@@ -46,7 +46,7 @@ else
   elif test ! -e cwm4/scripts/bootstrap.sh; then
     echo "Houston, we have a problem: the cwm4 git submodule is missing from your source tree!?"
     echo "I'd suggest to clone the source code of this project from github:"
-    echo "git clone --recursive https://github.com/CarloWood/ai-threadsafe-testsuite.git"
+    echo "git clone --recursive https://github.com/CarloWood/ai-statefultask-testsuite.git"
     exit 1
   fi
 fi
