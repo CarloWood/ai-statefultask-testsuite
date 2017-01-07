@@ -14,3 +14,7 @@
 	path = threadsafe
 	url = https://github.com/CarloWood/ai-threadsafe.git
 	branch = master
+[submodule "statefultask"]
+	path = statefultask
+	url = https://github.com/CarloWood/ai-statefultask.git
+	branch = master
