@@ -6,7 +6,7 @@ define(CW_PACKAGE_NAME, [ai-statefultask-testsuite])
 
 # Other configuration.
 define(CW_BUGREPORT, [carlo@alinoe.com])
-define(CW_COMPILER_WARNINGS, [-W -Wall -Woverloaded-virtual -Wundef -Wpointer-arith -Wwrite-strings -Winline])
+define(CW_COMPILER_WARNINGS, [-fmax-errors=2 -W -Wall -Woverloaded-virtual -Wundef -Wpointer-arith -Wwrite-strings -Winline])
 
 # Include cwm4 header.
 m4_include([cwm4/configure_ac_top.m4])
