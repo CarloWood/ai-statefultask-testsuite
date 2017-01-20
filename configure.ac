@@ -14,5 +14,7 @@ m4_include([cwm4/configure_ac_top.m4])
 # Comment this out if the project is using doxygen to generate documentation.
 CW_DOXYGEN
 
+AC_CONFIG_FILES([src/Makefile])
+
 # Include cwm4 footer.
 m4_include([cwm4/configure_ac_bottom.m4])

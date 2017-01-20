@@ -13,3 +13,4 @@ ltmain.sh
 missing
 submodules.m4
 lt_init.m4
+min_automake_version.m4
