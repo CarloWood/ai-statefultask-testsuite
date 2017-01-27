@@ -1,4 +1,5 @@
 autom4te.cache
+m4
 Makefile.in
 aclocal.m4
 compile
@@ -11,6 +12,3 @@ depcomp
 install-sh
 ltmain.sh
 missing
-submodules.m4
-lt_init.m4
-min_automake_version.m4
