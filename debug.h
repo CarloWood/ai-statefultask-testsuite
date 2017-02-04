@@ -3,4 +3,4 @@
 #define NAMESPACE_DEBUG debug
 #define NAMESPACE_DEBUG_START namespace debug {
 #define NAMESPACE_DEBUG_END }
-#include "cwd/debug.h"
+#include "cwds/debug.h"
