@@ -173,7 +173,7 @@ void Bumper::multiplex_impl(state_type run_state)
 
 int main()
 {
-#ifdef DEBUG_GOBAL
+#ifdef DEBUGGLOBAL
   GlobalObjectManager::main_entered();
 #endif
   Debug(NAMESPACE_DEBUG::init());
