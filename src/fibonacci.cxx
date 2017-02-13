@@ -9,7 +9,7 @@
 
 class Fibonacci;
 
-typedef std::vector<Fibonacci*> flower_type;
+typedef std::vector<boost::intrusive_ptr<Fibonacci>> flower_type;
 
 class Fibonacci : public AIStatefulTask {
   private:
@@ -34,7 +34,7 @@ class Fibonacci : public AIStatefulTask {
     static state_type const max_state = Fibonacci_done + 1;
     Fibonacci() : AIStatefulTask(true), m_flower(NULL), m_index(0), m_value(0), m_smallest_ready(false) { }
 
-    void set_flower(flower_type* flower, int n) { m_flower = flower; m_index = n; }
+    void set_flower(flower_type& flower, int n) { m_flower = &flower; m_index = n; }
     int value() const { return m_value; }
 
   protected: // The destructor must be protected.
@@ -89,6 +89,7 @@ void Fibonacci::multiplex_impl(state_type run_state)
       }
       (*m_flower)[m_index - 1]->run(this, Fibonacci_largest);
       (*m_flower)[m_index - 2]->run(this, Fibonacci_smallest);
+      idle();
       break;
     case Fibonacci_smallest:
       m_smallest_ready = true;
@@ -120,21 +121,24 @@ int main()
   AIAuxiliaryThread::start();
 
   flower_type flower;
-  int const number = 1;
+  int const number = 10;
   for (int n = 0; n < number; ++n)
   {
     flower.push_back(new Fibonacci);
-    flower.back()->set_flower(&flower, n);
+    flower.back()->set_flower(flower, n);
   }
 
   Dout(dc::statefultask|flush_cf, "Calling fibonacci->run()");
   flower[number - 1]->run();
 
-  for (int n = 0; n < 100 || flower[number - 1]->value() != 0; ++n)
+  for (int n = 0; n < number && flower[number - 1]->value() == 0; ++n)
   {
     Dout(dc::statefultask|flush_cf, "Calling gMainThreadEngine.mainloop()");
     gMainThreadEngine.mainloop();
     Dout(dc::statefultask|flush_cf, "Returned from gMainThreadEngine.mainloop()");
     std::this_thread::sleep_for(std::chrono::microseconds(1));
   }
+
+  for (int n = 0; n < number; ++n)
+    std::cout << flower[n]->value() << std::endl;
 }
