@@ -7,16 +7,14 @@
 #include <chrono>
 #include <atomic>
 
-class Fibonacci;
-
-typedef std::vector<boost::intrusive_ptr<Fibonacci>> flower_type;
-
 class Fibonacci : public AIStatefulTask {
   private:
-    flower_type* m_flower;
     int m_index;
     int m_value;
+    boost::intrusive_ptr<Fibonacci> m_smallest;
+    boost::intrusive_ptr<Fibonacci> m_largest;
     bool m_smallest_ready;
+    bool m_largest_ready;
 
   protected:
     typedef AIStatefulTask direct_base_type;    // The base class of this task.
@@ -32,9 +30,9 @@ class Fibonacci : public AIStatefulTask {
 
   public:
     static state_type const max_state = Fibonacci_done + 1;
-    Fibonacci() : AIStatefulTask(true), m_flower(NULL), m_index(0), m_value(0), m_smallest_ready(false) { }
+    Fibonacci() : AIStatefulTask(true), m_index(0), m_value(0), m_smallest_ready(false), m_largest_ready(false) { }
 
-    void set_flower(flower_type& flower, int n) { m_flower = &flower; m_index = n; }
+    void set_number(int n) { m_index = n; }
     int value() const { return m_value; }
 
   protected: // The destructor must be protected.
@@ -87,22 +85,35 @@ void Fibonacci::multiplex_impl(state_type run_state)
 	set_state(Fibonacci_done);
 	break;
       }
-      (*m_flower)[m_index - 1]->run(this, Fibonacci_largest);
-      (*m_flower)[m_index - 2]->run(this, Fibonacci_smallest);
+      m_largest = new Fibonacci;
+      m_largest->set_number(m_index - 1);
+      m_smallest = new Fibonacci;
+      m_smallest->set_number(m_index - 2);
       idle();
+      m_largest->run(this, Fibonacci_largest);
+      m_smallest->run(this, Fibonacci_smallest);
       break;
     case Fibonacci_smallest:
       m_smallest_ready = true;
-      idle();
+      if (m_largest_ready)
+        set_state(Fibonacci_math);
+      else
+        idle();
       break;
     case Fibonacci_largest:
-      set_state(Fibonacci_math);
+      m_largest_ready = true;
       if (!m_smallest_ready)
+      {
+        set_state(Fibonacci_start);
 	idle();
-      break;
+        break;
+      }
+      set_state(Fibonacci_math);
     case Fibonacci_math:
-      m_value = (*m_flower)[m_index - 1]->value() + (*m_flower)[m_index - 2]->value();
+      m_value = m_largest->value() + m_largest->value();
+      set_state(Fibonacci_done);
     case Fibonacci_done:
+      Dout(dc::notice, "m_index = " << m_index << "; m_value set to " << m_value);
       finish();
       break;
   }
@@ -120,25 +131,20 @@ int main()
 
   AIAuxiliaryThread::start();
 
-  flower_type flower;
-  int const number = 10;
-  for (int n = 0; n < number; ++n)
-  {
-    flower.push_back(new Fibonacci);
-    flower.back()->set_flower(flower, n);
-  }
+  int const number = 3;
+  Fibonacci* flower = new Fibonacci;
+  flower->set_number(number);
 
   Dout(dc::statefultask|flush_cf, "Calling fibonacci->run()");
-  flower[number - 1]->run();
+  flower->run();
 
-  for (int n = 0; n < number && flower[number - 1]->value() == 0; ++n)
+  for (int n = 0; n < 10000 && flower->value() == 0; ++n)
   {
-    Dout(dc::statefultask|flush_cf, "Calling gMainThreadEngine.mainloop()");
+    //Dout(dc::statefultask|flush_cf, "Calling gMainThreadEngine.mainloop()");
     gMainThreadEngine.mainloop();
-    Dout(dc::statefultask|flush_cf, "Returned from gMainThreadEngine.mainloop()");
+    //Dout(dc::statefultask|flush_cf, "Returned from gMainThreadEngine.mainloop()");
     std::this_thread::sleep_for(std::chrono::microseconds(1));
   }
 
-  for (int n = 0; n < number; ++n)
-    std::cout << flower[n]->value() << std::endl;
+  std::cout << flower->value() << std::endl;
 }
