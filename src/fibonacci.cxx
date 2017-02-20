@@ -177,13 +177,12 @@ int main()
   GlobalObjectManager::main_entered();
 #endif
   Debug(NAMESPACE_DEBUG::init());
-  Debug(libcw_do.on());
 
   static_assert(!std::is_destructible<Fibonacci>::value && std::has_virtual_destructor<Fibonacci>::value, "Class must have a protected virtual destuctor.");
 
   AIAuxiliaryThread::start();
 
-  int const number = 14;
+  int const number = 4;
   Fibonacci* flower = new Fibonacci;
   flower->set_number(number);
 
