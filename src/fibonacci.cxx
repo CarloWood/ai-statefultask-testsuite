@@ -183,7 +183,7 @@ int main()
   AIAuxiliaryThread::start();
 
   int const number = 4;
-  Fibonacci* flower = new Fibonacci;
+  boost::intrusive_ptr<Fibonacci> flower = new Fibonacci;
   flower->set_number(number);
 
   Dout(dc::statefultask|flush_cf, "Calling fibonacci->run()");
