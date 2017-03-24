@@ -12,22 +12,28 @@ std::atomic_uint number_of_tasks;
 class HelloWorld;
 class Bumper;
 
-HelloWorld*  hello_world;
+HelloWorld* hello_world;
 Bumper* bumper;
 
 class HelloWorld : public AIStatefulTask {
+  private:
+    bool m_bumped;
+
   protected:
     typedef AIStatefulTask direct_base_type;    // The base class of this task.
 
     // The different states of the task.
     enum hello_world_state_type {
-      HelloWorld_wait = direct_base_type::max_state,
+      HelloWorld_start = direct_base_type::max_state,
+      HelloWorld_wait,
       HelloWorld_done,
     };
 
   public:
     static state_type const max_state = HelloWorld_done + 1;
     HelloWorld();
+
+    void bump() { m_bumped = true; signal(1); }
 
   protected: // The destructor must be protected.
     ~HelloWorld();
@@ -39,12 +45,16 @@ class HelloWorld : public AIStatefulTask {
 };
 
 class Bumper : public AIStatefulTask {
+  private:
+    bool m_bumped;
+
   protected:
     typedef AIStatefulTask direct_base_type;    // The base class of this task.
 
     // The different states of the task.
     enum bumper_state_type {
-      Bumper_wait = direct_base_type::max_state,
+      Bumper_start = direct_base_type::max_state,
+      Bumper_wait,
       Bumper_done,
     };
 
@@ -52,7 +62,7 @@ class Bumper : public AIStatefulTask {
     static state_type const max_state = Bumper_done + 1;
     Bumper();
 
-    void done() { advance_state(Bumper_done); }
+    void bump() { m_bumped = true; signal(1); }
 
   protected: // The destructor must be protected.
     ~Bumper();
@@ -63,7 +73,7 @@ class Bumper : public AIStatefulTask {
     char const* state_str_impl(state_type run_state) const;
 };
 
-HelloWorld::HelloWorld() DEBUG_ONLY(: AIStatefulTask(true))
+HelloWorld::HelloWorld() DEBUG_ONLY(: AIStatefulTask(true)), m_bumped(false)
 {
   DoutEntering(dc::statefultask, "HelloWorld::HelloWorld()");
   ++number_of_tasks;
@@ -80,6 +90,7 @@ char const* HelloWorld::state_str_impl(state_type run_state) const
   switch(run_state)
   {
     // A complete listing of hello_world_state_type.
+    AI_CASE_RETURN(HelloWorld_start);
     AI_CASE_RETURN(HelloWorld_wait);
     AI_CASE_RETURN(HelloWorld_done);
   }
@@ -89,7 +100,7 @@ char const* HelloWorld::state_str_impl(state_type run_state) const
 
 void HelloWorld::initialize_impl()
 {
-  set_state(HelloWorld_wait);
+  set_state(HelloWorld_start);
 }
 
 void HelloWorld::abort_impl()
@@ -102,7 +113,7 @@ void HelloWorld::finish_impl()
   DoutEntering(dc::statefultask, "HelloWorld::finish_impl()");
 }
 
-Bumper::Bumper() DEBUG_ONLY(: AIStatefulTask(true))
+Bumper::Bumper() DEBUG_ONLY(: AIStatefulTask(true)), m_bumped(false)
 {
   DoutEntering(dc::statefultask, "Bumper::Bumper()");
   ++number_of_tasks;
@@ -119,6 +130,7 @@ char const* Bumper::state_str_impl(state_type run_state) const
   switch(run_state)
   {
     // A complete listing of bumper_state_type.
+    AI_CASE_RETURN(Bumper_start);
     AI_CASE_RETURN(Bumper_wait);
     AI_CASE_RETURN(Bumper_done);
   }
@@ -128,7 +140,7 @@ char const* Bumper::state_str_impl(state_type run_state) const
 
 void Bumper::initialize_impl()
 {
-  set_state(Bumper_wait);
+  set_state(Bumper_start);
 }
 
 void Bumper::abort_impl()
@@ -145,12 +157,19 @@ void HelloWorld::multiplex_impl(state_type run_state)
 {
   switch(run_state)
   {
+    case HelloWorld_start:
+      set_state(HelloWorld_wait);
+      break;
     case HelloWorld_wait:
-      set_state(HelloWorld_done);       // set_state() voids the last call to idle(), so it must be called before we call idle().
-      idle();                           // Wait until bumper calls cont() on us.
+      if (!m_bumped)
+      {
+        wait(1);
+        break;
+      }
+      set_state(HelloWorld_done);
       break;
     case HelloWorld_done:
-      bumper->done();
+      bumper->bump();
       finish();
       break;
   }
@@ -160,10 +179,17 @@ void Bumper::multiplex_impl(state_type run_state)
 {
   switch(run_state)
   {
+    case Bumper_start:
+      hello_world->bump();
+      set_state(Bumper_wait);
+      break;
     case Bumper_wait:
-      set_state(Bumper_done);           // set_state() voids the last call to idle(), so it must be called before we call idle().
-      hello_world->cont();              // This will immediately run hello_world, and thus call bumper->cont(), which will void the last call to idle().
-      idle();                           // Wait until hello_world calls cont() on us.
+      if (!m_bumped)
+      {
+        wait(1);
+        break;
+      }
+      set_state(Bumper_done);
       break;
     case Bumper_done:
       finish();
@@ -201,4 +227,6 @@ int main()
     Dout(dc::statefultask|flush_cf, "Returned from gMainThreadEngine.mainloop()");
     std::this_thread::sleep_for(std::chrono::microseconds(1));
   }
+
+  AIAuxiliaryThread::stop();
 }
