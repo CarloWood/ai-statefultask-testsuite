@@ -36,12 +36,9 @@ class HelloWorld : public AIStatefulTask {
     void bump() { m_bumped = true; signal(1); }
 
   protected: // The destructor must be protected.
-    ~HelloWorld();
-    void initialize_impl();
-    void multiplex_impl(state_type run_state);
-    void abort_impl();
-    void finish_impl();
-    char const* state_str_impl(state_type run_state) const;
+    ~HelloWorld() override;
+    char const* state_str_impl(state_type run_state) const override;
+    void multiplex_impl(state_type run_state) override;
 };
 
 class Bumper : public AIStatefulTask {
@@ -65,12 +62,9 @@ class Bumper : public AIStatefulTask {
     void bump() { m_bumped = true; signal(1); }
 
   protected: // The destructor must be protected.
-    ~Bumper();
-    void initialize_impl();
-    void multiplex_impl(state_type run_state);
-    void abort_impl();
-    void finish_impl();
+    ~Bumper() override;
     char const* state_str_impl(state_type run_state) const;
+    void multiplex_impl(state_type run_state);
 };
 
 HelloWorld::HelloWorld() DEBUG_ONLY(: AIStatefulTask(true)), m_bumped(false)
@@ -98,21 +92,6 @@ char const* HelloWorld::state_str_impl(state_type run_state) const
   return "UNKNOWN STATE";
 };
 
-void HelloWorld::initialize_impl()
-{
-  set_state(HelloWorld_start);
-}
-
-void HelloWorld::abort_impl()
-{
-  DoutEntering(dc::statefultask, "HelloWorld::abort_impl()");
-}
-
-void HelloWorld::finish_impl()
-{
-  DoutEntering(dc::statefultask, "HelloWorld::finish_impl()");
-}
-
 Bumper::Bumper() DEBUG_ONLY(: AIStatefulTask(true)), m_bumped(false)
 {
   DoutEntering(dc::statefultask, "Bumper::Bumper()");
@@ -137,21 +116,6 @@ char const* Bumper::state_str_impl(state_type run_state) const
   ASSERT(false);
   return "UNKNOWN STATE";
 };
-
-void Bumper::initialize_impl()
-{
-  set_state(Bumper_start);
-}
-
-void Bumper::abort_impl()
-{
-  DoutEntering(dc::statefultask, "Bumper::abort_impl()");
-}
-
-void Bumper::finish_impl()
-{
-  DoutEntering(dc::statefultask, "Bumper::finish_impl()");
-}
 
 void HelloWorld::multiplex_impl(state_type run_state)
 {

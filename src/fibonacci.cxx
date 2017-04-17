@@ -35,12 +35,9 @@ class Fibonacci : public AIStatefulTask {
     int value() const { return m_value; }
 
   protected: // The destructor must be protected.
-    ~Fibonacci() { }
-    void initialize_impl();
-    void multiplex_impl(state_type run_state);
-    void abort_impl();
-    void finish_impl();
+    ~Fibonacci() override { }
     char const* state_str_impl(state_type run_state) const;
+    void multiplex_impl(state_type run_state);
 };
 
 char const* Fibonacci::state_str_impl(state_type run_state) const
@@ -56,21 +53,6 @@ char const* Fibonacci::state_str_impl(state_type run_state) const
   ASSERT(false);
   return "UNKNOWN STATE";
 };
-
-void Fibonacci::initialize_impl()
-{
-  set_state(Fibonacci_start);
-}
-
-void Fibonacci::abort_impl()
-{
-  DoutEntering(dc::statefultask, "Fibonacci::abort_impl()");
-}
-
-void Fibonacci::finish_impl()
-{
-  DoutEntering(dc::statefultask, "Fibonacci::finish_impl()");
-}
 
 void Fibonacci::multiplex_impl(state_type run_state)
 {
