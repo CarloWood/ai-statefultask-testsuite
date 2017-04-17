@@ -18,3 +18,7 @@
 	path = statefultask
 	url = https://github.com/CarloWood/ai-statefultask.git
 	branch = master
+[submodule "microbench"]
+	path = microbench
+	url = https://github.com/CarloWood/microbench.git
+	branch = master
