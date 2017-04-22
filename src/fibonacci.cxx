@@ -78,7 +78,7 @@ void Fibonacci::multiplex_impl(state_type run_state)
       set_state(Fibonacci_wait);
       /*fall-through*/
     case Fibonacci_wait:
-      if (!(*m_largest && *m_smallest))
+      if (!(m_largest->finished() && m_smallest->finished()))
       {
         wait(1);
         break;
