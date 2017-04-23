@@ -16,6 +16,13 @@ static int factorial(int n)
   return r;
 }
 
+static void sayhello()
+{
+  DoutEntering(dc::notice, "sayhello()");
+  std::this_thread::sleep_for(std::chrono::seconds(1));
+  std::cout << "Hello!\n";
+}
+
 class Task : public AIStatefulTask {
   protected:
     using direct_base_type = AIStatefulTask;            // The base class of this task.
@@ -24,6 +31,7 @@ class Task : public AIStatefulTask {
     // The different states of the task.
     enum task_state_type {
       Task_start = direct_base_type::max_state,
+      Task_hello,
       Task_done,
     };
 
@@ -33,10 +41,11 @@ class Task : public AIStatefulTask {
 
   public:
     static state_type const max_state = Task_done + 1;  // One beyond the largest state.
-    Task() : AIStatefulTask(DEBUG_ONLY(true)), m_calculate_factorial(this, 1, &factorial) { }    // The derived class must have a default constructor.
+    Task() : AIStatefulTask(DEBUG_ONLY(true)), m_calculate_factorial(this, 1, &factorial), m_say_hello(this, 2, &sayhello) { }
 
   private:
     AIPackagedTask<int(int)> m_calculate_factorial;
+    AIPackagedTask<void()> m_say_hello;
 };
 
 char const* Task::state_str_impl(state_type run_state) const
@@ -45,6 +54,7 @@ char const* Task::state_str_impl(state_type run_state) const
   {
     // A complete listing of hello_world_state_type.
     AI_CASE_RETURN(Task_start);
+    AI_CASE_RETURN(Task_hello);
     AI_CASE_RETURN(Task_done);
   }
   ASSERT(false);
@@ -57,6 +67,10 @@ void Task::multiplex_impl(state_type run_state)
   {
     case Task_start:
       m_calculate_factorial(5);
+      set_state(Task_hello);
+      break;
+    case Task_hello:
+      m_say_hello();
       set_state(Task_done);
       break;
     case Task_done:
