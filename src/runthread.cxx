@@ -3,16 +3,17 @@
 #include "statefultask/AIStatefulTask.h"
 #include "statefultask/AIEngine.h"
 #include "statefultask/AIAuxiliaryThread.h"
-#include "statefultask/AIBackgroundJob.h"
+#include "statefultask/AIPackagedTask.h"
 
 // Suppose we need to run this from a task (and wait until it finished).
-static void factorial(int n)
+static int factorial(int n)
 {
   DoutEntering(dc::notice, "factorial()");
+  std::this_thread::sleep_for(std::chrono::seconds(1));
   int r = 1;
   while (n > 1) r *= n--;
-  Dout(dc::notice, "Leaving factorial() [" << r << "]");
-  //return r;
+  Dout(dc::notice, "Leaving factorial()");
+  return r;
 }
 
 class Task : public AIStatefulTask {
@@ -32,10 +33,10 @@ class Task : public AIStatefulTask {
 
   public:
     static state_type const max_state = Task_done + 1;  // One beyond the largest state.
-    Task() : AIStatefulTask(DEBUG_ONLY(true)), m_calculate_factorial(this, 1, factorial) { }    // The derived class must have a default constructor.
+    Task() : AIStatefulTask(DEBUG_ONLY(true)), m_calculate_factorial(this, 1, &factorial) { }    // The derived class must have a default constructor.
 
   private:
-    AIBackgroundJob<int> m_calculate_factorial;
+    AIPackagedTask<int(int)> m_calculate_factorial;
 };
 
 char const* Task::state_str_impl(state_type run_state) const
@@ -59,6 +60,7 @@ void Task::multiplex_impl(state_type run_state)
       set_state(Task_done);
       break;
     case Task_done:
+      std::cout << "The result of 5! = " << m_calculate_factorial.get() << std::endl;
       finish();
       break;
   }

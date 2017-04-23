@@ -23,19 +23,24 @@ int main()
   Debug(NAMESPACE_DEBUG::init());
 
   A foo;
-  AIDelayedFunction<int, int> f1(&foo, &A::g);
-  AIDelayedFunction<int, int> f2(&g);
-  AIDelayedFunction<int, int> f3([](int x, int y){ std::cout << "Calling lambda(" << x << ", " << y << ")\n"; });
+  AIDelayedFunction<void(int, int)> f1(&foo, &A::g);
+  AIDelayedFunction<void(int, int)> f2(&g);
+  AIDelayedFunction<void(int, int)> f3([](int x, int y){ std::cout << "Calling lambda(" << x << ", " << y << ")\n"; });
+  AIDelayedFunction<int(int, int)> sum([](int x, int y){ return x + y; });
 
   // Each of these calls takes about 0.1 microsecond.
   f1(1, 2);
   f2(3, 4);
   f3(5, 6);
+  sum(21, 21);
   
   std::cout << "Before calling f.invoke().\n";
+  sum.invoke();
   f3.invoke();
   f2.invoke();
   f1.invoke();
+
+  std::cout << sum.get() << std::endl;
 
   // Output:
   //
@@ -43,4 +48,5 @@ int main()
   // Calling lambda(5, 6)
   // Calling g(3, 4)
   // Calling A::g(1, 2)
+  // 42
 }
