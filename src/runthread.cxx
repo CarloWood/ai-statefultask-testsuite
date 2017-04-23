@@ -3,11 +3,22 @@
 #include "statefultask/AIStatefulTask.h"
 #include "statefultask/AIEngine.h"
 #include "statefultask/AIAuxiliaryThread.h"
+#include "statefultask/AIBackgroundJob.h"
+
+// Suppose we need to run this from a task (and wait until it finished).
+static void factorial(int n)
+{
+  DoutEntering(dc::notice, "factorial()");
+  int r = 1;
+  while (n > 1) r *= n--;
+  Dout(dc::notice, "Leaving factorial() [" << r << "]");
+  //return r;
+}
 
 class Task : public AIStatefulTask {
   protected:
     using direct_base_type = AIStatefulTask;            // The base class of this task.
-    ~Task() override { };                               // The destructor must be protected.
+    ~Task() override { }                                // The destructor must be protected.
 
     // The different states of the task.
     enum task_state_type {
@@ -21,7 +32,10 @@ class Task : public AIStatefulTask {
 
   public:
     static state_type const max_state = Task_done + 1;  // One beyond the largest state.
-    Task() : AIStatefulTask(DEBUG_ONLY(true)) { }       // The derived class must have a default constructor.
+    Task() : AIStatefulTask(DEBUG_ONLY(true)), m_calculate_factorial(this, 1, factorial) { }    // The derived class must have a default constructor.
+
+  private:
+    AIBackgroundJob<int> m_calculate_factorial;
 };
 
 char const* Task::state_str_impl(state_type run_state) const
@@ -41,6 +55,7 @@ void Task::multiplex_impl(state_type run_state)
   switch(run_state)
   {
     case Task_start:
+      m_calculate_factorial(5);
       set_state(Task_done);
       break;
     case Task_done:
@@ -65,7 +80,11 @@ int main()
   task->run();
 
   // Mainloop.
-  while (!task) gMainThreadEngine.mainloop();
+  while (!task->finished())
+  {
+    gMainThreadEngine.mainloop();
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  }
   if (!task->aborted())
     Dout(dc::notice, "The task finished successfully.");
 

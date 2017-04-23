@@ -1,8 +1,8 @@
 #include "sys.h"
 #include "debug.h"
-#include "statefultask/AIAuxiliaryThread.h"
 #include "microbench/microbench.h"
 #include <chrono>
+#include <thread>
 #include <boost/interprocess/sync/file_lock.hpp>
 
 int main()
@@ -11,8 +11,6 @@ int main()
   GlobalObjectManager::main_entered();
 #endif
   Debug(NAMESPACE_DEBUG::init());
-
-  AIAuxiliaryThread::start();
 
   boost::interprocess::file_lock flock("my_lock_file");
   Dout(dc::notice|flush_cf, "Attempting to lock \"my_lock_file\".");
@@ -26,11 +24,10 @@ int main()
         [&flock]() {            // Function to benchmark.
           flock.unlock();
           flock.lock(); },
-        100000,                 // Iterations per test run.
+        1000,                   // Iterations per test run.
         20,                     // Number of test runs.
         true) * 1000            // ms -> us
     << " µs." << std::endl;
 
   flock.unlock();
-  AIAuxiliaryThread::stop();
 }

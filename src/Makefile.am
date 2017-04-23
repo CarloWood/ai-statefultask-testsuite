@@ -1,6 +1,6 @@
 AM_CPPFLAGS = -iquote $(top_srcdir) -iquote $(top_srcdir)/cwds
 
-bin_PROGRAMS = helloworld fibonacci fiboquick filelock runthread
+bin_PROGRAMS = helloworld fibonacci fiboquick filelock runthread function
 
 helloworld_SOURCES = \
 	helloworld.cxx
@@ -17,6 +17,9 @@ filelock_SOURCES = \
 runthread_SOURCES = \
 	runthread.cxx
 
+function_SOURCES = \
+	function.cxx
+
 helloworld_CXXFLAGS = @LIBCWD_R_FLAGS@
 helloworld_LDADD = ../statefultask/libstatefultask.la ../threadsafe/libthreadsafe.la ../utils/libutils_r.la ../cwds/libcwds_r.la
 
@@ -31,6 +34,9 @@ filelock_LDADD = ../cwds/libcwds_r.la ../microbench/libmicrobench.la
 
 runthread_CXXFLAGS = @LIBCWD_R_FLAGS@
 runthread_LDADD = ../statefultask/libstatefultask.la ../threadsafe/libthreadsafe.la ../utils/libutils_r.la ../cwds/libcwds_r.la
+
+function_CXXFLAGS = @LIBCWD_R_FLAGS@
+function_LDADD = ../cwds/libcwds_r.la ../microbench/libmicrobench.la
 
 # --------------- Maintainer's Section
 
