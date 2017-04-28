@@ -67,7 +67,7 @@ class Bumper : public AIStatefulTask {
     void multiplex_impl(state_type run_state);
 };
 
-HelloWorld::HelloWorld() DEBUG_ONLY(: AIStatefulTask(true)), m_bumped(false)
+HelloWorld::HelloWorld() : DEBUG_ONLY(AIStatefulTask(true),) m_bumped(false)
 {
   DoutEntering(dc::statefultask, "HelloWorld::HelloWorld()");
   ++number_of_tasks;
@@ -92,7 +92,7 @@ char const* HelloWorld::state_str_impl(state_type run_state) const
   return "UNKNOWN STATE";
 };
 
-Bumper::Bumper() DEBUG_ONLY(: AIStatefulTask(true)), m_bumped(false)
+Bumper::Bumper() : DEBUG_ONLY(AIStatefulTask(true),) m_bumped(false)
 {
   DoutEntering(dc::statefultask, "Bumper::Bumper()");
   ++number_of_tasks;
