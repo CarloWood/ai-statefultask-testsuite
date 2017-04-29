@@ -23,6 +23,8 @@ static void sayhello()
   std::cout << "Hello!\n";
 }
 
+AIObjectQueue<std::function<void()>> s_task_queue(40);
+
 class Task : public AIStatefulTask {
   protected:
     using direct_base_type = AIStatefulTask;            // The base class of this task.
@@ -31,7 +33,9 @@ class Task : public AIStatefulTask {
     // The different states of the task.
     enum task_state_type {
       Task_start = direct_base_type::max_state,
+      Task_dispatch_factorial,
       Task_hello,
+      Task_dispatch_say_hello,
       Task_done,
     };
 
@@ -41,7 +45,9 @@ class Task : public AIStatefulTask {
 
   public:
     static state_type const max_state = Task_done + 1;  // One beyond the largest state.
-    Task() : AIStatefulTask(DEBUG_ONLY(true)), m_calculate_factorial(this, 1, &factorial), m_say_hello(this, 2, &sayhello) { }
+    Task() : AIStatefulTask(DEBUG_ONLY(true)),
+        m_calculate_factorial(this, 1, &factorial, s_task_queue),
+        m_say_hello(this, 2, &sayhello, s_task_queue) { }
 
   private:
     AIPackagedTask<int(int)> m_calculate_factorial;
@@ -54,7 +60,9 @@ char const* Task::state_str_impl(state_type run_state) const
   {
     // A complete listing of hello_world_state_type.
     AI_CASE_RETURN(Task_start);
+    AI_CASE_RETURN(Task_dispatch_factorial);
     AI_CASE_RETURN(Task_hello);
+    AI_CASE_RETURN(Task_dispatch_say_hello);
     AI_CASE_RETURN(Task_done);
   }
   ASSERT(false);
@@ -67,12 +75,28 @@ void Task::multiplex_impl(state_type run_state)
   {
     case Task_start:
       m_calculate_factorial(5);
+      // Fall through.
+    case Task_dispatch_factorial:
+      if (!m_calculate_factorial.dispatch())
+      {
+        set_state(Task_dispatch_factorial);
+        yield_frame(1);
+        break;
+      }
       set_state(Task_hello);
-      break;
+      break;                    // This break is necessary!
     case Task_hello:
       m_say_hello();
+      // Fall through.
+    case Task_dispatch_say_hello:
+      if (!m_say_hello.dispatch())
+      {
+        set_state(Task_dispatch_say_hello);
+        yield_frame(1);
+        break;
+      }
       set_state(Task_done);
-      break;
+      break;                    // This break is necessary!
     case Task_done:
       std::cout << "The result of 5! = " << m_calculate_factorial.get() << std::endl;
       finish();

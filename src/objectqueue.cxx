@@ -2,30 +2,30 @@
 #include "debug.h"
 #include "tracked.h"
 #include "statefultask/AIObjectQueue.h"
-//#include "statefultask/AIPackagedTask.h"
 #include <mutex>
 #include <atomic>
 #include <functional>
 #include <cstdlib>
 
 namespace { constexpr char const* const name_F = "std::function<void()>"; }
-struct F : tracked::detail::Tracked<&name_F> {
+struct F : tracked::Tracked<&name_F> {
   std::function<void()> m_f;
   F() {}
   template<typename BIND>
   F(BIND&& bind) : m_f(std::forward<BIND>(bind)) { }
-  F(F& orig) : tracked::detail::Tracked<&name_F>{orig}, m_f{orig.m_f} { }
-  F(F const& orig) : tracked::detail::Tracked<&name_F>{orig}, m_f{orig.m_f} { }
-  F(F&& orig) : tracked::detail::Tracked<&name_F>{std::move(orig)}, m_f{std::move(orig.m_f)} { }
-  F(F const&& orig) : tracked::detail::Tracked<&name_F>{std::move(orig)}, m_f{std::move(orig.m_f)} { }
-  void operator=(F const& orig) { tracked::detail::Tracked<&name_F>::operator=(orig); m_f = orig.m_f; }
-  void operator=(F&& orig) { tracked::detail::Tracked<&name_F>::operator=(std::move(orig)); m_f = std::move(orig.m_f); }
+  F(F& orig) : tracked::Tracked<&name_F>{orig}, m_f{orig.m_f} { }
+  F(F const& orig) : tracked::Tracked<&name_F>{orig}, m_f{orig.m_f} { }
+  F(F&& orig) : tracked::Tracked<&name_F>{std::move(orig)}, m_f{std::move(orig.m_f)} { }
+  F(F const&& orig) : tracked::Tracked<&name_F>{std::move(orig)}, m_f{std::move(orig.m_f)} { }
+  void operator=(F const& orig) { tracked::Tracked<&name_F>::operator=(orig); m_f = orig.m_f; }
+  void operator=(F&& orig) { tracked::Tracked<&name_F>::operator=(std::move(orig)); m_f = std::move(orig.m_f); }
   operator bool() const { return static_cast<bool>(m_f); }
+  void operator()() const { m_f(); }
 };
 
 namespace { constexpr char const* const name_B = "Big"; }
-struct B : tracked::detail::Tracked<&name_B> {
-  using tracked::detail::Tracked<&name_B>::Tracked;
+struct B : tracked::Tracked<&name_B> {
+  using tracked::Tracked<&name_B>::Tracked;
 };
 
 struct Big {
@@ -33,22 +33,9 @@ struct Big {
   B m_tracker;
 };
 
-void f(Big)
+void f(Big const& b)
 {
-}
-
-//using F = B; //std::function<void()>;
-
-void h(F& m)
-{ 
-  DoutEntering(dc::notice, "h(" << name_F << "&)");
-  F t(m);
-}
-
-void h(F&& m)
-{
-  DoutEntering(dc::notice, "h(" << name_F << "&&)");
-  F t(std::move(m));
+  Dout(dc::notice, "Calling f(\"" << b.m_data << "\")!");
 }
 
 int main()
@@ -86,16 +73,16 @@ int main()
 
       {
         Dout(dc::notice|continued_cf, "Constructing " << name_F << " big_function(std::bind(f, b))... ");
-        F big_function(std::bind(f, b));
+        F function(std::bind(f, b));
         Dout(dc::finish, "done.");
 
         //Debug(tracked::unmute());
-        Dout(dc::notice|continued_cf, "Moving big_function into AIObjectQueue... ");
-        pa.move_in(std::move(big_function));
+        Dout(dc::notice|continued_cf, "Moving " << name_F << " into AIObjectQueue... ");
+        pa.move_in(std::move(function));
         Dout(dc::finish, "Done.");
 
         {
-          Dout(dc::notice|continued_cf, "Moving " << name_F << " from AIObjectQueue to bf... ");
+          Dout(dc::notice|continued_cf, "Moving " << name_F << " out of AIObjectQueue to bf... ");
           F bf(ca.move_out());
           Dout(dc::finish, "Done.");
 
@@ -105,14 +92,21 @@ int main()
           }
           else
           {
-            Dout(dc::notice|continued_cf, "Moving bf into AIObjectQueue again... ");
-            bool success =pa.move_in(std::move(bf));
+            Dout(dc::notice|continued_cf, "Copying bf into AIObjectQueue... ");
+            pa.move_in(F(bf));
             Dout(dc::finish, "Done.");
-            if (!success)
-            {
-              std::cout << "Buffer full!\n";
-            }
+            Dout(dc::notice|continued_cf, "Moving bf into AIObjectQueue... ");
+            pa.move_in(std::move(bf));
+            Dout(dc::finish, "Done.");
+            Dout(dc::notice|continued_cf, "Moving " << name_F << " from AIObjectQueue to bf2... ");
+            F bf2(ca.move_out());
+            Dout(dc::finish, "Done.");
+            Dout(dc::notice|continued_cf, "Executing bf2()...");
+            bf2();
+            Dout(dc::finish, "Done.");
+            Dout(dc::notice|continued_cf, "Destructing bf2... ");
           }
+          Dout(dc::finish, "destructed.");
 
           Dout(dc::notice|continued_cf, "Destructing bf... ");
         }
