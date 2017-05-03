@@ -23,7 +23,8 @@ static void sayhello()
   std::cout << "Hello!\n";
 }
 
-AIObjectQueue<std::function<void()>> s_task_queue(40);
+constexpr int capacity = 2;
+AIObjectQueue<std::function<void()>> s_task_queue(capacity);
 
 class Task : public AIStatefulTask {
   protected:
@@ -77,7 +78,9 @@ void Task::multiplex_impl(state_type run_state)
       m_calculate_factorial(5);
       // Fall through.
     case Task_dispatch_factorial:
-      if (!m_calculate_factorial.dispatch())
+    {
+      int length = m_calculate_factorial.dispatch();
+      if (length == capacity)   // Queue was full.
       {
         set_state(Task_dispatch_factorial);
         yield_frame(1);
@@ -85,11 +88,14 @@ void Task::multiplex_impl(state_type run_state)
       }
       set_state(Task_hello);
       break;                    // This break is necessary!
+    }
     case Task_hello:
       m_say_hello();
       // Fall through.
     case Task_dispatch_say_hello:
-      if (!m_say_hello.dispatch())
+    {
+      int length = m_say_hello.dispatch();
+      if (length == capacity)   // Queue was full.
       {
         set_state(Task_dispatch_say_hello);
         yield_frame(1);
@@ -97,6 +103,7 @@ void Task::multiplex_impl(state_type run_state)
       }
       set_state(Task_done);
       break;                    // This break is necessary!
+    }
     case Task_done:
       std::cout << "The result of 5! = " << m_calculate_factorial.get() << std::endl;
       finish();

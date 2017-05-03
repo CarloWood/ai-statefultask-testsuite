@@ -53,15 +53,24 @@ int main()
     AIObjectQueue<F> object_queue;
     Dout(dc::finish, "done.");
 
+    ASSERT(object_queue.capacity() == 0);
+
+    int const capacity = 2;
+
     try {
-      // Allocate 10 std::function<void()> objects in it.
-      object_queue.reallocate(10);
+      // Allocate capacity std::function<void()> objects in it.
+      object_queue.reallocate(capacity);
     } catch (std::bad_alloc const& e) {
       std::cout << "Allocation failed: " << e.what() << '\n';
     }
 
+    ASSERT(object_queue.capacity() == capacity);
+
     auto pa = object_queue.producer_access();
     auto ca = object_queue.consumer_access();
+
+    ASSERT(pa.length() == 0);
+    ASSERT(ca.length() == 0);
 
     pa.clear();   // Access test (buffer is already empty of course).
     ca.clear();
@@ -81,10 +90,16 @@ int main()
         pa.move_in(std::move(function));
         Dout(dc::finish, "Done.");
 
+        ASSERT(pa.length() == 1);
+        ASSERT(ca.length() == 1);
+
         {
           Dout(dc::notice|continued_cf, "Moving " << name_F << " out of AIObjectQueue to bf... ");
           F bf(ca.move_out());
           Dout(dc::finish, "Done.");
+
+          ASSERT(pa.length() == 0);
+          ASSERT(ca.length() == 0);
 
           if (!bf)
           {
@@ -95,18 +110,32 @@ int main()
             Dout(dc::notice|continued_cf, "Copying bf into AIObjectQueue... ");
             pa.move_in(F(bf));
             Dout(dc::finish, "Done.");
-            Dout(dc::notice|continued_cf, "Moving bf into AIObjectQueue... ");
-            pa.move_in(std::move(bf));
-            Dout(dc::finish, "Done.");
-            Dout(dc::notice|continued_cf, "Moving " << name_F << " from AIObjectQueue to bf2... ");
-            F bf2(ca.move_out());
-            Dout(dc::finish, "Done.");
-            Dout(dc::notice|continued_cf, "Executing bf2()...");
-            bf2();
-            Dout(dc::finish, "Done.");
-            Dout(dc::notice|continued_cf, "Destructing bf2... ");
+            ASSERT(pa.length() == 1);
+            ASSERT(ca.length() == 1);
+            for (int i = 0; i < 5; ++i)
+            {
+              Dout(dc::notice|continued_cf, "Moving bf into AIObjectQueue... ");
+              pa.move_in(std::move(bf));
+              Dout(dc::finish, "Done.");
+              ASSERT(pa.length() == 2);
+              ASSERT(ca.length() == 2);
+              Dout(dc::notice|continued_cf, "Moving " << name_F << " from AIObjectQueue to bf2... ");
+              {
+                F bf2(ca.move_out());
+                Dout(dc::finish, "Done.");
+                ASSERT(pa.length() == 1);
+                ASSERT(ca.length() == 1);
+                Dout(dc::notice|continued_cf, "Executing bf2()...");
+                bf2();
+                Dout(dc::finish, "Done.");
+                Dout(dc::notice|continued_cf, "Moving bf2 to bf");
+                bf = std::move(bf2);
+                Dout(dc::finish, "Done.");
+                Dout(dc::notice|continued_cf, "Destructing bf2... ");
+              }
+              Dout(dc::finish, "destructed.");
+            }
           }
-          Dout(dc::finish, "destructed.");
 
           Dout(dc::notice|continued_cf, "Destructing bf... ");
         }
