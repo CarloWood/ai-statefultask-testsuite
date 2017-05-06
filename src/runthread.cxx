@@ -4,6 +4,7 @@
 #include "statefultask/AIEngine.h"
 #include "statefultask/AIAuxiliaryThread.h"
 #include "statefultask/AIPackagedTask.h"
+#include "statefultask/AIThreadPool.h"
 
 // Suppose we need to run this from a task (and wait until it finished).
 static int factorial(int n)
@@ -24,7 +25,7 @@ static void sayhello()
 }
 
 constexpr int capacity = 2;
-AIObjectQueue<std::function<void()>> s_task_queue(capacity);
+int s_task_queue;
 
 class Task : public AIStatefulTask {
   protected:
@@ -75,6 +76,7 @@ void Task::multiplex_impl(state_type run_state)
   switch(run_state)
   {
     case Task_start:
+      s_task_queue = AIThreadPool::instance().new_queue(capacity);
       m_calculate_factorial(5);
       // Fall through.
     case Task_dispatch_factorial:
@@ -118,6 +120,7 @@ int main()
 #endif
   Debug(NAMESPACE_DEBUG::init());
 
+  AIThreadPool thread_pool;
   AIAuxiliaryThread::start();
 
   boost::intrusive_ptr<Task> task = new Task;
