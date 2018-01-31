@@ -46,7 +46,7 @@ class Task : public AIStatefulTask {
     void multiplex_impl(state_type run_state) override;
 
   public:
-    static state_type const max_state = Task_done + 1;  // One beyond the largest state.
+    static state_type constexpr max_state = Task_done + 1;  // One beyond the largest state.
     Task() : AIStatefulTask(DEBUG_ONLY(true)),
         m_calculate_factorial(this, 1, &factorial, s_task_queue),
         m_say_hello(this, 2, &sayhello, s_task_queue) { }
@@ -71,6 +71,8 @@ char const* Task::state_str_impl(state_type run_state) const
   return "UNKNOWN STATE";
 }
 
+AIEngine engine("main engine", 2);
+
 void Task::multiplex_impl(state_type run_state)
 {
   switch(run_state)
@@ -85,7 +87,7 @@ void Task::multiplex_impl(state_type run_state)
       if (length == capacity)   // Queue was full.
       {
         set_state(Task_dispatch_factorial);
-        yield_frame(1);
+        yield_frame(&engine, 1);
         break;
       }
       set_state(Task_hello);
@@ -100,7 +102,7 @@ void Task::multiplex_impl(state_type run_state)
       if (length == capacity)   // Queue was full.
       {
         set_state(Task_dispatch_say_hello);
-        yield_frame(1);
+        yield_frame(&engine, 1);
         break;
       }
       set_state(Task_done);
@@ -132,7 +134,7 @@ int main()
   // Mainloop.
   while (!task->finished())
   {
-    gMainThreadEngine.mainloop();
+    engine.mainloop();
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
   if (!task->aborted())

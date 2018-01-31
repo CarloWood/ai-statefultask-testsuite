@@ -30,7 +30,7 @@ class HelloWorld : public AIStatefulTask {
     };
 
   public:
-    static state_type const max_state = HelloWorld_done + 1;
+    static state_type constexpr max_state = HelloWorld_done + 1;
     HelloWorld();
 
     void bump() { m_bumped = true; signal(1); }
@@ -56,7 +56,7 @@ class Bumper : public AIStatefulTask {
     };
 
   public:
-    static state_type const max_state = Bumper_done + 1;
+    static state_type constexpr max_state = Bumper_done + 1;
     Bumper();
 
     void bump() { m_bumped = true; signal(1); }
@@ -167,10 +167,11 @@ int main()
   GlobalObjectManager::main_entered();
 #endif
   Debug(NAMESPACE_DEBUG::init());
-  Debug(libcw_do.on());
+  Debug(if (!dc::statefultask.is_on()) dc::statefultask.on());
 
   static_assert(!std::is_destructible<HelloWorld>::value && std::has_virtual_destructor<HelloWorld>::value, "Class must have a protected virtual destuctor.");
 
+  AIEngine engine("main:engine");
   AIAuxiliaryThread::start();
 
   hello_world = new HelloWorld;
@@ -186,9 +187,9 @@ int main()
 
   for (int n = 0; n < 100 && number_of_tasks > 0; ++n)
   {
-    Dout(dc::statefultask|flush_cf, "Calling gMainThreadEngine.mainloop()");
-    gMainThreadEngine.mainloop();
-    Dout(dc::statefultask|flush_cf, "Returned from gMainThreadEngine.mainloop()");
+    Dout(dc::statefultask|flush_cf, "Calling engine.mainloop()");
+    engine.mainloop();
+    Dout(dc::statefultask|flush_cf, "Returned from engine.mainloop()");
     std::this_thread::sleep_for(std::chrono::microseconds(1));
   }
 

@@ -28,7 +28,7 @@ class Fibonacci : public AIStatefulTask {
     };
 
   public:
-    static state_type const max_state = Fibonacci_done + 1;
+    static state_type constexpr max_state = Fibonacci_done + 1;
     Fibonacci() : DEBUG_ONLY(AIStatefulTask(true),) m_index(0), m_value(0), m_smallest_ready(false), m_largest_ready(false) { }
 
     void set_number(int n) { m_index = n; }
@@ -104,9 +104,11 @@ int main()
   GlobalObjectManager::main_entered();
 #endif
   Debug(NAMESPACE_DEBUG::init());
+  Debug(if (!dc::statefultask.is_on()) dc::statefultask.on());
 
   static_assert(!std::is_destructible<Fibonacci>::value && std::has_virtual_destructor<Fibonacci>::value, "Class must have a protected virtual destuctor.");
 
+  AIEngine engine("main:engine");
   AIAuxiliaryThread::start();
 
   int const number = 10;
@@ -118,9 +120,9 @@ int main()
 
   while (flower->value() == 0)
   {
-    //Dout(dc::statefultask|flush_cf, "Calling gMainThreadEngine.mainloop()");
-    gMainThreadEngine.mainloop();
-    //Dout(dc::statefultask|flush_cf, "Returned from gMainThreadEngine.mainloop()");
+    //Dout(dc::statefultask|flush_cf, "Calling engine.mainloop()");
+    engine.mainloop();
+    //Dout(dc::statefultask|flush_cf, "Returned from engine.mainloop()");
     std::this_thread::sleep_for(std::chrono::microseconds(1));
   }
 
