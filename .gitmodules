@@ -18,6 +18,10 @@
 	path = statefultask
 	url = https://github.com/CarloWood/ai-statefultask.git
 	branch = master
+[submodule "statefultask-docs"]
+	path = statefultask/docs/html
+	url = https://github.com/CarloWood/ai-statefultask.git
+	branch = gh-pages
 [submodule "microbench"]
 	path = microbench
 	url = https://github.com/CarloWood/microbench.git
