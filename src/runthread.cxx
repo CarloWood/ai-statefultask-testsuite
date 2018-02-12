@@ -25,7 +25,7 @@ static void sayhello()
 }
 
 constexpr int capacity = 2;
-int s_task_queue;
+AIThreadPool::QueueHandle s_task_queue;
 
 class Task : public AIStatefulTask {
   protected:
