@@ -17,10 +17,8 @@ int main()
   std::atomic_int count{0};
   std::atomic_int empty{0};
   {
-    AIThreadPool thread_pool(3);
+    AIThreadPool thread_pool(6);
     AIThreadPool::QueueHandle queue_handle1 = thread_pool.new_queue(capacity);
-    AIThreadPool::QueueHandle queue_handle2 = thread_pool.new_queue(capacity);
-    AIThreadPool::QueueHandle queue_handle3 = thread_pool.new_queue(capacity);
     {
       auto queues_access = thread_pool.queues_read_access();
 
@@ -28,13 +26,13 @@ int main()
       for (int n = 0; n < 1000000; ++n)
       {
         // Note the reference (&) here (it won't compile without it).
-        auto& queue = thread_pool.get_queue(queues_access, queue_handle3);
+        auto& queue = thread_pool.get_queue(queues_access, queue_handle1);
         int length;
         {
           auto access = queue.producer_access();
           length = access.length();
           if (length < capacity) // Buffer not full?
-            access.move_in([&count](){ count++; });
+            access.move_in([&count](){ int c = count++; return c % 5 == 0; });
         }
         if (AI_UNLIKELY(length == capacity))
         {
