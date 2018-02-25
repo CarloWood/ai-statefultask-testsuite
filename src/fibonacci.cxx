@@ -13,8 +13,6 @@ class Fibonacci : public AIStatefulTask {
     int m_value;
     boost::intrusive_ptr<Fibonacci> m_smallest;
     boost::intrusive_ptr<Fibonacci> m_largest;
-    bool m_smallest_ready;
-    bool m_largest_ready;
 
   protected:
     typedef AIStatefulTask direct_base_type;    // The base class of this task.
@@ -29,15 +27,15 @@ class Fibonacci : public AIStatefulTask {
 
   public:
     static state_type constexpr max_state = Fibonacci_done + 1;
-    Fibonacci() : DEBUG_ONLY(AIStatefulTask(true),) m_index(0), m_value(0), m_smallest_ready(false), m_largest_ready(false) { }
+    Fibonacci() : DEBUG_ONLY(AIStatefulTask(true),) m_index(0), m_value(0) { }
 
     void set_number(int n) { m_index = n; }
     int value() const { return m_value; }
 
   protected: // The destructor must be protected.
     ~Fibonacci() override { }
-    char const* state_str_impl(state_type run_state) const;
-    void multiplex_impl(state_type run_state);
+    char const* state_str_impl(state_type run_state) const override;
+    void multiplex_impl(state_type run_state) override;
 };
 
 char const* Fibonacci::state_str_impl(state_type run_state) const
