@@ -2,7 +2,6 @@
 #include "debug.h"
 #include "statefultask/AIStatefulTask.h"
 #include "statefultask/AIEngine.h"
-#include "statefultask/AIAuxiliaryThread.h"
 #include "statefultask/AIPackagedTask.h"
 #include "statefultask/AIThreadPool.h"
 
@@ -25,7 +24,7 @@ static void sayhello()
 }
 
 constexpr int capacity = 2;
-AIThreadPool::QueueHandle s_task_queue;
+AIQueueHandle s_task_queue;
 
 class Task : public AIStatefulTask {
   protected:
@@ -123,13 +122,13 @@ int main()
   Debug(NAMESPACE_DEBUG::init());
 
   AIThreadPool thread_pool;
-  AIAuxiliaryThread::start();
+  AIQueueHandle high_priority_queue = thread_pool.new_queue(8);
 
   boost::intrusive_ptr<Task> task = new Task;
 
   // Start the test task.
   Dout(dc::statefultask|flush_cf, "Calling task->run()");
-  task->run();
+  task->run(high_priority_queue);
 
   // Mainloop.
   while (!task->finished())
@@ -139,6 +138,4 @@ int main()
   }
   if (!task->aborted())
     Dout(dc::notice, "The task finished successfully.");
-
-  AIAuxiliaryThread::stop();
 }

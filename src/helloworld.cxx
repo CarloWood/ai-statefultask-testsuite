@@ -1,7 +1,7 @@
 #include "sys.h"
 #include "debug.h"
 #include "statefultask/AIEngine.h"
-#include "statefultask/AIAuxiliaryThread.h"
+#include "statefultask/AIThreadPool.h"
 #include "utils/GlobalObjectManager.h"
 #include <iostream>
 #include <chrono>
@@ -63,8 +63,8 @@ class Bumper : public AIStatefulTask {
 
   protected: // The destructor must be protected.
     ~Bumper() override;
-    char const* state_str_impl(state_type run_state) const;
-    void multiplex_impl(state_type run_state);
+    char const* state_str_impl(state_type run_state) const override;
+    void multiplex_impl(state_type run_state) override;
 };
 
 HelloWorld::HelloWorld() : DEBUG_ONLY(AIStatefulTask(true),) m_bumped(false)
@@ -172,17 +172,18 @@ int main()
   static_assert(!std::is_destructible<HelloWorld>::value && std::has_virtual_destructor<HelloWorld>::value, "Class must have a protected virtual destuctor.");
 
   AIEngine engine("main:engine");
-  AIAuxiliaryThread::start();
+  AIThreadPool thread_pool;
+  AIQueueHandle high_priority_queue = thread_pool.new_queue(8);
 
   hello_world = new HelloWorld;
   bumper = new Bumper;
 
   Dout(dc::statefultask|flush_cf, "Calling hello_world->run()");
-  hello_world->run();
+  hello_world->run(high_priority_queue);
   Dout(dc::statefultask|flush_cf, "Returned from hello_world->run()");
 
   Dout(dc::statefultask|flush_cf, "Calling bumper->run()");
-  bumper->run();
+  bumper->run(high_priority_queue);
   Dout(dc::statefultask|flush_cf, "Returned from bumper->run()");
 
   for (int n = 0; n < 100 && number_of_tasks > 0; ++n)
@@ -192,6 +193,4 @@ int main()
     Dout(dc::statefultask|flush_cf, "Returned from engine.mainloop()");
     std::this_thread::sleep_for(std::chrono::microseconds(1));
   }
-
-  AIAuxiliaryThread::stop();
 }

@@ -21,7 +21,7 @@ int main()
   std::atomic_int full{0};
   {
     AIThreadPool thread_pool(6);
-    AIThreadPool::QueueHandle queue_handle1 = thread_pool.new_queue(capacity);
+    AIQueueHandle queue_handle1 = thread_pool.new_queue(capacity);
     {
       auto queues_access = thread_pool.queues_read_access();
 

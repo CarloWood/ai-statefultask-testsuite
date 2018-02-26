@@ -1,11 +1,13 @@
 #include "sys.h"
 #include "debug.h"
 #include "statefultask/AIEngine.h"
-#include "statefultask/AIAuxiliaryThread.h"
+#include "statefultask/AIThreadPool.h"
 #include "utils/GlobalObjectManager.h"
 #include <iostream>
 #include <chrono>
 #include <atomic>
+
+AIQueueHandle high_priority_queue;
 
 class Fibonacci : public AIStatefulTask {
   private:
@@ -70,8 +72,8 @@ void Fibonacci::multiplex_impl(state_type run_state)
       m_smallest = new Fibonacci;
       m_smallest->set_number(m_index - 2);
       // Start subtasks and wait for one or both to be finished.
-      m_largest->run(this, 1);          // Let both sub tasks signal the same bit.
-      m_smallest->run(this, 1);
+      m_largest->run(high_priority_queue, this, 1);          // Let both sub tasks signal the same bit.
+      m_smallest->run(high_priority_queue, this, 1);
       // Wait until one or both subtasks have finished (if they haven't already).
       set_state(Fibonacci_wait);
       /*fall-through*/
@@ -107,24 +109,24 @@ int main()
   static_assert(!std::is_destructible<Fibonacci>::value && std::has_virtual_destructor<Fibonacci>::value, "Class must have a protected virtual destuctor.");
 
   AIEngine engine("main:engine");
-  AIAuxiliaryThread::start();
+  AIThreadPool thread_pool;
+  high_priority_queue = thread_pool.new_queue(100);
 
   int const number = 10;
   boost::intrusive_ptr<Fibonacci> flower = new Fibonacci;
   flower->set_number(number);
 
   Dout(dc::statefultask|flush_cf, "Calling fibonacci->run()");
-  flower->run();
+  flower->run(&engine);
+  Dout(dc::statefultask|flush_cf, "Returned from fibonacci->run()");
 
   while (flower->value() == 0)
   {
-    //Dout(dc::statefultask|flush_cf, "Calling engine.mainloop()");
+    Dout(dc::statefultask|flush_cf, "Calling engine.mainloop()");
     engine.mainloop();
-    //Dout(dc::statefultask|flush_cf, "Returned from engine.mainloop()");
+    Dout(dc::statefultask|flush_cf, "Returned from engine.mainloop()");
     std::this_thread::sleep_for(std::chrono::microseconds(1));
   }
 
   std::cout << flower->value() << std::endl;
-
-  AIAuxiliaryThread::stop();
 }
