@@ -110,12 +110,14 @@ int main()
                   assert(new_v != old_v);
                   assert(is_sane(cache, t));
 
+#if 0
                   std::cout << "\nnew_v = " << new_v;
                   for (int c = 1; c < 5; ++c)
                     std::cout << "; cache[" << c << "] = " << cache[c];
                   for (int c = 0; c < 5; ++c)
                     std::cout << "; t[" << c << "] = " << t[c];
                   std::cout << std::endl;
+#endif
 
                   // Change to new value;
                   cache[1] = new_v;
@@ -143,15 +145,12 @@ int main()
                     int sv;
                     while (nv <= (sv = cache[si]) || t[i] != si)
                     {
-                      if (sv > nv)
+                      if (nv > sv)
                       {
-                        t[i] = in;
-                      }
-                      else
-                      {
-                        t[i] = in = si;
                         nv = sv;
+                        in = si;
                       }
+                      t[i] = in;
                       if (i == 0)
                         break;
                       si = t[s(i)];
