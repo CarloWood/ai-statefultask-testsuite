@@ -125,62 +125,40 @@ int main()
                   int i = 3;
                   int nv = new_v;
 
-                  std::cout << "interval = 1; i = 3; nv = " << nv << '\n';
-
                   // Execute the algorithm.
                   if (new_v < old_v)
                   {
-                    std::cout << "Executing algorithm for becoming less: testing if " << nv << " <= " << cache[t[i]] << "...";
                     while (nv <= cache[t[i]])
                     {
-                      std::cout << "yes\n";
-                      std::cout << "Setting t[" << i << "] = " << interval << '\n';
                       t[i] = interval;
                       if (i == 0)
-                      {
-                        std::cout << "Leaving because i == 0\n";
                         break;
-                      }
-                      std::cout << "Setting i = " << p(i) << '\n';
                       i = p(i);
                     }
-                    std::cout << "exiting loop\n";
                   }
                   else
                   {
-                    std::cout << "Executing algorithm for becoming larger.\n";
                     int in = interval;
-                    assert(in == 1);
                     int si = 3 - in;  // Sibling is always 2.
                     int sv;
-                    std::cout << "2. in = " << in << "; si = " << si << "; comparing !(" << cache[si] << " < " << nv << " && " << t[i] << " == " << si << ")\n";
                     while (nv <= (sv = cache[si]) || t[i] != si)
                     {
-                      std::cout << "3. Comparing " << sv << " > " << nv << '\n';
                       if (sv > nv)
                       {
-                        std::cout << "Setting t[" << i << "] = " << in << '\n';
                         t[i] = in;
                         if (i == 0)
                           break;
-                        si = t[s(i)];
-                        i = p(i);
                       }
                       else
                       {
-                        std::cout << "Setting t[" << i << "] = " << si << '\n';
                         t[i] = si;
                         if (i == 0)
                           break;
-                        std::cout << "Setting in = " << si << '\n';
                         in = si;
-                        std::cout << "Setting si = " << t[s(i)] << '\n';
-                        si = t[s(i)];
-                        std::cout << "nv = " << sv << '\n';
                         nv = sv;
-                        i = p(i);
                       }
-                      std::cout << "4. in = " << in << "; si = " << si << "; comparing !(" << cache[si] << " < " << nv << " && " << t[i] << " == " << si << ")\n";
+                      si = t[s(i)];
+                      i = p(i);
                     }
                   }
 
