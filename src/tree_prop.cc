@@ -154,7 +154,7 @@ int main()
                     int si = 3 - in;  // Sibling is always 2.
                     int sv;
                     std::cout << "2. in = " << in << "; si = " << si << "; comparing !(" << cache[si] << " < " << nv << " && " << t[i] << " == " << si << ")\n";
-                    while (!((sv = cache[si]) < nv && t[i] == si))
+                    while (nv <= (sv = cache[si]) || t[i] != si)
                     {
                       std::cout << "3. Comparing " << sv << " > " << nv << '\n';
                       if (sv > nv)
