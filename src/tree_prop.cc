@@ -146,17 +146,14 @@ int main()
                       if (sv > nv)
                       {
                         t[i] = in;
-                        if (i == 0)
-                          break;
                       }
                       else
                       {
-                        t[i] = si;
-                        if (i == 0)
-                          break;
-                        in = si;
+                        t[i] = in = si;
                         nv = sv;
                       }
+                      if (i == 0)
+                        break;
                       si = t[s(i)];
                       i = p(i);
                     }
