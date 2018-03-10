@@ -17,6 +17,12 @@ int s(int i)
   return (i == 1) ? 2 : 7 - i;
 }
 
+int interval_to_parent_index(int in)
+{
+  assert(in == 1);
+  return 3;
+}
+
 bool is_sane(std::array<int, 5> const& cache, int const* t)
 {
   if (t[4] != 3)
@@ -119,42 +125,48 @@ int main()
                   std::cout << std::endl;
 #endif
 
-                  // Change to new value;
-                  cache[1] = new_v;
-
                   // Prepare variables.
-                  int interval = 1;
-                  int i = 3;
-                  int nv = new_v;
+                  int interval = 1;                                             // interval is the interval that changed.
+                  // Change to new value;
+                  cache[interval] = new_v;                                      // Here it does.
 
-                  // Execute the algorithm.
-                  if (new_v < old_v)
+                  if (new_v < old_v)                                            // The value can either become less or become greater.
                   {
-                    while (nv <= cache[t[i]])
+                    // Execute the algorithm for cache value becoming less.
+                    int nv = cache[interval];                                   // Let 'nv' be the new value.
+                    int i = interval_to_parent_index(interval);                 // Let 'i' be the index of the parent node in the tree above 'interval'.
+                    while (nv <= cache[t[i]])                                   // t[i] is the content of that node. cache[t[i]] is the value that is represents.
                     {
-                      t[i] = interval;
-                      if (i == 0)
+                      t[i] = interval;                                          // Update that tree node.
+                      if (i == 0)                                               // If this was the top-most node in the tree then we're done.
                         break;
-                      i = p(i);
+                      i = p(i);                                                 // Set 'i' to be the index of the parent node in the tree above 'i'.
                     }
                   }
                   else
                   {
-                    int in = interval;
-                    int si = 3 - in;  // Sibling is always 2.
-                    int sv;
-                    while (nv <= (sv = cache[si]) || t[i] != si)
+                    // Execute the algorithm for cache value becoming greater.
+                    int nv = cache[interval];                                   // Let 'nv' be the new value.
+                    int i = interval_to_parent_index(interval);                 // Let 'i' be the index of the parent node in the tree above 'interval'.
+
+                    int in = interval;                                          // Let 'in' be the interval whose value is changed with respect to t[i].
+                    int si = 3 - in;                                    // Let 'si' be the interval of the current sibling of in.
+                    for(;;)
                     {
-                      if (nv > sv)
+                      int sv = cache[si];
+                      bool stays_smaller = nv <= sv;
+                      if (!stays_smaller)
                       {
+                        if (t[i] == si)
+                          break;
                         nv = sv;
                         in = si;
                       }
-                      t[i] = in;
-                      if (i == 0)
+                      t[i] = in;                                                // Update the tree.
+                      if (i == 0)                                               // If this was the top-most node in the tree then we're done.
                         break;
-                      si = t[s(i)];
-                      i = p(i);
+                      si = t[s(i)];                                     // Update the sibling interval.
+                      i = p(i);                                                 // Set 'i' to be the index of the parent node in the tree above 'i'.
                     }
                   }
 
