@@ -160,7 +160,7 @@ struct Timer
       std::cout << "ERROR: Expiring a timer with m_expiration_point = " << m_expiration_point.time_since_epoch().count() << "; should be: " << last_time_point.time_since_epoch().count() << std::endl;
       assert(last_time_point == m_expiration_point);
     }
-    std::cout << /*m_sequence_number <<*/ " : call_back()\t\t\t" << m_expiration_point.time_since_epoch().count() << "\n";
+    //std::cout << /*m_sequence_number <<*/ " : call_back()\t\t\t" << m_expiration_point.time_since_epoch().count() << "\n";
     m_call_back();
   }
 
@@ -460,7 +460,7 @@ class RunningTimers<INTERVALS, 2>
 
   void decrease_cache(interval_index interval, time_point tp)
   {
-    std::cout << "Calling decrease_cache(" << interval << ", " << tp.time_since_epoch().count() << ")" << std::endl;
+    //std::cout << "Calling decrease_cache(" << interval << ", " << tp.time_since_epoch().count() << ")" << std::endl;
     assert(tp <= m_cache[interval]);
     m_cache[interval] = tp;                             // Replace no_timer with tp.
     // We just put a SMALLER value in the cache at position interval than what there was before.
@@ -478,7 +478,7 @@ class RunningTimers<INTERVALS, 2>
 
   void increase_cache(interval_index interval, time_point tp)
   {
-    std::cout << "Calling increase_cache(" << interval << ", " << tp.time_since_epoch().count() << ")" << std::endl;
+    //std::cout << "Calling increase_cache(" << interval << ", " << tp.time_since_epoch().count() << ")" << std::endl;
     assert(tp >= m_cache[interval]);
     m_cache[interval] = tp;
 
@@ -660,8 +660,8 @@ RunningTimers<Intervals, 2> running_timers2;
 template<class INTERVALS>
 void RunningTimers<INTERVALS, 2>::sanity_check() const
 {
-  static int count;
-  std::cout << "sanity check #" << ++count << std::endl;
+  //static int count;
+  //std::cout << "sanity check #" << ++count << std::endl;
 
   // Every cache entry needs to have either no_timer in it when the corresponding queue is empty, or the first entry of that queue.
   for (interval_index interval = 0; interval < tree_size; ++interval)
@@ -693,10 +693,10 @@ void RunningTimers<INTERVALS, 2>::sanity_check() const
 template<class INTERVALS>
 void RunningTimers<INTERVALS, 2>::expire_next()
 {
-  std::cout << "Calling expire_next()" << std::endl;
+  //std::cout << "Calling expire_next()" << std::endl;
   sanity_check();
   int const interval = m_tree[1];                             // The interval of the timer that will expire next.
-  std::cout << "  m_tree[1] = " << interval << '\n';
+  //std::cout << "  m_tree[1] = " << interval << '\n';
   Queue& queue{m_queues[interval]};
   assert(!queue.empty());
   RunningTimer timer{queue.pop()};
@@ -705,7 +705,7 @@ void RunningTimers<INTERVALS, 2>::expire_next()
   increase_cache(interval, queue.next_expiration_point());
   //running_timers2.print();
 
-  std::cout << "  calling expire on timer [" << timer.m_timer->m_sequence_number << "]" << std::endl;
+  //std::cout << "  calling expire on timer [" << timer.m_timer->m_sequence_number << "]" << std::endl;
   timer.m_timer->expire();
   //running_timers2.print();
   sanity_check();
@@ -724,7 +724,7 @@ void update_running_timer()
 template<>
 void Timer<0>::start(interval_index interval, std::function<void()> call_back, int n)
 {
-  std::cout << "Calling Timer::start(interval = " << interval << ", ..., n = " << n << ") with this = [" << m_sequence_number << "]" << std::endl;
+  //std::cout << "Calling Timer::start(interval = " << interval << ", ..., n = " << n << ") with this = [" << m_sequence_number << "]" << std::endl;
   // Call stop() first.
   assert(!m_handle.is_running());
   m_expiration_point = /*clock_type::*/now(n) + Intervals::durations[interval];
@@ -732,7 +732,7 @@ void Timer<0>::start(interval_index interval, std::function<void()> call_back, i
   std::lock_guard<std::mutex> lk(running_timers_mutex);
   m_handle = running_timers0.push(interval, this);
 
-  std::cout << "  expires at " << m_expiration_point.time_since_epoch().count() << std::endl;
+  //std::cout << "  expires at " << m_expiration_point.time_since_epoch().count() << std::endl;
   if (running_timers0.is_current(m_handle))
     update_running_timer();
 }
@@ -740,7 +740,7 @@ void Timer<0>::start(interval_index interval, std::function<void()> call_back, i
 template<>
 void Timer<1>::start(interval_index interval, std::function<void()> call_back, int n)
 {
-  std::cout << "Calling Timer::start(interval = " << interval << ", ..., n = " << n << ") with this = [" << m_sequence_number << "]" << std::endl;
+  //std::cout << "Calling Timer::start(interval = " << interval << ", ..., n = " << n << ") with this = [" << m_sequence_number << "]" << std::endl;
   // Call stop() first.
   assert(!m_handle.is_running());
   m_expiration_point = /*clock_type::*/now(n) + Intervals::durations[interval];
@@ -749,7 +749,7 @@ void Timer<1>::start(interval_index interval, std::function<void()> call_back, i
   m_handle = running_timers1.push(interval, this);
 
   m_cancelled_1 = false;
-  std::cout << "  expires at " << m_expiration_point.time_since_epoch().count() << std::endl;
+  //std::cout << "  expires at " << m_expiration_point.time_since_epoch().count() << std::endl;
   if (running_timers1.is_current(m_handle))
     update_running_timer();
 }
@@ -757,7 +757,7 @@ void Timer<1>::start(interval_index interval, std::function<void()> call_back, i
 template<>
 void Timer<2>::start(interval_index interval, std::function<void()> call_back, int n)
 {
-  std::cout << "Calling Timer::start(interval = " << interval << ", ..., n = " << n << ") with this = [" << m_sequence_number << "]" << std::endl;
+  //std::cout << "Calling Timer::start(interval = " << interval << ", ..., n = " << n << ") with this = [" << m_sequence_number << "]" << std::endl;
   // Call stop() first.
   assert(!m_handle.is_running());
   m_expiration_point = /*clock_type::*/now(n) + Intervals::durations[interval];
@@ -765,7 +765,7 @@ void Timer<2>::start(interval_index interval, std::function<void()> call_back, i
   std::lock_guard<std::mutex> lk(running_timers_mutex);
   m_handle = running_timers2.push(interval, this);
 
-  std::cout << "  expires at " << m_expiration_point.time_since_epoch().count() << std::endl;
+  //std::cout << "  expires at " << m_expiration_point.time_since_epoch().count() << std::endl;
   if (running_timers2.is_current(m_handle))
     update_running_timer();
   //running_timers2.print();
@@ -783,8 +783,8 @@ void Timer<0>::stop()
     if (update)
       update_running_timer();
   }
-  else
-    std::cout << "NOT running!\n";
+  //else
+  //  std::cout << "NOT running!\n";
 }
 
 template<>
@@ -803,8 +803,8 @@ void Timer<1>::stop()
     if (update)
       update_running_timer();
   }
-  else
-    std::cout << "NOT running!\n";
+  //else
+  //  std::cout << "NOT running!\n";
 }
 
 template<>
@@ -821,8 +821,8 @@ void Timer<2>::stop()
     if (update)
       update_running_timer();
   }
-  else
-    std::cout << "NOT running!\n";
+  //else
+  //  std::cout << "NOT running!\n";
   //running_timers2.print();
 }
 
