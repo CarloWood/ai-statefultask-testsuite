@@ -25,7 +25,7 @@ using ticks = time_point::rep;
 using microseconds = std::chrono::microseconds;
 using milliseconds = std::chrono::milliseconds;
 using seconds = std::chrono::seconds;
-int constexpr loopsize = 250000; //10000000;
+int constexpr loopsize = 10000000;
 
 // In order to be reproducable, invent out own 'now()' function.
 // Since we're aiming at adding loopsize in 10 second, we need
@@ -347,6 +347,13 @@ class Queue
     return m_running_timers.front().m_timer == nullptr;
   }
 
+  time_point front() const
+  {
+    if (m_running_timers.empty())
+      return no_timer;
+    return m_running_timers.front().m_timer->get_expiration_point();
+  }
+
   // Return the expiration point for the related interval that will expire next.
   time_point next_expiration_point()
   {
@@ -365,6 +372,7 @@ class Queue
 
   // Only used for testing.
   size_t size() const { return m_running_timers.size(); }
+
   int cancelled_in_queue() const
   {
     int sz = 0;
@@ -512,10 +520,12 @@ class RunningTimers<INTERVALS, 2>
   Handle<2> push(interval_index interval, Timer<2>* timer)
   {
     assert(0 <= interval && interval < INTERVALS::number);
+    sanity_check();
     bool empty = m_queues[interval].empty();
     uint64_t sequence = m_queues[interval].push(timer);
     if (empty)
       decrease_cache(interval, timer->get_expiration_point());
+    sanity_check();
     return {interval, sequence};
   }
 
@@ -539,21 +549,29 @@ class RunningTimers<INTERVALS, 2>
   bool cancel(Handle<2> const handle)
   {
     assert(handle.is_running());
+    //std::cout << "Calling RunningTimers<2>::cancel({[" << handle.m_sequence << "], in=" << handle. m_interval << "})\n";
+    //std::cout << "Before:\n";
+    //print();
+    sanity_check();
     // Cancel the timer associated with handle.
     Queue& queue{m_queues[handle.m_interval]};
     if (!queue.cancel(handle.m_sequence))       // Not the current timer for this interval?
+    {
+      //std::cout << "After:\n";
+      //print();
+      sanity_check();
       return false;                             // Then not the current timer.
+    }
     // The cancelled timer is at the front of the queue. Remove it, and any subsequent cancelled timers.
     do
     {
       queue.pop_cancelled_timer();
-      if (queue.empty())
-      {
-        increase_cache(handle.m_interval, no_timer);// There are no timers left with this interval.
-        break;
-      }
     }
-    while (queue.front_is_cancelled());             // Is the next timer also cancelled?
+    while (!queue.empty() && queue.front_is_cancelled());       // Is the next timer also cancelled?
+    increase_cache(handle.m_interval, queue.front());
+    //std::cout << "After:\n";
+    //print();
+    sanity_check();
     // Return true if the cancelled timer is the currently running timer.
     return m_tree[1] == handle.m_interval;
   }
@@ -614,6 +632,8 @@ class RunningTimers<INTERVALS, 2>
     }
     std::cout << std::endl;
   }
+
+  void sanity_check() const;
 };
 
 template<class INTERVALS>
@@ -629,6 +649,7 @@ RunningTimers<INTERVALS, 2>::RunningTimers()
   {
     m_tree[index] = m_tree[left_child_of(index)];
   }
+  sanity_check();
 }
 
 std::mutex running_timers_mutex;
@@ -637,9 +658,43 @@ RunningTimers<Intervals, 1> running_timers1;
 RunningTimers<Intervals, 2> running_timers2;
 
 template<class INTERVALS>
+void RunningTimers<INTERVALS, 2>::sanity_check() const
+{
+  static int count;
+  std::cout << "sanity check #" << ++count << std::endl;
+
+  // Every cache entry needs to have either no_timer in it when the corresponding queue is empty, or the first entry of that queue.
+  for (interval_index interval = 0; interval < tree_size; ++interval)
+  {
+    if (interval >= INTERVALS::number)
+      assert(m_cache[interval] == no_timer);
+    else
+      assert(m_cache[interval] == m_queues[interval].front());
+  }
+  for (interval_index interval = 0; interval < tree_size; interval += 2)
+  {
+    int ti = interval_to_parent_index(interval);
+    assert((m_tree[ti] & ~1) == interval);
+    assert(m_cache[m_tree[ti] ^ 1] >= m_cache[m_tree[ti]]);
+  }
+  for (int ti = tree_size - 1; ti > 1; --ti)
+  {
+    int pi = parent_of(ti);
+    int si = sibling_of(ti);
+    int pin = m_tree[pi];
+    int in = m_tree[ti];
+    int sin = m_tree[si];
+    assert(pin == in || pin == sin);
+    int oin = in + sin - pin;
+    assert(m_cache[pin] <= m_cache[oin]);
+  }
+}
+
+template<class INTERVALS>
 void RunningTimers<INTERVALS, 2>::expire_next()
 {
   std::cout << "Calling expire_next()" << std::endl;
+  sanity_check();
   int const interval = m_tree[1];                             // The interval of the timer that will expire next.
   std::cout << "  m_tree[1] = " << interval << '\n';
   Queue& queue{m_queues[interval]};
@@ -648,11 +703,12 @@ void RunningTimers<INTERVALS, 2>::expire_next()
 
   // Execute the algorithm for cache value becoming greater.
   increase_cache(interval, queue.next_expiration_point());
-  running_timers2.print();
+  //running_timers2.print();
 
   std::cout << "  calling expire on timer [" << timer.m_timer->m_sequence_number << "]" << std::endl;
   timer.m_timer->expire();
-  running_timers2.print();
+  //running_timers2.print();
+  sanity_check();
 }
 
 // I'm assuming that end() doesn't invalidate, ever.
@@ -712,7 +768,7 @@ void Timer<2>::start(interval_index interval, std::function<void()> call_back, i
   std::cout << "  expires at " << m_expiration_point.time_since_epoch().count() << std::endl;
   if (running_timers2.is_current(m_handle))
     update_running_timer();
-  running_timers2.print();
+  //running_timers2.print();
 }
 
 template<>
@@ -767,7 +823,7 @@ void Timer<2>::stop()
   }
   else
     std::cout << "NOT running!\n";
-  running_timers2.print();
+  //running_timers2.print();
 }
 
 int extra_timers{0};
