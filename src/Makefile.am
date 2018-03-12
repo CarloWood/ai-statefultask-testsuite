@@ -59,7 +59,7 @@ threadpool_LDADD = ../statefultask/libstatefultask.la ../threadsafe/libthreadsaf
 cv_wait_CXXFLAGS = -O3
 cv_wait_LDFLAGS = -pthread
 
-timer_test_CXXFLAGS = -g
+timer_test_CXXFLAGS = -O3
 timer_test_LDFLAGS = -pthread
 
 # --------------- Maintainer's Section

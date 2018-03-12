@@ -154,8 +154,7 @@ int main()
                     for(;;)
                     {
                       int sv = cache[si];
-                      bool stays_smaller = nv <= sv;
-                      if (!stays_smaller)
+                      if (nv > sv)
                       {
                         if (t[i] == si)
                           break;
