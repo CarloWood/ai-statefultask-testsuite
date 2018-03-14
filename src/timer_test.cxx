@@ -113,20 +113,27 @@ struct Handle<1>
   }
 };
 
-template<>
-struct Handle<2>
+struct TimerHandle
 {
   uint64_t m_sequence;
   interval_index m_interval;    // Interval index; -1 means: not running.
 
   // Default constructor. Construct a handle for a "not running timer".
-  Handle() : m_interval(-1) { }
+  TimerHandle() : m_interval(-1) { }
 
   // Construct a Handle for a running timer with interval \a interval and sequence \sequence.
-  constexpr Handle(interval_index interval, uint64_t sequence) : m_sequence(sequence), m_interval(interval) { }
+  constexpr TimerHandle(interval_index interval, uint64_t sequence) : m_sequence(sequence), m_interval(interval) { }
 
   bool is_running() const { return m_interval >= 0; }
   void set_not_running() { m_interval = -1; }
+};
+
+template<>
+struct Handle<2> : public TimerHandle
+{
+  Handle() : TimerHandle() { }
+  constexpr Handle(interval_index interval, uint64_t sequence) : TimerHandle(interval, sequence) { }
+  Handle(TimerHandle handle) : TimerHandle(handle) { }
 };
 
 static time_point last_time_point;
@@ -499,13 +506,13 @@ class RunningTimers<INTERVALS, 2>
   void expire_next();
 
   // Return true if \a handle is the next timer to expire.
-  bool is_current(Handle<2> const& handle) const
+  bool is_current(TimerHandle const& handle) const
   {
     return m_tree[1] == handle.m_interval && m_queues[handle.m_interval].is_current(handle.m_sequence);
   }
 
   // Add \a timer to the list of running timers, using \a interval as timeout.
-  Handle<2> push(interval_index interval, Timer<2>* timer)
+  TimerHandle push(interval_index interval, Timer<2>* timer)
   {
     assert(0 <= interval && interval < INTERVALS::number);
     sanity_check();
@@ -534,7 +541,7 @@ class RunningTimers<INTERVALS, 2>
     return sz;
   }
 
-  bool cancel(Handle<2> const handle)
+  bool cancel(TimerHandle const handle)
   {
     assert(handle.is_running());
     //std::cout << "Calling RunningTimers<2>::cancel({[" << handle.m_sequence << "], in=" << handle. m_interval << "})\n";
