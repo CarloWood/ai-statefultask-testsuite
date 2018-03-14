@@ -68,19 +68,19 @@ template<int implementation>
 struct TimerImp;
 
 template<int implementation>
-struct Handle;
+struct TimerHandleImp;
 
 template<>
-struct Handle<0>
+struct TimerHandleImp<0>
 {
   static std::multimap<time_point, TimerImp<0>*>::iterator const end;
   std::multimap<time_point, TimerImp<0>*>::iterator m_iter;
 
   // Default constructor. Construct a handle for a "not running timer".
-  Handle() : m_iter(end) { }
+  TimerHandleImp() : m_iter(end) { }
 
   // Construct a Handle that points to a given iterator.
-  Handle(std::multimap<time_point, TimerImp<0>*>::iterator iter) : m_iter(iter) { }
+  TimerHandleImp(std::multimap<time_point, TimerImp<0>*>::iterator iter) : m_iter(iter) { }
 
   bool is_running() const { return m_iter != end; }
 
@@ -94,15 +94,15 @@ struct Handle<0>
 };
 
 template<>
-struct Handle<1>
+struct TimerHandleImp<1>
 {
   TimerImp<1>* m_timer;
 
   // Default constructor. Construct a handle for a "not running timer".
-  Handle() : m_timer(nullptr) { }
+  TimerHandleImp() : m_timer(nullptr) { }
 
   // Construct a Handle that points to a given timer.
-  Handle(TimerImp<1>* timer) : m_timer(timer) { }
+  TimerHandleImp(TimerImp<1>* timer) : m_timer(timer) { }
 
   bool is_running() const { return m_timer; }
 
@@ -129,11 +129,11 @@ struct TimerHandle
 };
 
 template<>
-struct Handle<2> : public TimerHandle
+struct TimerHandleImp<2> : public TimerHandle
 {
-  Handle() : TimerHandle() { }
-  constexpr Handle(interval_index interval, uint64_t sequence) : TimerHandle(interval, sequence) { }
-  Handle(TimerHandle handle) : TimerHandle(handle) { }
+  TimerHandleImp() : TimerHandle() { }
+  constexpr TimerHandleImp(interval_index interval, uint64_t sequence) : TimerHandle(interval, sequence) { }
+  TimerHandleImp(TimerHandle handle) : TimerHandle(handle) { }
 };
 
 static time_point last_time_point;
@@ -141,7 +141,7 @@ static time_point last_time_point;
 template<int implementation>
 struct TimerImp
 {
-  Handle<implementation> m_handle;              // If m_handle.is_running() returns true then this timer is running
+  TimerHandleImp<implementation> m_handle;              // If m_handle.is_running() returns true then this timer is running
                                                 //   and m_handle can be used to find the corresponding Timer object.
   time_point m_expiration_point;                // The time at which we should expire (only valid when this is a running timer).
   std::function<void()> m_call_back;            // The callback function (only valid when this is a running timer).
@@ -192,14 +192,14 @@ class RunningTimers<INTERVALS, 0>
 
  public:
   // Return true if \a handle is the next timer to expire.
-  bool is_current(Handle<0> const& handle) const
+  bool is_current(TimerHandleImp<0> const& handle) const
   {
     assert(handle.is_running());
     return handle.m_iter == m_map.begin();
   }
 
   // Add \a timer to the list of running timers, using \a interval as timeout.
-  Handle<0> push(int, TimerImp<0>* timer)
+  TimerHandleImp<0> push(int, TimerImp<0>* timer)
   {
     return m_map.emplace(timer->get_expiration_point(), timer);
   }
@@ -249,13 +249,13 @@ class RunningTimers<INTERVALS, 1>
 
  public:
   // Return true if \a handle is the next timer to expire.
-  bool is_current(Handle<1> const& handle) const
+  bool is_current(TimerHandleImp<1> const& handle) const
   {
     return handle.m_timer == m_pqueue.top().second;
   }
 
   // Add \a timer to the list of running timers, using \a interval as timeout.
-  Handle<1> push(int, TimerImp<1>* timer)
+  TimerHandleImp<1> push(int, TimerImp<1>* timer)
   {
     m_pqueue.emplace(timer->get_expiration_point(), timer);
     return timer;
@@ -708,7 +708,7 @@ void RunningTimers<INTERVALS, 2>::expire_next()
 
 // I'm assuming that end() doesn't invalidate, ever.
 //static
-std::multimap<time_point, TimerImp<0>*>::iterator const Handle<0>::end{running_timers0.end()};
+std::multimap<time_point, TimerImp<0>*>::iterator const TimerHandleImp<0>::end{running_timers0.end()};
 
 void update_running_timer()
 {
