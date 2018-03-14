@@ -65,7 +65,7 @@ void expire1() { expire_count[1]++; }
 void expire2() { expire_count[2]++; }
 
 template<int implementation>
-struct Timer;
+struct TimerImp;
 
 template<int implementation>
 struct Handle;
@@ -73,14 +73,14 @@ struct Handle;
 template<>
 struct Handle<0>
 {
-  static std::multimap<time_point, Timer<0>*>::iterator const end;
-  std::multimap<time_point, Timer<0>*>::iterator m_iter;
+  static std::multimap<time_point, TimerImp<0>*>::iterator const end;
+  std::multimap<time_point, TimerImp<0>*>::iterator m_iter;
 
   // Default constructor. Construct a handle for a "not running timer".
   Handle() : m_iter(end) { }
 
   // Construct a Handle that points to a given iterator.
-  Handle(std::multimap<time_point, Timer<0>*>::iterator iter) : m_iter(iter) { }
+  Handle(std::multimap<time_point, TimerImp<0>*>::iterator iter) : m_iter(iter) { }
 
   bool is_running() const { return m_iter != end; }
 
@@ -96,13 +96,13 @@ struct Handle<0>
 template<>
 struct Handle<1>
 {
-  Timer<1>* m_timer;
+  TimerImp<1>* m_timer;
 
   // Default constructor. Construct a handle for a "not running timer".
   Handle() : m_timer(nullptr) { }
 
   // Construct a Handle that points to a given timer.
-  Handle(Timer<1>* timer) : m_timer(timer) { }
+  Handle(TimerImp<1>* timer) : m_timer(timer) { }
 
   bool is_running() const { return m_timer; }
 
@@ -139,7 +139,7 @@ struct Handle<2> : public TimerHandle
 static time_point last_time_point;
 
 template<int implementation>
-struct Timer
+struct TimerImp
 {
   Handle<implementation> m_handle;              // If m_handle.is_running() returns true then this timer is running
                                                 //   and m_handle can be used to find the corresponding Timer object.
@@ -149,8 +149,8 @@ struct Timer
   int const m_sequence_number;
   bool m_cancelled_1;                           // Only used when implementation == 1.
 
-  Timer() : m_sequence_number(++s_sequence_number), m_cancelled_1(false) { }
-  ~Timer() { stop(); }
+  TimerImp() : m_sequence_number(++s_sequence_number), m_cancelled_1(false) { }
+  ~TimerImp() { stop(); }
 
   void start(interval_index interval, std::function<void()> call_back, int n);
   void stop();
@@ -179,7 +179,7 @@ struct Timer
 
 //static
 template<int implementation>
-int Timer<implementation>::s_sequence_number = 0;
+int TimerImp<implementation>::s_sequence_number = 0;
 
 template<class INTERVALS, int implementation>
 class RunningTimers;
@@ -188,7 +188,7 @@ template<class INTERVALS>
 class RunningTimers<INTERVALS, 0>
 {
  private:
-  std::multimap<time_point, Timer<0>*> m_map;
+  std::multimap<time_point, TimerImp<0>*> m_map;
 
  public:
   // Return true if \a handle is the next timer to expire.
@@ -199,7 +199,7 @@ class RunningTimers<INTERVALS, 0>
   }
 
   // Add \a timer to the list of running timers, using \a interval as timeout.
-  Handle<0> push(int, Timer<0>* timer)
+  Handle<0> push(int, TimerImp<0>* timer)
   {
     return m_map.emplace(timer->get_expiration_point(), timer);
   }
@@ -213,7 +213,7 @@ class RunningTimers<INTERVALS, 0>
   // For debugging. Expire the next timer.
   void expire_next()
   {
-    Timer<0>* timer;
+    TimerImp<0>* timer;
     do
     {
       auto b = m_map.begin();
@@ -231,7 +231,7 @@ class RunningTimers<INTERVALS, 0>
     while (!timer);
   }
 
-  std::multimap<time_point, Timer<0>*>::iterator end()
+  std::multimap<time_point, TimerImp<0>*>::iterator end()
   {
     return m_map.end();
   }
@@ -241,7 +241,7 @@ template<class INTERVALS>
 class RunningTimers<INTERVALS, 1>
 {
  private:
-   using data_t = std::pair<time_point, Timer<1>*>;
+   using data_t = std::pair<time_point, TimerImp<1>*>;
    struct Compare {
      bool operator()(data_t const& d1, data_t const& d2) { return d1.first > d2.first; }
    };
@@ -255,7 +255,7 @@ class RunningTimers<INTERVALS, 1>
   }
 
   // Add \a timer to the list of running timers, using \a interval as timeout.
-  Handle<1> push(int, Timer<1>* timer)
+  Handle<1> push(int, TimerImp<1>* timer)
   {
     m_pqueue.emplace(timer->get_expiration_point(), timer);
     return timer;
@@ -270,7 +270,7 @@ class RunningTimers<INTERVALS, 1>
   // For debugging. Expire the next timer.
   void expire_next()
   {
-    Timer<1>* timer;
+    TimerImp<1>* timer;
     do
     {
       assert(!m_pqueue.empty());
@@ -296,7 +296,7 @@ class Queue
 {
  private:
   uint64_t m_sequence_offset;                   // The number of timers that were popped from m_running_timers, minus 1.
-  std::deque<Timer<2>*> m_running_timers;       // All running timers for the related interval.
+  std::deque<TimerImp<2>*> m_running_timers;       // All running timers for the related interval.
 
  public:
   // Construct an empty queue.
@@ -308,17 +308,17 @@ class Queue
 
   // Add \a timer to the end of the queue. Returns an ever increasing sequence number.
   // The first sequence number returned is 0, then 1, 2, 3, ... etc.
-  uint64_t push(Timer<2>* timer)
+  uint64_t push(TimerImp<2>* timer)
   {
     m_running_timers.emplace_back(timer);
     return m_running_timers.size() - 1 + m_sequence_offset;
   }
 
   // Remove one timer from the front of the queue and return it.
-  Timer<2>* pop()
+  TimerImp<2>* pop()
   {
     assert(!m_running_timers.empty());
-    Timer<2>* running_timer{m_running_timers.front()};
+    TimerImp<2>* running_timer{m_running_timers.front()};
     ++m_sequence_offset;
     m_running_timers.pop_front();
     return running_timer;
@@ -359,7 +359,7 @@ class Queue
   {
     while (!m_running_timers.empty())
     {
-      Timer<2>* timer = m_running_timers.front();
+      TimerImp<2>* timer = m_running_timers.front();
       if (timer)
         return timer->get_expiration_point();
       pop_cancelled_timer();
@@ -386,7 +386,7 @@ class Queue
     std::cout << "[offset:" << m_sequence_offset << "] ";
     for (auto timer : m_running_timers)
     {
-      Timer<2>* t = timer;
+      TimerImp<2>* t = timer;
       if (t)
         std::cout << " [" << t->m_sequence_number << ']' << t->get_expiration_point().time_since_epoch().count();
       else
@@ -512,7 +512,7 @@ class RunningTimers<INTERVALS, 2>
   }
 
   // Add \a timer to the list of running timers, using \a interval as timeout.
-  TimerHandle push(interval_index interval, Timer<2>* timer)
+  TimerHandle push(interval_index interval, TimerImp<2>* timer)
   {
     assert(0 <= interval && interval < INTERVALS::number);
     sanity_check();
@@ -694,7 +694,7 @@ void RunningTimers<INTERVALS, 2>::expire_next()
   //std::cout << "  m_tree[1] = " << interval << '\n';
   Queue& queue{m_queues[interval]};
   assert(!queue.empty());
-  Timer<2>* timer{queue.pop()};
+  TimerImp<2>* timer{queue.pop()};
 
   // Execute the algorithm for cache value becoming greater.
   increase_cache(interval, queue.next_expiration_point());
@@ -708,7 +708,7 @@ void RunningTimers<INTERVALS, 2>::expire_next()
 
 // I'm assuming that end() doesn't invalidate, ever.
 //static
-std::multimap<time_point, Timer<0>*>::iterator const Handle<0>::end{running_timers0.end()};
+std::multimap<time_point, TimerImp<0>*>::iterator const Handle<0>::end{running_timers0.end()};
 
 void update_running_timer()
 {
@@ -717,7 +717,7 @@ void update_running_timer()
 }
 
 template<>
-void Timer<0>::start(interval_index interval, std::function<void()> call_back, int n)
+void TimerImp<0>::start(interval_index interval, std::function<void()> call_back, int n)
 {
   //std::cout << "Calling Timer::start(interval = " << interval << ", ..., n = " << n << ") with this = [" << m_sequence_number << "]" << std::endl;
   // Call stop() first.
@@ -733,7 +733,7 @@ void Timer<0>::start(interval_index interval, std::function<void()> call_back, i
 }
 
 template<>
-void Timer<1>::start(interval_index interval, std::function<void()> call_back, int n)
+void TimerImp<1>::start(interval_index interval, std::function<void()> call_back, int n)
 {
   //std::cout << "Calling Timer::start(interval = " << interval << ", ..., n = " << n << ") with this = [" << m_sequence_number << "]" << std::endl;
   // Call stop() first.
@@ -750,7 +750,7 @@ void Timer<1>::start(interval_index interval, std::function<void()> call_back, i
 }
 
 template<>
-void Timer<2>::start(interval_index interval, std::function<void()> call_back, int n)
+void TimerImp<2>::start(interval_index interval, std::function<void()> call_back, int n)
 {
   //std::cout << "Calling Timer::start(interval = " << interval << ", ..., n = " << n << ") with this = [" << m_sequence_number << "]" << std::endl;
   // Call stop() first.
@@ -767,7 +767,7 @@ void Timer<2>::start(interval_index interval, std::function<void()> call_back, i
 }
 
 template<>
-void Timer<0>::stop()
+void TimerImp<0>::stop()
 {
   //std::cout << "Calling Timer::stop() with this = [" << m_sequence_number << "]" << std::endl;
   if (m_handle.is_running())
@@ -783,7 +783,7 @@ void Timer<0>::stop()
 }
 
 template<>
-void Timer<1>::stop()
+void TimerImp<1>::stop()
 {
   //std::cout << "Calling Timer::stop() with this = [" << m_sequence_number << "]" << std::endl;
   if (m_handle.is_running())
@@ -803,7 +803,7 @@ void Timer<1>::stop()
 }
 
 template<>
-void Timer<2>::stop()
+void TimerImp<2>::stop()
 {
   //std::cout << "Calling Timer::stop() with this = [" << m_sequence_number << "]" << std::endl;
   if (m_handle.is_running())
@@ -823,13 +823,13 @@ void Timer<2>::stop()
 
 int extra_timers{0};
 template<int implementation>
-std::vector<Timer<implementation>> timers;
+std::vector<TimerImp<implementation>> timers;
 template<>
-std::vector<Timer<0>> timers<0>;
+std::vector<TimerImp<0>> timers<0>;
 template<>
-std::vector<Timer<1>> timers<1>;
+std::vector<TimerImp<1>> timers<1>;
 template<>
-std::vector<Timer<2>> timers<2>;
+std::vector<TimerImp<2>> timers<2>;
 
 void generate()
 {
@@ -878,9 +878,9 @@ void generate()
   int constexpr ne = std::min(131215, loopsize);
   for (int n = 0; n < ne; ++n)
   {
-    Timer<0>& timer0(timers<0>[nt]);
-    Timer<1>& timer1(timers<1>[nt]);
-    Timer<2>& timer2(timers<2>[nt]);
+    TimerImp<0>& timer0(timers<0>[nt]);
+    TimerImp<1>& timer1(timers<1>[nt]);
+    TimerImp<2>& timer2(timers<2>[nt]);
     ++nt;
     int interval = random_intervals[n];
 
@@ -910,9 +910,9 @@ void generate()
   int m = 131215 * fraction;
   for (int n = 131215; n < loopsize; ++n)
   {
-    Timer<0>& timer0(timers<0>[nt]);
-    Timer<1>& timer1(timers<1>[nt]);
-    Timer<2>& timer2(timers<2>[nt]);
+    TimerImp<0>& timer0(timers<0>[nt]);
+    TimerImp<1>& timer1(timers<1>[nt]);
+    TimerImp<2>& timer2(timers<2>[nt]);
     ++nt;
     int interval = random_intervals[n];
 
