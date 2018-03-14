@@ -13,56 +13,17 @@
 #include <queue>
 #include "utils/is_power_of_two.h"
 #include "utils/nearest_power_of_two.h"
-
-using interval_index = int;
-
-struct Timer
-{
-  struct Handle
-  {
-    uint64_t m_sequence;
-    interval_index m_interval;    // Interval index; -1 means: not running.
-
-    // Default constructor. Construct a handle for a "not running timer".
-    Handle() : m_interval(-1) { }
-
-    // Construct a Handle for a running timer with interval \a interval and sequence \sequence.
-    constexpr Handle(interval_index interval, uint64_t sequence) : m_sequence(sequence), m_interval(interval) { }
-
-    bool is_running() const { return m_interval >= 0; }
-    void set_not_running() { m_interval = -1; }
-  };
-
-  using clock_type = std::chrono::high_resolution_clock;
-  using time_point = std::chrono::time_point<clock_type>;
-
-  Handle m_handle;                      // If m_handle.is_running() returns true then this timer is running
-                                        //   and m_handle can be used to find the corresponding Timer object.
-  time_point m_expiration_point;        // The time at which we should expire (only valid when this is a running timer).
-  std::function<void()> m_call_back;    // The callback function (only valid when this is a running timer).
-
-  ~Timer() { stop(); }
-
-  void start(interval_index interval, std::function<void()> call_back, int n);
-  void stop();
-
-  void expire()
-  {
-    assert(m_handle.is_running());
-    m_handle.set_not_running();
-    //std::cout << /*m_sequence_number <<*/ " : call_back()\t\t\t" << m_expiration_point.time_since_epoch().count() << "\n";
-    m_call_back();
-  }
-
-  time_point get_expiration_point() const { return m_expiration_point; }
-};
+#include "statefultask/Timer.h"
 
 // 0: multimap
 // 1: priority_queue
 // 2: My own design
 
-using duration = Timer::time_point::duration;
-using ticks = Timer::time_point::rep;
+using Timer = statefultask::Timer;
+using interval_t = Timer::interval_t;
+using time_point = Timer::time_point;
+using duration = time_point::duration;
+using ticks = time_point::rep;
 using microseconds = std::chrono::microseconds;
 using milliseconds = std::chrono::milliseconds;
 using seconds = std::chrono::seconds;
@@ -71,10 +32,10 @@ int constexpr loopsize = 10000000;
 // In order to be reproducable, invent out own 'now()' function.
 // Since we're aiming at adding loopsize in 10 second, we need
 // to add 10,000,000,000 nanoseconds when n == loopsize.
-Timer::time_point constexpr now(int n) { return Timer::time_point(duration{/*1520039479404233206L +*/ 10000000000L / loopsize * n}); }
+time_point constexpr now(int n) { return time_point(duration{/*1520039479404233206L +*/ 10000000000L / loopsize * n}); }
 
 // Lets assume that a single program can use up to 64 different intervals (but no more).
-interval_index constexpr max_interval_index = 38;
+interval_t constexpr max_interval_index = 38;
 
 struct Intervals
 {
@@ -113,14 +74,14 @@ struct TimerHandleImpl;
 template<>
 struct TimerHandleImpl<0>
 {
-  static std::multimap<Timer::time_point, TimerImpl<0>*>::iterator const end;
-  std::multimap<Timer::time_point, TimerImpl<0>*>::iterator m_iter;
+  static std::multimap<time_point, TimerImpl<0>*>::iterator const end;
+  std::multimap<time_point, TimerImpl<0>*>::iterator m_iter;
 
   // Default constructor. Construct a handle for a "not running timer".
   TimerHandleImpl() : m_iter(end) { }
 
   // Construct a Handle that points to a given iterator.
-  TimerHandleImpl(std::multimap<Timer::time_point, TimerImpl<0>*>::iterator iter) : m_iter(iter) { }
+  TimerHandleImpl(std::multimap<time_point, TimerImpl<0>*>::iterator iter) : m_iter(iter) { }
 
   bool is_running() const { return m_iter != end; }
 
@@ -157,11 +118,11 @@ template<>
 struct TimerHandleImpl<2> : public Timer::Handle
 {
   TimerHandleImpl() : Timer::Handle() { }
-  constexpr TimerHandleImpl(interval_index interval, uint64_t sequence) : Timer::Handle(interval, sequence) { }
+  constexpr TimerHandleImpl(interval_t interval, uint64_t sequence) : Timer::Handle(interval, sequence) { }
   TimerHandleImpl(Timer::Handle handle) : Timer::Handle(handle) { }
 };
 
-static Timer::time_point last_time_point;
+static time_point last_time_point;
 
 template<int implementation>
 struct TimerImpl;
@@ -171,7 +132,7 @@ struct TimerImpl<0>
 {
   TimerHandleImpl<0> m_handle;                   // If m_handle.is_running() returns true then this timer is running
                                                  //   and m_handle can be used to find the corresponding Timer object.
-  Timer::time_point m_expiration_point;          // The time at which we should expire (only valid when this is a running timer).
+  time_point m_expiration_point;          // The time at which we should expire (only valid when this is a running timer).
   std::function<void()> m_call_back;            // The callback function (only valid when this is a running timer).
   static int s_sequence_number;
   int const m_sequence_number;
@@ -179,7 +140,7 @@ struct TimerImpl<0>
   TimerImpl() : m_sequence_number(++s_sequence_number) { }
   ~TimerImpl() { stop(); }
 
-  void start(interval_index interval, std::function<void()> call_back, int n);
+  void start(interval_t interval, std::function<void()> call_back, int n);
   void stop();
 
   void expire()
@@ -191,7 +152,7 @@ struct TimerImpl<0>
     m_call_back();
   }
 
-  Timer::time_point get_expiration_point() const { return m_expiration_point; }
+  time_point get_expiration_point() const { return m_expiration_point; }
 };
 
 template<>
@@ -199,7 +160,7 @@ struct TimerImpl<1>
 {
   TimerHandleImpl<1> m_handle;                  // If m_handle.is_running() returns true then this timer is running
                                                 //   and m_handle can be used to find the corresponding Timer object.
-  Timer::time_point m_expiration_point;         // The time at which we should expire (only valid when this is a running timer).
+  time_point m_expiration_point;         // The time at which we should expire (only valid when this is a running timer).
   std::function<void()> m_call_back;            // The callback function (only valid when this is a running timer).
   static int s_sequence_number;
   int const m_sequence_number;
@@ -208,7 +169,7 @@ struct TimerImpl<1>
   TimerImpl() : m_sequence_number(++s_sequence_number), m_cancelled_1(false) { }
   ~TimerImpl() { stop(); }
 
-  void start(interval_index interval, std::function<void()> call_back, int n);
+  void start(interval_t interval, std::function<void()> call_back, int n);
   void stop();
 
   void expire()
@@ -225,7 +186,7 @@ struct TimerImpl<1>
     m_call_back();
   }
 
-  Timer::time_point get_expiration_point() const { return m_expiration_point; }
+  time_point get_expiration_point() const { return m_expiration_point; }
 };
 
 template<>
@@ -253,7 +214,7 @@ template<class INTERVALS>
 class RunningTimers<INTERVALS, 0>
 {
  private:
-  std::multimap<Timer::time_point, TimerImpl<0>*> m_map;
+  std::multimap<time_point, TimerImpl<0>*> m_map;
 
  public:
   // Return true if \a handle is the next timer to expire.
@@ -296,7 +257,7 @@ class RunningTimers<INTERVALS, 0>
     while (!timer);
   }
 
-  std::multimap<Timer::time_point, TimerImpl<0>*>::iterator end()
+  std::multimap<time_point, TimerImpl<0>*>::iterator end()
   {
     return m_map.end();
   }
@@ -306,7 +267,7 @@ template<class INTERVALS>
 class RunningTimers<INTERVALS, 1>
 {
  private:
-   using data_t = std::pair<Timer::time_point, TimerImpl<1>*>;
+   using data_t = std::pair<time_point, TimerImpl<1>*>;
    struct Compare {
      bool operator()(data_t const& d1, data_t const& d2) { return d1.first > d2.first; }
    };
@@ -355,7 +316,7 @@ class RunningTimers<INTERVALS, 1>
 };
 
 // Use a value far in the future to represent 'no timer' (aka, a "timer" that will never expire).
-Timer::time_point constexpr no_timer{duration(std::numeric_limits<ticks>::max())};
+time_point constexpr no_timer{duration(std::numeric_limits<ticks>::max())};
 
 class Queue
 {
@@ -412,7 +373,7 @@ class Queue
     return m_running_timers.front() == nullptr;
   }
 
-  Timer::time_point front() const
+  time_point front() const
   {
     if (m_running_timers.empty())
       return no_timer;
@@ -420,7 +381,7 @@ class Queue
   }
 
   // Return the expiration point for the related interval that will expire next.
-  Timer::time_point next_expiration_point()
+  time_point next_expiration_point()
   {
     while (!m_running_timers.empty())
     {
@@ -495,7 +456,7 @@ class RunningTimers<INTERVALS, 2>
 
  private:
   std::array<uint8_t, tree_size> m_tree;
-  std::array<Timer::time_point, tree_size> m_cache;
+  std::array<time_point, tree_size> m_cache;
   std::array<Queue, INTERVALS::number> m_queues;
 
   static int constexpr parent_of(int index)                             // Used in increase_cache and decrease_cache.
@@ -503,7 +464,7 @@ class RunningTimers<INTERVALS, 2>
     return index >> 1;
   }
 
-  static int constexpr interval_to_parent_index(interval_index in)      // Used in increase_cache and decrease_cache.
+  static int constexpr interval_to_parent_index(interval_t in)      // Used in increase_cache and decrease_cache.
   {
     return (in + tree_size) >> 1;
   }
@@ -518,7 +479,7 @@ class RunningTimers<INTERVALS, 2>
     return index << 1;
   }
 
-  void decrease_cache(interval_index interval, Timer::time_point tp)
+  void decrease_cache(interval_t interval, time_point tp)
   {
     //std::cout << "Calling decrease_cache(" << interval << ", " << tp.time_since_epoch().count() << ")" << std::endl;
     assert(tp <= m_cache[interval]);
@@ -536,7 +497,7 @@ class RunningTimers<INTERVALS, 2>
     }
   }
 
-  void increase_cache(interval_index interval, Timer::time_point tp)
+  void increase_cache(interval_t interval, time_point tp)
   {
     //std::cout << "Calling increase_cache(" << interval << ", " << tp.time_since_epoch().count() << ")" << std::endl;
     assert(tp >= m_cache[interval]);
@@ -544,11 +505,11 @@ class RunningTimers<INTERVALS, 2>
 
     int parent_ti = interval_to_parent_index(interval); // Let 'parent_ti' be the index of the parent node in the tree above 'interval'.
 
-    interval_index in = interval;                       // Let 'in' be the interval whose value is changed with respect to m_tree[parent_ti].
-    interval_index si = in ^ 1;                         // Let 'si' be the interval of the current sibling of in.
+    interval_t in = interval;                       // Let 'in' be the interval whose value is changed with respect to m_tree[parent_ti].
+    interval_t si = in ^ 1;                         // Let 'si' be the interval of the current sibling of in.
     for(;;)
     {
-      Timer::time_point sv = m_cache[si];
+      time_point sv = m_cache[si];
       if (tp > sv)
       {
         if (m_tree[parent_ti] == si)
@@ -577,7 +538,7 @@ class RunningTimers<INTERVALS, 2>
   }
 
   // Add \a timer to the list of running timers, using \a interval as timeout.
-  Timer::Handle push(interval_index interval, Timer* timer)
+  Timer::Handle push(interval_t interval, Timer* timer)
   {
     assert(0 <= interval && interval < INTERVALS::number);
     sanity_check();
@@ -699,7 +660,7 @@ class RunningTimers<INTERVALS, 2>
 template<class INTERVALS>
 RunningTimers<INTERVALS, 2>::RunningTimers()
 {
-  for (interval_index interval = 0; interval < tree_size; ++interval)
+  for (interval_t interval = 0; interval < tree_size; ++interval)
   {
     m_cache[interval] = no_timer;
     int parent_ti = interval_to_parent_index(interval);
@@ -724,14 +685,14 @@ void RunningTimers<INTERVALS, 2>::sanity_check() const
   //std::cout << "sanity check #" << ++count << std::endl;
 
   // Every cache entry needs to have either no_timer in it when the corresponding queue is empty, or the first entry of that queue.
-  for (interval_index interval = 0; interval < tree_size; ++interval)
+  for (interval_t interval = 0; interval < tree_size; ++interval)
   {
     if (interval >= INTERVALS::number)
       assert(m_cache[interval] == no_timer);
     else
       assert(m_cache[interval] == m_queues[interval].front());
   }
-  for (interval_index interval = 0; interval < tree_size; interval += 2)
+  for (interval_t interval = 0; interval < tree_size; interval += 2)
   {
     int ti = interval_to_parent_index(interval);
     assert((m_tree[ti] & ~1) == interval);
@@ -778,7 +739,7 @@ void RunningTimers<INTERVALS, 2>::expire_next()
 
 // I'm assuming that end() doesn't invalidate, ever.
 //static
-std::multimap<Timer::time_point, TimerImpl<0>*>::iterator const TimerHandleImpl<0>::end{running_timers0.end()};
+std::multimap<time_point, TimerImpl<0>*>::iterator const TimerHandleImpl<0>::end{running_timers0.end()};
 
 void update_running_timer()
 {
@@ -786,7 +747,7 @@ void update_running_timer()
   //std::cout << "Calling update_running_timer()\n";
 }
 
-void TimerImpl<0>::start(interval_index interval, std::function<void()> call_back, int n)
+void TimerImpl<0>::start(interval_t interval, std::function<void()> call_back, int n)
 {
   //std::cout << "Calling Timer::start(interval = " << interval << ", ..., n = " << n << ") with this = [" << m_sequence_number << "]" << std::endl;
   // Call stop() first.
@@ -801,7 +762,7 @@ void TimerImpl<0>::start(interval_index interval, std::function<void()> call_bac
     update_running_timer();
 }
 
-void TimerImpl<1>::start(interval_index interval, std::function<void()> call_back, int n)
+void TimerImpl<1>::start(interval_t interval, std::function<void()> call_back, int n)
 {
   //std::cout << "Calling Timer::start(interval = " << interval << ", ..., n = " << n << ") with this = [" << m_sequence_number << "]" << std::endl;
   // Call stop() first.
@@ -817,7 +778,7 @@ void TimerImpl<1>::start(interval_index interval, std::function<void()> call_bac
     update_running_timer();
 }
 
-void Timer::start(interval_index interval, std::function<void()> call_back, int n)
+void Timer::start(interval_t interval, std::function<void()> call_back, int n)
 {
   //std::cout << "Calling Timer::start(interval = " << interval << ", ..., n = " << n << ") with this = [" << m_sequence_number << "]" << std::endl;
   // Call stop() first.
@@ -902,7 +863,7 @@ void generate()
   std::uniform_int_distribution<ticks> dist(0, max_interval_index);
 
   std::cout << "Generating random numbers..." << std::endl;
-  std::vector<interval_index> random_intervals(loopsize);
+  std::vector<interval_t> random_intervals(loopsize);
   for (int n = 0; n < loopsize; ++n)
   {
     random_intervals[n] = dist(rng);
