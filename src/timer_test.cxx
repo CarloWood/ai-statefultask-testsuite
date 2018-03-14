@@ -14,14 +14,55 @@
 #include "utils/is_power_of_two.h"
 #include "utils/nearest_power_of_two.h"
 
+using interval_index = int;
+
+struct Timer
+{
+  struct Handle
+  {
+    uint64_t m_sequence;
+    interval_index m_interval;    // Interval index; -1 means: not running.
+
+    // Default constructor. Construct a handle for a "not running timer".
+    Handle() : m_interval(-1) { }
+
+    // Construct a Handle for a running timer with interval \a interval and sequence \sequence.
+    constexpr Handle(interval_index interval, uint64_t sequence) : m_sequence(sequence), m_interval(interval) { }
+
+    bool is_running() const { return m_interval >= 0; }
+    void set_not_running() { m_interval = -1; }
+  };
+
+  using clock_type = std::chrono::high_resolution_clock;
+  using time_point = std::chrono::time_point<clock_type>;
+
+  Handle m_handle;                      // If m_handle.is_running() returns true then this timer is running
+                                        //   and m_handle can be used to find the corresponding Timer object.
+  time_point m_expiration_point;        // The time at which we should expire (only valid when this is a running timer).
+  std::function<void()> m_call_back;    // The callback function (only valid when this is a running timer).
+
+  ~Timer() { stop(); }
+
+  void start(interval_index interval, std::function<void()> call_back, int n);
+  void stop();
+
+  void expire()
+  {
+    assert(m_handle.is_running());
+    m_handle.set_not_running();
+    //std::cout << /*m_sequence_number <<*/ " : call_back()\t\t\t" << m_expiration_point.time_since_epoch().count() << "\n";
+    m_call_back();
+  }
+
+  time_point get_expiration_point() const { return m_expiration_point; }
+};
+
 // 0: multimap
 // 1: priority_queue
 // 2: My own design
 
-using clock_type = std::chrono::high_resolution_clock;
-using time_point = std::chrono::time_point<clock_type>;
-using duration = time_point::duration;
-using ticks = time_point::rep;
+using duration = Timer::time_point::duration;
+using ticks = Timer::time_point::rep;
 using microseconds = std::chrono::microseconds;
 using milliseconds = std::chrono::milliseconds;
 using seconds = std::chrono::seconds;
@@ -30,10 +71,9 @@ int constexpr loopsize = 10000000;
 // In order to be reproducable, invent out own 'now()' function.
 // Since we're aiming at adding loopsize in 10 second, we need
 // to add 10,000,000,000 nanoseconds when n == loopsize.
-time_point constexpr now(int n) { return time_point(duration{/*1520039479404233206L +*/ 10000000000L / loopsize * n}); }
+Timer::time_point constexpr now(int n) { return Timer::time_point(duration{/*1520039479404233206L +*/ 10000000000L / loopsize * n}); }
 
 // Lets assume that a single program can use up to 64 different intervals (but no more).
-using interval_index = int;
 interval_index constexpr max_interval_index = 38;
 
 struct Intervals
@@ -73,14 +113,14 @@ struct TimerHandleImpl;
 template<>
 struct TimerHandleImpl<0>
 {
-  static std::multimap<time_point, TimerImpl<0>*>::iterator const end;
-  std::multimap<time_point, TimerImpl<0>*>::iterator m_iter;
+  static std::multimap<Timer::time_point, TimerImpl<0>*>::iterator const end;
+  std::multimap<Timer::time_point, TimerImpl<0>*>::iterator m_iter;
 
   // Default constructor. Construct a handle for a "not running timer".
   TimerHandleImpl() : m_iter(end) { }
 
   // Construct a Handle that points to a given iterator.
-  TimerHandleImpl(std::multimap<time_point, TimerImpl<0>*>::iterator iter) : m_iter(iter) { }
+  TimerHandleImpl(std::multimap<Timer::time_point, TimerImpl<0>*>::iterator iter) : m_iter(iter) { }
 
   bool is_running() const { return m_iter != end; }
 
@@ -113,30 +153,15 @@ struct TimerHandleImpl<1>
   }
 };
 
-struct TimerHandle
-{
-  uint64_t m_sequence;
-  interval_index m_interval;    // Interval index; -1 means: not running.
-
-  // Default constructor. Construct a handle for a "not running timer".
-  TimerHandle() : m_interval(-1) { }
-
-  // Construct a Handle for a running timer with interval \a interval and sequence \sequence.
-  constexpr TimerHandle(interval_index interval, uint64_t sequence) : m_sequence(sequence), m_interval(interval) { }
-
-  bool is_running() const { return m_interval >= 0; }
-  void set_not_running() { m_interval = -1; }
-};
-
 template<>
-struct TimerHandleImpl<2> : public TimerHandle
+struct TimerHandleImpl<2> : public Timer::Handle
 {
-  TimerHandleImpl() : TimerHandle() { }
-  constexpr TimerHandleImpl(interval_index interval, uint64_t sequence) : TimerHandle(interval, sequence) { }
-  TimerHandleImpl(TimerHandle handle) : TimerHandle(handle) { }
+  TimerHandleImpl() : Timer::Handle() { }
+  constexpr TimerHandleImpl(interval_index interval, uint64_t sequence) : Timer::Handle(interval, sequence) { }
+  TimerHandleImpl(Timer::Handle handle) : Timer::Handle(handle) { }
 };
 
-static time_point last_time_point;
+static Timer::time_point last_time_point;
 
 template<int implementation>
 struct TimerImpl;
@@ -145,8 +170,8 @@ template<>
 struct TimerImpl<0>
 {
   TimerHandleImpl<0> m_handle;                   // If m_handle.is_running() returns true then this timer is running
-                                                //   and m_handle can be used to find the corresponding Timer object.
-  time_point m_expiration_point;                // The time at which we should expire (only valid when this is a running timer).
+                                                 //   and m_handle can be used to find the corresponding Timer object.
+  Timer::time_point m_expiration_point;          // The time at which we should expire (only valid when this is a running timer).
   std::function<void()> m_call_back;            // The callback function (only valid when this is a running timer).
   static int s_sequence_number;
   int const m_sequence_number;
@@ -166,15 +191,15 @@ struct TimerImpl<0>
     m_call_back();
   }
 
-  time_point get_expiration_point() const { return m_expiration_point; }
+  Timer::time_point get_expiration_point() const { return m_expiration_point; }
 };
 
 template<>
 struct TimerImpl<1>
 {
-  TimerHandleImpl<1> m_handle;                   // If m_handle.is_running() returns true then this timer is running
+  TimerHandleImpl<1> m_handle;                  // If m_handle.is_running() returns true then this timer is running
                                                 //   and m_handle can be used to find the corresponding Timer object.
-  time_point m_expiration_point;                // The time at which we should expire (only valid when this is a running timer).
+  Timer::time_point m_expiration_point;         // The time at which we should expire (only valid when this is a running timer).
   std::function<void()> m_call_back;            // The callback function (only valid when this is a running timer).
   static int s_sequence_number;
   int const m_sequence_number;
@@ -200,35 +225,7 @@ struct TimerImpl<1>
     m_call_back();
   }
 
-  time_point get_expiration_point() const { return m_expiration_point; }
-};
-
-struct Timer
-{
-  TimerHandle m_handle;                 // If m_handle.is_running() returns true then this timer is running
-                                        //   and m_handle can be used to find the corresponding Timer object.
-  time_point m_expiration_point;        // The time at which we should expire (only valid when this is a running timer).
-  std::function<void()> m_call_back;    // The callback function (only valid when this is a running timer).
-
-  ~Timer() { stop(); }
-
-  void start(interval_index interval, std::function<void()> call_back, int n);
-  void stop();
-
-  void expire()
-  {
-    assert(m_handle.is_running());
-    m_handle.set_not_running();
-    if (last_time_point != m_expiration_point)
-    {
-      std::cout << "ERROR: Expiring a timer with m_expiration_point = " << m_expiration_point.time_since_epoch().count() << "; should be: " << last_time_point.time_since_epoch().count() << std::endl;
-      assert(last_time_point == m_expiration_point);
-    }
-    //std::cout << /*m_sequence_number <<*/ " : call_back()\t\t\t" << m_expiration_point.time_since_epoch().count() << "\n";
-    m_call_back();
-  }
-
-  time_point get_expiration_point() const { return m_expiration_point; }
+  Timer::time_point get_expiration_point() const { return m_expiration_point; }
 };
 
 template<>
@@ -256,7 +253,7 @@ template<class INTERVALS>
 class RunningTimers<INTERVALS, 0>
 {
  private:
-  std::multimap<time_point, TimerImpl<0>*> m_map;
+  std::multimap<Timer::time_point, TimerImpl<0>*> m_map;
 
  public:
   // Return true if \a handle is the next timer to expire.
@@ -299,7 +296,7 @@ class RunningTimers<INTERVALS, 0>
     while (!timer);
   }
 
-  std::multimap<time_point, TimerImpl<0>*>::iterator end()
+  std::multimap<Timer::time_point, TimerImpl<0>*>::iterator end()
   {
     return m_map.end();
   }
@@ -309,7 +306,7 @@ template<class INTERVALS>
 class RunningTimers<INTERVALS, 1>
 {
  private:
-   using data_t = std::pair<time_point, TimerImpl<1>*>;
+   using data_t = std::pair<Timer::time_point, TimerImpl<1>*>;
    struct Compare {
      bool operator()(data_t const& d1, data_t const& d2) { return d1.first > d2.first; }
    };
@@ -358,7 +355,7 @@ class RunningTimers<INTERVALS, 1>
 };
 
 // Use a value far in the future to represent 'no timer' (aka, a "timer" that will never expire).
-time_point constexpr no_timer{duration(std::numeric_limits<ticks>::max())};
+Timer::time_point constexpr no_timer{duration(std::numeric_limits<ticks>::max())};
 
 class Queue
 {
@@ -415,7 +412,7 @@ class Queue
     return m_running_timers.front() == nullptr;
   }
 
-  time_point front() const
+  Timer::time_point front() const
   {
     if (m_running_timers.empty())
       return no_timer;
@@ -423,7 +420,7 @@ class Queue
   }
 
   // Return the expiration point for the related interval that will expire next.
-  time_point next_expiration_point()
+  Timer::time_point next_expiration_point()
   {
     while (!m_running_timers.empty())
     {
@@ -498,7 +495,7 @@ class RunningTimers<INTERVALS, 2>
 
  private:
   std::array<uint8_t, tree_size> m_tree;
-  std::array<time_point, tree_size> m_cache;
+  std::array<Timer::time_point, tree_size> m_cache;
   std::array<Queue, INTERVALS::number> m_queues;
 
   static int constexpr parent_of(int index)                             // Used in increase_cache and decrease_cache.
@@ -521,7 +518,7 @@ class RunningTimers<INTERVALS, 2>
     return index << 1;
   }
 
-  void decrease_cache(interval_index interval, time_point tp)
+  void decrease_cache(interval_index interval, Timer::time_point tp)
   {
     //std::cout << "Calling decrease_cache(" << interval << ", " << tp.time_since_epoch().count() << ")" << std::endl;
     assert(tp <= m_cache[interval]);
@@ -539,7 +536,7 @@ class RunningTimers<INTERVALS, 2>
     }
   }
 
-  void increase_cache(interval_index interval, time_point tp)
+  void increase_cache(interval_index interval, Timer::time_point tp)
   {
     //std::cout << "Calling increase_cache(" << interval << ", " << tp.time_since_epoch().count() << ")" << std::endl;
     assert(tp >= m_cache[interval]);
@@ -551,7 +548,7 @@ class RunningTimers<INTERVALS, 2>
     interval_index si = in ^ 1;                         // Let 'si' be the interval of the current sibling of in.
     for(;;)
     {
-      time_point sv = m_cache[si];
+      Timer::time_point sv = m_cache[si];
       if (tp > sv)
       {
         if (m_tree[parent_ti] == si)
@@ -574,13 +571,13 @@ class RunningTimers<INTERVALS, 2>
   void expire_next();
 
   // Return true if \a handle is the next timer to expire.
-  bool is_current(TimerHandle const& handle) const
+  bool is_current(Timer::Handle const& handle) const
   {
     return m_tree[1] == handle.m_interval && m_queues[handle.m_interval].is_current(handle.m_sequence);
   }
 
   // Add \a timer to the list of running timers, using \a interval as timeout.
-  TimerHandle push(interval_index interval, Timer* timer)
+  Timer::Handle push(interval_index interval, Timer* timer)
   {
     assert(0 <= interval && interval < INTERVALS::number);
     sanity_check();
@@ -609,7 +606,7 @@ class RunningTimers<INTERVALS, 2>
     return sz;
   }
 
-  bool cancel(TimerHandle const handle)
+  bool cancel(Timer::Handle const handle)
   {
     assert(handle.is_running());
     //std::cout << "Calling RunningTimers<2>::cancel({[" << handle.m_sequence << "], in=" << handle. m_interval << "})\n";
@@ -769,6 +766,11 @@ void RunningTimers<INTERVALS, 2>::expire_next()
   //running_timers2.print();
 
   //std::cout << "  calling expire on timer [" << timer->m_sequence_number << "]" << std::endl;
+  if (last_time_point != timer->get_expiration_point())
+  {
+    std::cout << "ERROR: Expiring a timer with m_expiration_point = " << timer->get_expiration_point().time_since_epoch().count() << "; should be: " << last_time_point.time_since_epoch().count() << std::endl;
+    assert(last_time_point == timer->get_expiration_point());
+  }
   timer->expire();
   //running_timers2.print();
   sanity_check();
@@ -776,7 +778,7 @@ void RunningTimers<INTERVALS, 2>::expire_next()
 
 // I'm assuming that end() doesn't invalidate, ever.
 //static
-std::multimap<time_point, TimerImpl<0>*>::iterator const TimerHandleImpl<0>::end{running_timers0.end()};
+std::multimap<Timer::time_point, TimerImpl<0>*>::iterator const TimerHandleImpl<0>::end{running_timers0.end()};
 
 void update_running_timer()
 {
@@ -789,7 +791,7 @@ void TimerImpl<0>::start(interval_index interval, std::function<void()> call_bac
   //std::cout << "Calling Timer::start(interval = " << interval << ", ..., n = " << n << ") with this = [" << m_sequence_number << "]" << std::endl;
   // Call stop() first.
   assert(!m_handle.is_running());
-  m_expiration_point = /*clock_type::*/now(n) + Intervals::durations[interval];
+  m_expiration_point = /*Timer::clock_type::*/now(n) + Intervals::durations[interval];
   m_call_back = call_back;
   std::lock_guard<std::mutex> lk(running_timers_mutex);
   m_handle = running_timers0.push(interval, this);
@@ -804,7 +806,7 @@ void TimerImpl<1>::start(interval_index interval, std::function<void()> call_bac
   //std::cout << "Calling Timer::start(interval = " << interval << ", ..., n = " << n << ") with this = [" << m_sequence_number << "]" << std::endl;
   // Call stop() first.
   assert(!m_handle.is_running());
-  m_expiration_point = /*clock_type::*/now(n) + Intervals::durations[interval];
+  m_expiration_point = /*Timer::clock_type::*/now(n) + Intervals::durations[interval];
   m_call_back = call_back;
   std::lock_guard<std::mutex> lk(running_timers_mutex);
   m_handle = running_timers1.push(interval, this);
@@ -820,7 +822,7 @@ void Timer::start(interval_index interval, std::function<void()> call_back, int 
   //std::cout << "Calling Timer::start(interval = " << interval << ", ..., n = " << n << ") with this = [" << m_sequence_number << "]" << std::endl;
   // Call stop() first.
   assert(!m_handle.is_running());
-  m_expiration_point = /*clock_type::*/now(n) + Intervals::durations[interval];
+  m_expiration_point = /*Timer::clock_type::*/now(n) + Intervals::durations[interval];
   m_call_back = call_back;
   std::lock_guard<std::mutex> lk(running_timers_mutex);
   m_handle = running_timers2.push(interval, this);
