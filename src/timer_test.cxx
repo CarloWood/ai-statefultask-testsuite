@@ -135,7 +135,7 @@ template<int implementation>
 struct Timer
 {
   Handle<implementation> m_handle;              // If m_handle.is_running() returns true then this timer is running
-                                                //   and m_handle can be used to find the corresponding RunningTimer object.
+                                                //   and m_handle can be used to find the corresponding Timer object.
   time_point m_expiration_point;                // The time at which we should expire (only valid when this is a running timer).
   std::function<void()> m_call_back;            // The callback function (only valid when this is a running timer).
   static int s_sequence_number;
@@ -282,13 +282,6 @@ class RunningTimers<INTERVALS, 1>
   }
 };
 
-struct RunningTimer
-{
-  Timer<2>* m_timer;                               // The underlaying Timer, or nullptr when the timer was cancelled.
-
-  RunningTimer(Timer<2>* timer) : m_timer(timer) { }
-};
-
 // Use a value far in the future to represent 'no timer' (aka, a "timer" that will never expire).
 time_point constexpr no_timer{duration(std::numeric_limits<ticks>::max())};
 
@@ -296,7 +289,7 @@ class Queue
 {
  private:
   uint64_t m_sequence_offset;                   // The number of timers that were popped from m_running_timers, minus 1.
-  std::deque<RunningTimer> m_running_timers;    // All running timers for the related interval.
+  std::deque<Timer<2>*> m_running_timers;       // All running timers for the related interval.
 
  public:
   // Construct an empty queue.
@@ -315,10 +308,10 @@ class Queue
   }
 
   // Remove one timer from the front of the queue and return it.
-  RunningTimer pop()
+  Timer<2>* pop()
   {
     assert(!m_running_timers.empty());
-    RunningTimer running_timer{m_running_timers.front()};
+    Timer<2>* running_timer{m_running_timers.front()};
     ++m_sequence_offset;
     m_running_timers.pop_front();
     return running_timer;
@@ -327,7 +320,7 @@ class Queue
   void pop_cancelled_timer()
   {
     assert(!m_running_timers.empty());
-    assert(!m_running_timers.front().m_timer);
+    assert(!m_running_timers.front());
     ++m_sequence_offset;
     m_running_timers.pop_front();
     ++erase_count[2];
@@ -338,20 +331,20 @@ class Queue
   {
     size_t i = sequence - m_sequence_offset;
     assert(0 <= i && i < m_running_timers.size());
-    m_running_timers[i].m_timer = nullptr;
+    m_running_timers[i] = nullptr;
     return i == 0;
   }
 
   bool front_is_cancelled() const
   {
-    return m_running_timers.front().m_timer == nullptr;
+    return m_running_timers.front() == nullptr;
   }
 
   time_point front() const
   {
     if (m_running_timers.empty())
       return no_timer;
-    return m_running_timers.front().m_timer->get_expiration_point();
+    return m_running_timers.front()->get_expiration_point();
   }
 
   // Return the expiration point for the related interval that will expire next.
@@ -359,7 +352,7 @@ class Queue
   {
     while (!m_running_timers.empty())
     {
-      Timer<2>* timer = m_running_timers.front().m_timer;
+      Timer<2>* timer = m_running_timers.front();
       if (timer)
         return timer->get_expiration_point();
       pop_cancelled_timer();
@@ -377,7 +370,7 @@ class Queue
   {
     int sz = 0;
     for (auto timer : m_running_timers)
-      sz += timer.m_timer ? 0 : 1;
+      sz += timer ? 0 : 1;
     return sz;
   }
 
@@ -386,7 +379,7 @@ class Queue
     std::cout << "[offset:" << m_sequence_offset << "] ";
     for (auto timer : m_running_timers)
     {
-      Timer<2>* t = timer.m_timer;
+      Timer<2>* t = timer;
       if (t)
         std::cout << " [" << t->m_sequence_number << ']' << t->get_expiration_point().time_since_epoch().count();
       else
@@ -433,29 +426,24 @@ class RunningTimers<INTERVALS, 2>
   std::array<time_point, tree_size> m_cache;
   std::array<Queue, INTERVALS::number> m_queues;
 
-  static int constexpr parent_of(int index)
+  static int constexpr parent_of(int index)                             // Used in increase_cache and decrease_cache.
   {
-    return index / 2;
+    return index >> 1;
   }
 
-  static int constexpr left_child_of(int index)
+  static int constexpr interval_to_parent_index(interval_index in)      // Used in increase_cache and decrease_cache.
   {
-    return index * 2;
+    return (in + tree_size) >> 1;
   }
 
-  static int constexpr right_child_of(int index)
-  {
-    return index * 2 + 1;
-  }
-
-  static int constexpr interval_to_parent_index(interval_index in)
-  {
-    return (in + tree_size) / 2;
-  }
-
-  static int constexpr sibling_of(int index)
+  static int constexpr sibling_of(int index)                            // Used in increase_cache.
   {
     return index ^ 1;
+  }
+
+  static int constexpr left_child_of(int index)                         // Only used in constructor.
+  {
+    return index << 1;
   }
 
   void decrease_cache(interval_index interval, time_point tp)
@@ -699,14 +687,14 @@ void RunningTimers<INTERVALS, 2>::expire_next()
   //std::cout << "  m_tree[1] = " << interval << '\n';
   Queue& queue{m_queues[interval]};
   assert(!queue.empty());
-  RunningTimer timer{queue.pop()};
+  Timer<2>* timer{queue.pop()};
 
   // Execute the algorithm for cache value becoming greater.
   increase_cache(interval, queue.next_expiration_point());
   //running_timers2.print();
 
-  //std::cout << "  calling expire on timer [" << timer.m_timer->m_sequence_number << "]" << std::endl;
-  timer.m_timer->expire();
+  //std::cout << "  calling expire on timer [" << timer->m_sequence_number << "]" << std::endl;
+  timer->expire();
   //running_timers2.print();
   sanity_check();
 }
