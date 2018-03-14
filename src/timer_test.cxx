@@ -139,15 +139,46 @@ struct TimerHandleImp<2> : public TimerHandle
 static time_point last_time_point;
 
 template<int implementation>
-struct TimerImp
+struct TimerImp;
+
+template<>
+struct TimerImp<0>
 {
-  TimerHandleImp<implementation> m_handle;              // If m_handle.is_running() returns true then this timer is running
+  TimerHandleImp<0> m_handle;                   // If m_handle.is_running() returns true then this timer is running
                                                 //   and m_handle can be used to find the corresponding Timer object.
   time_point m_expiration_point;                // The time at which we should expire (only valid when this is a running timer).
   std::function<void()> m_call_back;            // The callback function (only valid when this is a running timer).
   static int s_sequence_number;
   int const m_sequence_number;
-  bool m_cancelled_1;                           // Only used when implementation == 1.
+
+  TimerImp() : m_sequence_number(++s_sequence_number) { }
+  ~TimerImp() { stop(); }
+
+  void start(interval_index interval, std::function<void()> call_back, int n);
+  void stop();
+
+  void expire()
+  {
+    assert(m_handle.is_running());
+    m_handle.set_not_running();
+    last_time_point = m_expiration_point;
+    //std::cout << /*m_sequence_number <<*/ " : call_back()\t\t\t" << m_expiration_point.time_since_epoch().count() << "\n";
+    m_call_back();
+  }
+
+  time_point get_expiration_point() const { return m_expiration_point; }
+};
+
+template<>
+struct TimerImp<1>
+{
+  TimerHandleImp<1> m_handle;                   // If m_handle.is_running() returns true then this timer is running
+                                                //   and m_handle can be used to find the corresponding Timer object.
+  time_point m_expiration_point;                // The time at which we should expire (only valid when this is a running timer).
+  std::function<void()> m_call_back;            // The callback function (only valid when this is a running timer).
+  static int s_sequence_number;
+  int const m_sequence_number;
+  bool m_cancelled_1;
 
   TimerImp() : m_sequence_number(++s_sequence_number), m_cancelled_1(false) { }
   ~TimerImp() { stop(); }
@@ -160,9 +191,7 @@ struct TimerImp
     assert(m_handle.is_running());
     assert(!m_cancelled_1);
     m_handle.set_not_running();
-    if (implementation == 0)
-      last_time_point = m_expiration_point;
-    else if (last_time_point != m_expiration_point)
+    if (last_time_point != m_expiration_point)
     {
       std::cout << "ERROR: Expiring a timer with m_expiration_point = " << m_expiration_point.time_since_epoch().count() << "; should be: " << last_time_point.time_since_epoch().count() << std::endl;
       assert(last_time_point == m_expiration_point);
@@ -171,15 +200,54 @@ struct TimerImp
     m_call_back();
   }
 
-  time_point get_expiration_point() const
+  time_point get_expiration_point() const { return m_expiration_point; }
+};
+
+struct Timer
+{
+  TimerHandle m_handle;                 // If m_handle.is_running() returns true then this timer is running
+                                        //   and m_handle can be used to find the corresponding Timer object.
+  time_point m_expiration_point;        // The time at which we should expire (only valid when this is a running timer).
+  std::function<void()> m_call_back;    // The callback function (only valid when this is a running timer).
+
+  ~Timer() { stop(); }
+
+  void start(interval_index interval, std::function<void()> call_back, int n);
+  void stop();
+
+  void expire()
   {
-    return m_expiration_point;
+    assert(m_handle.is_running());
+    m_handle.set_not_running();
+    if (last_time_point != m_expiration_point)
+    {
+      std::cout << "ERROR: Expiring a timer with m_expiration_point = " << m_expiration_point.time_since_epoch().count() << "; should be: " << last_time_point.time_since_epoch().count() << std::endl;
+      assert(last_time_point == m_expiration_point);
+    }
+    //std::cout << /*m_sequence_number <<*/ " : call_back()\t\t\t" << m_expiration_point.time_since_epoch().count() << "\n";
+    m_call_back();
   }
+
+  time_point get_expiration_point() const { return m_expiration_point; }
+};
+
+template<>
+struct TimerImp<2> : public Timer
+{
+  static int s_sequence_number;
+  int const m_sequence_number;
+  TimerImp() : m_sequence_number(++s_sequence_number) { }
+  TimerImp(Timer timer) : Timer(timer), m_sequence_number(++s_sequence_number) { }
 };
 
 //static
-template<int implementation>
-int TimerImp<implementation>::s_sequence_number = 0;
+int TimerImp<0>::s_sequence_number = 0;
+
+//static
+int TimerImp<1>::s_sequence_number = 0;
+
+//static
+int TimerImp<2>::s_sequence_number = 0;
 
 template<class INTERVALS, int implementation>
 class RunningTimers;
@@ -296,7 +364,7 @@ class Queue
 {
  private:
   uint64_t m_sequence_offset;                   // The number of timers that were popped from m_running_timers, minus 1.
-  std::deque<TimerImp<2>*> m_running_timers;       // All running timers for the related interval.
+  std::deque<Timer*> m_running_timers;          // All running timers for the related interval.
 
  public:
   // Construct an empty queue.
@@ -308,17 +376,17 @@ class Queue
 
   // Add \a timer to the end of the queue. Returns an ever increasing sequence number.
   // The first sequence number returned is 0, then 1, 2, 3, ... etc.
-  uint64_t push(TimerImp<2>* timer)
+  uint64_t push(Timer* timer)
   {
     m_running_timers.emplace_back(timer);
     return m_running_timers.size() - 1 + m_sequence_offset;
   }
 
   // Remove one timer from the front of the queue and return it.
-  TimerImp<2>* pop()
+  Timer* pop()
   {
     assert(!m_running_timers.empty());
-    TimerImp<2>* running_timer{m_running_timers.front()};
+    Timer* running_timer{m_running_timers.front()};
     ++m_sequence_offset;
     m_running_timers.pop_front();
     return running_timer;
@@ -359,7 +427,7 @@ class Queue
   {
     while (!m_running_timers.empty())
     {
-      TimerImp<2>* timer = m_running_timers.front();
+      Timer* timer = m_running_timers.front();
       if (timer)
         return timer->get_expiration_point();
       pop_cancelled_timer();
@@ -386,9 +454,9 @@ class Queue
     std::cout << "[offset:" << m_sequence_offset << "] ";
     for (auto timer : m_running_timers)
     {
-      TimerImp<2>* t = timer;
+      Timer* t = timer;
       if (t)
-        std::cout << " [" << t->m_sequence_number << ']' << t->get_expiration_point().time_since_epoch().count();
+        std::cout << " [" << static_cast<TimerImp<2>*>(t)->m_sequence_number << ']' << t->get_expiration_point().time_since_epoch().count();
       else
         std::cout << " <cancelled>";
     }
@@ -512,7 +580,7 @@ class RunningTimers<INTERVALS, 2>
   }
 
   // Add \a timer to the list of running timers, using \a interval as timeout.
-  TimerHandle push(interval_index interval, TimerImp<2>* timer)
+  TimerHandle push(interval_index interval, Timer* timer)
   {
     assert(0 <= interval && interval < INTERVALS::number);
     sanity_check();
@@ -694,7 +762,7 @@ void RunningTimers<INTERVALS, 2>::expire_next()
   //std::cout << "  m_tree[1] = " << interval << '\n';
   Queue& queue{m_queues[interval]};
   assert(!queue.empty());
-  TimerImp<2>* timer{queue.pop()};
+  Timer* timer{queue.pop()};
 
   // Execute the algorithm for cache value becoming greater.
   increase_cache(interval, queue.next_expiration_point());
@@ -716,7 +784,6 @@ void update_running_timer()
   //std::cout << "Calling update_running_timer()\n";
 }
 
-template<>
 void TimerImp<0>::start(interval_index interval, std::function<void()> call_back, int n)
 {
   //std::cout << "Calling Timer::start(interval = " << interval << ", ..., n = " << n << ") with this = [" << m_sequence_number << "]" << std::endl;
@@ -732,7 +799,6 @@ void TimerImp<0>::start(interval_index interval, std::function<void()> call_back
     update_running_timer();
 }
 
-template<>
 void TimerImp<1>::start(interval_index interval, std::function<void()> call_back, int n)
 {
   //std::cout << "Calling Timer::start(interval = " << interval << ", ..., n = " << n << ") with this = [" << m_sequence_number << "]" << std::endl;
@@ -749,8 +815,7 @@ void TimerImp<1>::start(interval_index interval, std::function<void()> call_back
     update_running_timer();
 }
 
-template<>
-void TimerImp<2>::start(interval_index interval, std::function<void()> call_back, int n)
+void Timer::start(interval_index interval, std::function<void()> call_back, int n)
 {
   //std::cout << "Calling Timer::start(interval = " << interval << ", ..., n = " << n << ") with this = [" << m_sequence_number << "]" << std::endl;
   // Call stop() first.
@@ -766,7 +831,6 @@ void TimerImp<2>::start(interval_index interval, std::function<void()> call_back
   //running_timers2.print();
 }
 
-template<>
 void TimerImp<0>::stop()
 {
   //std::cout << "Calling Timer::stop() with this = [" << m_sequence_number << "]" << std::endl;
@@ -782,7 +846,6 @@ void TimerImp<0>::stop()
   //  std::cout << "NOT running!\n";
 }
 
-template<>
 void TimerImp<1>::stop()
 {
   //std::cout << "Calling Timer::stop() with this = [" << m_sequence_number << "]" << std::endl;
@@ -802,8 +865,7 @@ void TimerImp<1>::stop()
   //  std::cout << "NOT running!\n";
 }
 
-template<>
-void TimerImp<2>::stop()
+void Timer::stop()
 {
   //std::cout << "Calling Timer::stop() with this = [" << m_sequence_number << "]" << std::endl;
   if (m_handle.is_running())
