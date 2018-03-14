@@ -13,7 +13,14 @@
 #include <queue>
 #include "utils/is_power_of_two.h"
 #include "utils/nearest_power_of_two.h"
-#include "statefultask/Timer.h"
+#include "statefultask/TimerQueue.h"
+
+namespace statefultask {
+
+//static
+Timer::time_point constexpr statefultask::Timer::none;
+
+} // namespace statefultask
 
 // 0: multimap
 // 1: priority_queue
@@ -207,6 +214,18 @@ int TimerImpl<1>::s_sequence_number = 0;
 //static
 int TimerImpl<2>::s_sequence_number = 0;
 
+void print(statefultask::TimerQueue const& queue)
+{
+  std::cout << "[offset:" << queue.get_sequence_offset() << "] ";
+  for (auto timer : queue)
+  {
+    if (timer)
+      std::cout << " [" << static_cast<TimerImpl<2>*>(timer)->m_sequence_number << ']' << timer->get_expiration_point().time_since_epoch().count();
+    else
+      std::cout << " <cancelled>";
+  }
+}
+
 template<class INTERVALS, int implementation>
 class RunningTimers;
 
@@ -315,112 +334,6 @@ class RunningTimers<INTERVALS, 1>
   }
 };
 
-// Use a value far in the future to represent 'no timer' (aka, a "timer" that will never expire).
-time_point constexpr no_timer{duration(std::numeric_limits<ticks>::max())};
-
-class Queue
-{
- private:
-  uint64_t m_sequence_offset;                   // The number of timers that were popped from m_running_timers, minus 1.
-  std::deque<Timer*> m_running_timers;          // All running timers for the related interval.
-
- public:
-  // Construct an empty queue.
-  Queue() : m_sequence_offset(0) { }
-
-  // Return true if \a sequence is the value returned by a call to push() for
-  // a timer that is now at the bottom (will be returned by pop()).
-  bool is_current(uint64_t sequence) const { return sequence == m_sequence_offset; }
-
-  // Add \a timer to the end of the queue. Returns an ever increasing sequence number.
-  // The first sequence number returned is 0, then 1, 2, 3, ... etc.
-  uint64_t push(Timer* timer)
-  {
-    m_running_timers.emplace_back(timer);
-    return m_running_timers.size() - 1 + m_sequence_offset;
-  }
-
-  // Remove one timer from the front of the queue and return it.
-  Timer* pop()
-  {
-    assert(!m_running_timers.empty());
-    Timer* running_timer{m_running_timers.front()};
-    ++m_sequence_offset;
-    m_running_timers.pop_front();
-    return running_timer;
-  }
-
-  void pop_cancelled_timer()
-  {
-    assert(!m_running_timers.empty());
-    assert(!m_running_timers.front());
-    ++m_sequence_offset;
-    m_running_timers.pop_front();
-    ++erase_count[2];
-    --cancelled[2];
-  }
-
-  bool cancel(uint64_t sequence)
-  {
-    size_t i = sequence - m_sequence_offset;
-    assert(0 <= i && i < m_running_timers.size());
-    m_running_timers[i] = nullptr;
-    return i == 0;
-  }
-
-  bool front_is_cancelled() const
-  {
-    return m_running_timers.front() == nullptr;
-  }
-
-  time_point front() const
-  {
-    if (m_running_timers.empty())
-      return no_timer;
-    return m_running_timers.front()->get_expiration_point();
-  }
-
-  // Return the expiration point for the related interval that will expire next.
-  time_point next_expiration_point()
-  {
-    while (!m_running_timers.empty())
-    {
-      Timer* timer = m_running_timers.front();
-      if (timer)
-        return timer->get_expiration_point();
-      pop_cancelled_timer();
-    }
-    return no_timer;
-  }
-
-  // Return true if are no running timers for the related interval.
-  bool empty() const { return m_running_timers.empty(); }
-
-  // Only used for testing.
-  size_t size() const { return m_running_timers.size(); }
-
-  int cancelled_in_queue() const
-  {
-    int sz = 0;
-    for (auto timer : m_running_timers)
-      sz += timer ? 0 : 1;
-    return sz;
-  }
-
-  void print() const
-  {
-    std::cout << "[offset:" << m_sequence_offset << "] ";
-    for (auto timer : m_running_timers)
-    {
-      Timer* t = timer;
-      if (t)
-        std::cout << " [" << static_cast<TimerImpl<2>*>(t)->m_sequence_number << ']' << t->get_expiration_point().time_since_epoch().count();
-      else
-        std::cout << " <cancelled>";
-    }
-  }
-};
-
 // This is a tournament tree of queues of timers with the same interval.
 //
 // The advantage of using queues of timers with the same interval
@@ -457,7 +370,7 @@ class RunningTimers<INTERVALS, 2>
  private:
   std::array<uint8_t, tree_size> m_tree;
   std::array<time_point, tree_size> m_cache;
-  std::array<Queue, INTERVALS::number> m_queues;
+  std::array<statefultask::TimerQueue, INTERVALS::number> m_queues;
 
   static int constexpr parent_of(int index)                             // Used in increase_cache and decrease_cache.
   {
@@ -575,7 +488,7 @@ class RunningTimers<INTERVALS, 2>
     //print();
     sanity_check();
     // Cancel the timer associated with handle.
-    Queue& queue{m_queues[handle.m_interval]};
+    statefultask::TimerQueue& queue{m_queues[handle.m_interval]};
     if (!queue.cancel(handle.m_sequence))       // Not the current timer for this interval?
     {
       //std::cout << "After:\n";
@@ -584,11 +497,16 @@ class RunningTimers<INTERVALS, 2>
       return false;                             // Then not the current timer.
     }
     // The cancelled timer is at the front of the queue. Remove it, and any subsequent cancelled timers.
-    do
     {
-      queue.pop_cancelled_timer();
+      size_t size_diff = queue.size();
+
+      queue.pop_cancelled_timers();
+
+      size_diff -= queue.size();
+      erase_count[2] += size_diff;
+      cancelled[2] -= size_diff;
     }
-    while (!queue.empty() && queue.front_is_cancelled());       // Is the next timer also cancelled?
+
     increase_cache(handle.m_interval, queue.front());
     //std::cout << "After:\n";
     //print();
@@ -615,7 +533,7 @@ class RunningTimers<INTERVALS, 2>
     std::cout << "  cache:\n";
     for (auto&& tp : m_cache)
     {
-      if (tp != no_timer)
+      if (tp != Timer::none)
       {
         std::cout << "  " << i << " :" << tp.time_since_epoch().count() << '\n';
       }
@@ -662,7 +580,7 @@ RunningTimers<INTERVALS, 2>::RunningTimers()
 {
   for (interval_t interval = 0; interval < tree_size; ++interval)
   {
-    m_cache[interval] = no_timer;
+    m_cache[interval] = Timer::none;
     int parent_ti = interval_to_parent_index(interval);
     m_tree[parent_ti] = interval & ~1;
   }
@@ -688,7 +606,7 @@ void RunningTimers<INTERVALS, 2>::sanity_check() const
   for (interval_t interval = 0; interval < tree_size; ++interval)
   {
     if (interval >= INTERVALS::number)
-      assert(m_cache[interval] == no_timer);
+      assert(m_cache[interval] == Timer::none);
     else
       assert(m_cache[interval] == m_queues[interval].front());
   }
@@ -718,13 +636,21 @@ void RunningTimers<INTERVALS, 2>::expire_next()
   sanity_check();
   int const interval = m_tree[1];                             // The interval of the timer that will expire next.
   //std::cout << "  m_tree[1] = " << interval << '\n';
-  Queue& queue{m_queues[interval]};
+  statefultask::TimerQueue& queue{m_queues[interval]};
   assert(!queue.empty());
   Timer* timer{queue.pop()};
 
   // Execute the algorithm for cache value becoming greater.
-  increase_cache(interval, queue.next_expiration_point());
-  //running_timers2.print();
+  {
+    size_t size_diff = queue.size();
+
+    increase_cache(interval, queue.next_expiration_point());
+
+    size_diff -= queue.size();
+    erase_count[2] += size_diff;
+    cancelled[2] -= size_diff;
+    //running_timers2.print();
+  }
 
   //std::cout << "  calling expire on timer [" << timer->m_sequence_number << "]" << std::endl;
   if (last_time_point != timer->get_expiration_point())
