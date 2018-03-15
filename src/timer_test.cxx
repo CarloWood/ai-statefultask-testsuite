@@ -216,11 +216,11 @@ int TimerImpl<2>::s_sequence_number = 0;
 
 void print(statefultask::TimerQueue const& queue)
 {
-  std::cout << "[offset:" << queue.get_sequence_offset() << "] ";
-  for (auto timer : queue)
+  std::cout << "[offset:" << queue.debug_get_sequence_offset() << "] ";
+  for (auto timer = queue.debug_begin(); timer != queue.debug_end(); ++timer)
   {
-    if (timer)
-      std::cout << " [" << static_cast<TimerImpl<2>*>(timer)->m_sequence_number << ']' << timer->get_expiration_point().time_since_epoch().count();
+    if (*timer)
+      std::cout << " [" << static_cast<TimerImpl<2>*>(*timer)->m_sequence_number << ']' << (*timer)->get_expiration_point().time_since_epoch().count();
     else
       std::cout << " <cancelled>";
   }
@@ -455,9 +455,8 @@ class RunningTimers<INTERVALS, 2>
   {
     assert(0 <= interval && interval < INTERVALS::number);
     sanity_check();
-    bool empty = m_queues[interval].empty();
     uint64_t sequence = m_queues[interval].push(timer);
-    if (empty)
+    if (m_queues[interval].is_current(sequence))
       decrease_cache(interval, timer->get_expiration_point());
     sanity_check();
     return {interval, sequence};
@@ -468,15 +467,15 @@ class RunningTimers<INTERVALS, 2>
   {
     size_t sz = 0;
     for (auto&& queue : m_queues)
-      sz += queue.size();
+      sz += queue.debug_size();
     return sz;
   }
 
-  int cancelled_in_queue() const
+  int debug_cancelled_in_queue() const
   {
     int sz = 0;
     for (auto&& queue : m_queues)
-      sz += queue.cancelled_in_queue();
+      sz += queue.debug_cancelled_in_queue();
     return sz;
   }
 
@@ -490,7 +489,8 @@ class RunningTimers<INTERVALS, 2>
     // Cancel the timer associated with handle.
     statefultask::TimerQueue& queue{m_queues[handle.m_interval]};
     {
-      size_t size_diff = queue.size();
+      size_t size_diff = queue.debug_size();
+
       if (!queue.cancel(handle.m_sequence))       // Not the current timer for this interval?
       {
         //std::cout << "After:\n";
@@ -498,7 +498,8 @@ class RunningTimers<INTERVALS, 2>
         sanity_check();
         return false;                             // Then not the current timer.
       }
-      size_diff -= queue.size();
+
+      size_diff -= queue.debug_size();
       erase_count[2] += size_diff;
       cancelled[2] -= size_diff;
     }
@@ -605,7 +606,7 @@ void RunningTimers<INTERVALS, 2>::sanity_check() const
       assert(m_cache[interval] == Timer::none);
     else
     {
-      assert(m_queues[interval].empty() || *m_queues[interval].begin() != nullptr);
+      assert(m_queues[interval].debug_empty() || *m_queues[interval].debug_begin() != nullptr);
       assert(m_cache[interval] == m_queues[interval].next_expiration_point());
     }
   }
@@ -637,17 +638,17 @@ void RunningTimers<INTERVALS, 2>::expire_next()
   //std::cout << "  m_tree[1] = " << interval << '\n';
   statefultask::TimerQueue& queue{m_queues[interval]};
   // During this test there will always be more timers.
-  assert(!queue.empty());
+  assert(!queue.debug_empty());
   Timer* timer;
 
   // Execute the algorithm for cache value becoming greater.
   {
-    size_t size_diff = queue.size() - 1; // -1 because pop() removes one timer that wasn't cancelled and is accounted for by the call to timer->expire() below.
+    size_t size_diff = queue.debug_size() - 1; // -1 because pop() removes one timer that wasn't cancelled and is accounted for by the call to timer->expire() below.
 
     timer = queue.pop();
     increase_cache(interval, queue.next_expiration_point());
 
-    size_diff -= queue.size();
+    size_diff -= queue.debug_size();
     erase_count[2] += size_diff;
     cancelled[2] -= size_diff;
     //running_timers2.print();
@@ -940,5 +941,5 @@ int main()
   assert(sum0 == loopsize + extra_timers);
   assert(sum1 == loopsize + extra_timers);
   assert(sum2 == loopsize + extra_timers);
-  assert(cancelled[2] == running_timers2.cancelled_in_queue());
+  assert(cancelled[2] == running_timers2.debug_cancelled_in_queue());
 }
