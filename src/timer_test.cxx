@@ -13,6 +13,7 @@
 #include <queue>
 #include "utils/is_power_of_two.h"
 #include "utils/nearest_power_of_two.h"
+#include "statefultask/RunningTimers.h"
 #include "statefultask/TimerQueue.h"
 
 namespace statefultask {
@@ -34,7 +35,7 @@ using ticks = time_point::rep;
 using microseconds = std::chrono::microseconds;
 using milliseconds = std::chrono::milliseconds;
 using seconds = std::chrono::seconds;
-int constexpr loopsize = 1000000; // 10000000;
+int constexpr loopsize = 10000000;
 
 // In order to be reproducable, invent out own 'now()' function.
 // Since we're aiming at adding loopsize in 10 second, we need
@@ -227,10 +228,10 @@ void print(statefultask::TimerQueue const& queue)
 }
 
 template<class INTERVALS, int implementation>
-class RunningTimers;
+class RunningTimersImpl;
 
 template<class INTERVALS>
-class RunningTimers<INTERVALS, 0>
+class RunningTimersImpl<INTERVALS, 0>
 {
  private:
   std::multimap<time_point, TimerImpl<0>*> m_map;
@@ -283,7 +284,7 @@ class RunningTimers<INTERVALS, 0>
 };
 
 template<class INTERVALS>
-class RunningTimers<INTERVALS, 1>
+class RunningTimersImpl<INTERVALS, 1>
 {
  private:
    using data_t = std::pair<time_point, TimerImpl<1>*>;
@@ -334,189 +335,45 @@ class RunningTimers<INTERVALS, 1>
   }
 };
 
-// This is a tournament tree of queues of timers with the same interval.
-//
-// The advantage of using queues of timers with the same interval
-// is that it is extremely cheap to insert a new timer with a
-// given interval when there is already another timer with the
-// same interval running. On top of that, it is likely that even
-// a program that has a million timers running simultaneously
-// only uses a handful of distinct intervals, so the size of
-// the tree/heap shrinks dramatically.
-//
-// Assume INTERVALS::number is 6, and thus tree_size == 8,
-// then the structure of the data in RunningTimers could look like:
-//
-// Tournament tree (tree index:tree index)
-// m_tree:                                              1:4
-//                                             /                  \
-//                                  2:0                                     3:4
-//                              /         \                             /         \
-//                        4:0                 5:3                 6:4                 7:6
-//                      /     \             /     \             /     \             /     \
-// m_cache:           18  no_timer       102        55        10        60  no_timer  no_timer
-// index of m_cache:   0         1         2         3         4         5         6         7
-//
-// Thus, m_tree[1] contains 4, m_tree[2] contains 0, m_tree[3] contains 4 and so on.
-// Each time a parent contains the same interval (in) as one of its children and well
-// such that m_cache[in] contains the smallest time_point value of the two.
-// m_cache[in] contains a copy of the top of m_queues[in].
-//
 template<class INTERVALS>
-class RunningTimers<INTERVALS, 2>
+class RunningTimersImpl<INTERVALS, 2> : public statefultask::RunningTimers<INTERVALS>
 {
-  static int constexpr tree_size = utils::nearest_power_of_two(INTERVALS::number);
-
- private:
-  std::array<uint8_t, tree_size> m_tree;
-  std::array<time_point, tree_size> m_cache;
-  std::array<statefultask::TimerQueue, INTERVALS::number> m_queues;
-
-  static int constexpr parent_of(int index)                             // Used in increase_cache and decrease_cache.
-  {
-    return index >> 1;
-  }
-
-  static int constexpr interval_to_parent_index(interval_t in)      // Used in increase_cache and decrease_cache.
-  {
-    return (in + tree_size) >> 1;
-  }
-
-  static int constexpr sibling_of(int index)                            // Used in increase_cache.
-  {
-    return index ^ 1;
-  }
-
-  static int constexpr left_child_of(int index)                         // Only used in constructor.
-  {
-    return index << 1;
-  }
-
-  void decrease_cache(interval_t interval, time_point tp)
-  {
-    //std::cout << "Calling decrease_cache(" << interval << ", " << tp.time_since_epoch().count() << ")" << std::endl;
-    assert(tp <= m_cache[interval]);
-    m_cache[interval] = tp;                             // Replace no_timer with tp.
-    // We just put a SMALLER value in the cache at position interval than what there was before.
-    // Therefore all we have to do is overwrite parents with our interval until the time_point
-    // value of the parent is less than tp.
-    int parent_ti = interval_to_parent_index(interval); // Let 'parent_ti' be the index of the parent node in the tree above 'interval'.
-    while (tp <= m_cache[m_tree[parent_ti]])            // m_tree[parent_ti] is the content of that node. m_cache[m_tree[parent_ti]] is the value.
-    {
-      m_tree[parent_ti] = interval;                     // Update that tree node.
-      if (parent_ti == 1)                               // If this was the top-most node in the tree then we're done.
-        break;
-      parent_ti = parent_of(parent_ti);                 // Set 'i' to be the index of the parent node in the tree above 'i'.
-    }
-  }
-
-  void increase_cache(interval_t interval, time_point tp)
-  {
-    //std::cout << "Calling increase_cache(" << interval << ", " << tp.time_since_epoch().count() << ")" << std::endl;
-    assert(tp >= m_cache[interval]);
-    m_cache[interval] = tp;
-
-    int parent_ti = interval_to_parent_index(interval); // Let 'parent_ti' be the index of the parent node in the tree above 'interval'.
-
-    interval_t in = interval;                       // Let 'in' be the interval whose value is changed with respect to m_tree[parent_ti].
-    interval_t si = in ^ 1;                         // Let 'si' be the interval of the current sibling of in.
-    for(;;)
-    {
-      time_point sv = m_cache[si];
-      if (tp > sv)
-      {
-        if (m_tree[parent_ti] == si)
-          break;
-        tp = sv;
-        in = si;
-      }
-      m_tree[parent_ti] = in;                           // Update the tree.
-      if (parent_ti == 1)                               // If this was the top-most node in the tree then we're done.
-        break;
-      si = m_tree[sibling_of(parent_ti)];               // Update the sibling interval.
-      parent_ti = parent_of(parent_ti);                 // Set 'parent_ti' to be the index of the parent node in the tree above 'parent_ti'.
-    }
-  }
-
  public:
-  RunningTimers();
-
-  // For debugging. Expire the next timer.
-  void expire_next();
-
-  // Return true if \a handle is the next timer to expire.
-  bool is_current(Timer::Handle const& handle) const
-  {
-    return m_tree[1] == handle.m_interval && m_queues[handle.m_interval].is_current(handle.m_sequence);
-  }
-
-  // Add \a timer to the list of running timers, using \a interval as timeout.
-  Timer::Handle push(interval_t interval, Timer* timer)
-  {
-    assert(0 <= interval && interval < INTERVALS::number);
-    sanity_check();
-    uint64_t sequence = m_queues[interval].push(timer);
-    if (m_queues[interval].is_current(sequence))
-      decrease_cache(interval, timer->get_expiration_point());
-    sanity_check();
-    return {interval, sequence};
-  }
-
-  // Only for debug output.
-  size_t size() const
-  {
-    size_t sz = 0;
-    for (auto&& queue : m_queues)
-      sz += queue.debug_size();
-    return sz;
-  }
-
-  int debug_cancelled_in_queue() const
-  {
-    int sz = 0;
-    for (auto&& queue : m_queues)
-      sz += queue.debug_cancelled_in_queue();
-    return sz;
-  }
+  RunningTimersImpl() { sanity_check(); }
 
   bool cancel(Timer::Handle const handle)
   {
     assert(handle.is_running());
-    //std::cout << "Calling RunningTimers<2>::cancel({[" << handle.m_sequence << "], in=" << handle. m_interval << "})\n";
+    //std::cout << "Calling RunningTimers::cancel({[" << handle.m_sequence << "], in=" << handle. m_interval << "})\n";
     //std::cout << "Before:\n";
     //print();
     sanity_check();
-    // Cancel the timer associated with handle.
-    statefultask::TimerQueue& queue{m_queues[handle.m_interval]};
+
+    bool res;
     {
+      statefultask::TimerQueue& queue{this->m_queues[handle.m_interval]};
       size_t size_diff = queue.debug_size();
 
-      if (!queue.cancel(handle.m_sequence))       // Not the current timer for this interval?
-      {
-        //std::cout << "After:\n";
-        //print();
-        sanity_check();
-        return false;                             // Then not the current timer.
-      }
+      res = statefultask::RunningTimers<INTERVALS>::cancel(handle);
 
       size_diff -= queue.debug_size();
       erase_count[2] += size_diff;
       cancelled[2] -= size_diff;
     }
 
-    increase_cache(handle.m_interval, queue.next_expiration_point());
     //std::cout << "After:\n";
     //print();
     sanity_check();
+
     // Return true if the cancelled timer is the currently running timer.
-    return m_tree[1] == handle.m_interval;
+    return res;
   }
 
   void print() const
   {
     std::cout << "Running timers:\n";
     int i = 0; // interval
-    for (auto&& queue : m_queues)
+    for (auto&& queue : this->m_queues)
     {
       if (!queue.empty())
       {
@@ -528,7 +385,7 @@ class RunningTimers<INTERVALS, 2>
     }
     i = 0;
     std::cout << "  cache:\n";
-    for (auto&& tp : m_cache)
+    for (auto&& tp : this->m_cache)
     {
       if (tp != Timer::none)
       {
@@ -541,9 +398,9 @@ class RunningTimers<INTERVALS, 2>
     int dist = 128;
     int in = dist / 2;
     std::cout << std::setfill(' ');
-    for (int j = 1; j < tree_size; ++j)
+    for (int j = 1; j < statefultask::RunningTimers<INTERVALS>::tree_size; ++j)
     {
-      uint8_t d = m_tree[j];
+      uint8_t d = this->m_tree[j];
       std::cout << std::right << std::setw(in) << (int)d;
       in = dist;
       if (i - 1 == j)
@@ -569,11 +426,25 @@ class RunningTimers<INTERVALS, 2>
     std::cout << std::endl;
   }
 
+  void expire_next()
+  {
+    sanity_check();
+    statefultask::RunningTimers<INTERVALS>::expire_next();
+    sanity_check();
+  }
+
   void sanity_check() const;
 };
 
+std::mutex running_timers_mutex;
+RunningTimersImpl<Intervals, 0> running_timers0;
+RunningTimersImpl<Intervals, 1> running_timers1;
+RunningTimersImpl<Intervals, 2> running_timers2;
+
+namespace statefultask {
+
 template<class INTERVALS>
-RunningTimers<INTERVALS, 2>::RunningTimers()
+RunningTimers<INTERVALS>::RunningTimers()
 {
   for (interval_t interval = 0; interval < tree_size; ++interval)
   {
@@ -585,55 +456,12 @@ RunningTimers<INTERVALS, 2>::RunningTimers()
   {
     m_tree[index] = m_tree[left_child_of(index)];
   }
-  sanity_check();
-}
-
-std::mutex running_timers_mutex;
-RunningTimers<Intervals, 0> running_timers0;
-RunningTimers<Intervals, 1> running_timers1;
-RunningTimers<Intervals, 2> running_timers2;
-
-template<class INTERVALS>
-void RunningTimers<INTERVALS, 2>::sanity_check() const
-{
-  //static int count;
-  //std::cout << "sanity check #" << ++count << std::endl;
-
-  // Every cache entry needs to have either no_timer in it when the corresponding queue is empty, or the first entry of that queue.
-  for (interval_t interval = 0; interval < tree_size; ++interval)
-  {
-    if (interval >= INTERVALS::number)
-      assert(m_cache[interval] == Timer::none);
-    else
-    {
-      assert(m_queues[interval].debug_empty() || *m_queues[interval].debug_begin() != nullptr);
-      assert(m_cache[interval] == m_queues[interval].next_expiration_point());
-    }
-  }
-  for (interval_t interval = 0; interval < tree_size; interval += 2)
-  {
-    int ti = interval_to_parent_index(interval);
-    assert((m_tree[ti] & ~1) == interval);
-    assert(m_cache[m_tree[ti] ^ 1] >= m_cache[m_tree[ti]]);
-  }
-  for (int ti = tree_size - 1; ti > 1; --ti)
-  {
-    int pi = parent_of(ti);
-    int si = sibling_of(ti);
-    int pin = m_tree[pi];
-    int in = m_tree[ti];
-    int sin = m_tree[si];
-    assert(pin == in || pin == sin);
-    int oin = in + sin - pin;
-    assert(m_cache[pin] <= m_cache[oin]);
-  }
 }
 
 template<class INTERVALS>
-void RunningTimers<INTERVALS, 2>::expire_next()
+void RunningTimers<INTERVALS>::expire_next()
 {
   //std::cout << "Calling expire_next()" << std::endl;
-  sanity_check();
   int const interval = m_tree[1];                             // The interval of the timer that will expire next.
   //std::cout << "  m_tree[1] = " << interval << '\n';
   statefultask::TimerQueue& queue{m_queues[interval]};
@@ -662,7 +490,44 @@ void RunningTimers<INTERVALS, 2>::expire_next()
   }
   timer->expire();
   //running_timers2.print();
-  sanity_check();
+}
+
+} // namespace statefultask
+
+template<class INTERVALS>
+void RunningTimersImpl<INTERVALS, 2>::sanity_check() const
+{
+  //static int count;
+  //std::cout << "sanity check #" << ++count << std::endl;
+
+  // Every cache entry needs to have either no_timer in it when the corresponding queue is empty, or the first entry of that queue.
+  for (interval_t interval = 0; interval < statefultask::RunningTimers<INTERVALS>::tree_size; ++interval)
+  {
+    if (interval >= INTERVALS::number)
+      assert(this->m_cache[interval] == Timer::none);
+    else
+    {
+      assert(this->m_queues[interval].debug_empty() || *this->m_queues[interval].debug_begin() != nullptr);
+      assert(this->m_cache[interval] == this->m_queues[interval].next_expiration_point());
+    }
+  }
+  for (interval_t interval = 0; interval < statefultask::RunningTimers<INTERVALS>::tree_size; interval += 2)
+  {
+    int ti = this->interval_to_parent_index(interval);
+    assert((this->m_tree[ti] & ~1) == interval);
+    assert(this->m_cache[this->m_tree[ti] ^ 1] >= this->m_cache[this->m_tree[ti]]);
+  }
+  for (int ti = statefultask::RunningTimers<INTERVALS>::tree_size - 1; ti > 1; --ti)
+  {
+    int pi = this->parent_of(ti);
+    int si = this->sibling_of(ti);
+    int pin = this->m_tree[pi];
+    int in = this->m_tree[ti];
+    int sin = this->m_tree[si];
+    assert(pin == in || pin == sin);
+    int oin = in + sin - pin;
+    assert(this->m_cache[pin] <= this->m_cache[oin]);
+  }
 }
 
 // I'm assuming that end() doesn't invalidate, ever.
@@ -714,7 +579,9 @@ void Timer::start(interval_t interval, std::function<void()> call_back, int n)
   m_expiration_point = /*Timer::clock_type::*/now(n) + Intervals::durations[interval];
   m_call_back = call_back;
   std::lock_guard<std::mutex> lk(running_timers_mutex);
+  running_timers2.sanity_check();
   m_handle = running_timers2.push(interval, this);
+  running_timers2.sanity_check();
 
   //std::cout << "  expires at " << m_expiration_point.time_since_epoch().count() << std::endl;
   if (running_timers2.is_current(m_handle))
@@ -854,7 +721,7 @@ void generate()
   }
   std::cout << "Running timers: " << (running_timers0.size() - cancelled[0]) << '\n';
   std::cout << "Running timers: " << (running_timers1.size() - cancelled[1]) << '\n';
-  std::cout << "Running timers: " << (running_timers2.size() - cancelled[2]) << '\n';
+  std::cout << "Running timers: " << (running_timers2.debug_size() - cancelled[2]) << '\n';
   // For the remainder we wish to keep the number of running timers at around 100,000.
   // Therefore on average we should remove 1.5 timers per loop, the same amount that we add.
   // During this loop the ratio x/y goes to 1. Therefore each call to expire_next() removes
@@ -895,11 +762,11 @@ void generate()
   }
   std::cout << "Running timers: " << (running_timers0.size() - cancelled[0]) << '\n';
   std::cout << "Running timers: " << (running_timers1.size() - cancelled[1]) << '\n';
-  std::cout << "Running timers: " << (running_timers2.size() - cancelled[2]) << '\n';
+  std::cout << "Running timers: " << (running_timers2.debug_size() - cancelled[2]) << '\n';
   auto end = std::chrono::high_resolution_clock::now();
   std::cout << "Running: " << (running_timers0.size() - cancelled[0]) << '\n';
   std::cout << "Running: " << (running_timers1.size() - cancelled[1]) << '\n';
-  std::cout << "Running: " << (running_timers2.size() - cancelled[2]) << '\n';
+  std::cout << "Running: " << (running_timers2.debug_size() - cancelled[2]) << '\n';
   std::cout << "Benchmark finished.\n";
 
   std::chrono::duration<double> diff = end - start;
@@ -916,10 +783,10 @@ int main()
 
   int sum0 = running_timers0.size() + expire_count[0] + erase_count[0];
   int sum1 = running_timers1.size() + expire_count[1] + erase_count[1];
-  int sum2 = running_timers2.size() + expire_count[2] + erase_count[2];
+  int sum2 = running_timers2.debug_size() + expire_count[2] + erase_count[2];
   std::cout << "running_timers.size() = " << running_timers0.size() << "; cancelled = " << cancelled[0] << '\n';
   std::cout << "running_timers.size() = " << running_timers1.size() << "; cancelled = " << cancelled[1] << '\n';
-  std::cout << "running_timers.size() = " << running_timers2.size() << "; cancelled = " << cancelled[2] << '\n';
+  std::cout << "running_timers.size() = " << running_timers2.debug_size() << "; cancelled = " << cancelled[2] << '\n';
   std::cout << "loopsize (type X timers) = " << loopsize <<
       "; type Y timers: " << extra_timers <<
       "; still running timers: " << (running_timers0.size() - cancelled[0]) <<
@@ -934,7 +801,7 @@ int main()
       "; expired timers = " << expire_count[1] << std::endl;
   std::cout << "loopsize (type X timers) = " << loopsize <<
       "; type Y timers: " << extra_timers <<
-      "; still running timers: " << (running_timers2.size() - cancelled[2]) <<
+      "; still running timers: " << (running_timers2.debug_size() - cancelled[2]) <<
       "; cancelled timers still in queue: " << cancelled[2] <<
       "; cancelled timers removed from queue = " << erase_count[2] <<
       "; expired timers = " << expire_count[2] << std::endl;
