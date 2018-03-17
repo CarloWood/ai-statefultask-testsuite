@@ -40,7 +40,7 @@ int main()
   f3(5, 6);
   f4();
   sum(21, 21);
-  
+
   std::cout << "Before calling invoke().\n";
   sum.invoke();
   f4.invoke();

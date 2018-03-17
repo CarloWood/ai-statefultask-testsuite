@@ -14,14 +14,6 @@
 #include "utils/is_power_of_two.h"
 #include "utils/nearest_power_of_two.h"
 #include "statefultask/RunningTimers.h"
-#include "statefultask/TimerQueue.h"
-
-namespace statefultask {
-
-//static
-Timer::time_point constexpr statefultask::Timer::none;
-
-} // namespace statefultask
 
 // 0: multimap
 // 1: priority_queue
@@ -37,7 +29,7 @@ using milliseconds = std::chrono::milliseconds;
 using seconds = std::chrono::seconds;
 int constexpr loopsize = 10000000;
 
-// In order to be reproducable, invent out own 'now()' function.
+// In order to be reproducable, invent our own 'now()' function.
 // Since we're aiming at adding loopsize in 10 second, we need
 // to add 10,000,000,000 nanoseconds when n == loopsize.
 time_point constexpr now(int n) { return time_point(duration{/*1520039479404233206L +*/ 10000000000L / loopsize * n}); }
@@ -64,14 +56,6 @@ struct Intervals
 
 //static
 std::array<duration, max_interval_index + 1> constexpr Intervals::durations;
-
-std::array<std::atomic_int, 3> expire_count;
-std::array<std::atomic_int, 3> erase_count;
-std::array<std::atomic_int, 3> cancelled;
-
-void expire0() { expire_count[0]++; }
-void expire1() { expire_count[1]++; }
-void expire2() { expire_count[2]++; }
 
 template<int implementation>
 struct TimerImpl;
@@ -130,7 +114,13 @@ struct TimerHandleImpl<2> : public Timer::Handle
   TimerHandleImpl(Timer::Handle handle) : Timer::Handle(handle) { }
 };
 
+static Timer* last_timer_2;
 static time_point last_time_point;
+static int last_sequence_0;
+static int last_out_of_sync_sequence_1;
+static int last_out_of_sync_sequence_10;
+static int last_out_of_sync_sequence_2;
+static int last_out_of_sync_sequence_20;
 
 template<int implementation>
 struct TimerImpl;
@@ -156,6 +146,8 @@ struct TimerImpl<0>
     assert(m_handle.is_running());
     m_handle.set_not_running();
     last_time_point = m_expiration_point;
+    last_sequence_0 = m_sequence_number;
+    //std::cout << "0. Expiring timer " << m_sequence_number << " @" << m_expiration_point.time_since_epoch().count() << '\n';
     //std::cout << /*m_sequence_number <<*/ " : call_back()\t\t\t" << m_expiration_point.time_since_epoch().count() << "\n";
     m_call_back();
   }
@@ -185,10 +177,37 @@ struct TimerImpl<1>
     assert(m_handle.is_running());
     assert(!m_cancelled_1);
     m_handle.set_not_running();
+    //std::cout << "1. Expiring timer " << m_sequence_number << " @" << m_expiration_point.time_since_epoch().count() << '\n';
     if (last_time_point != m_expiration_point)
     {
-      std::cout << "ERROR: Expiring a timer with m_expiration_point = " << m_expiration_point.time_since_epoch().count() << "; should be: " << last_time_point.time_since_epoch().count() << std::endl;
+      std::cout << "1. ERROR: Expiring a timer with m_expiration_point = " << m_expiration_point.time_since_epoch().count() << "; should be: " << last_time_point.time_since_epoch().count() << std::endl;
       assert(last_time_point == m_expiration_point);
+    }
+    if (m_sequence_number != last_sequence_0)
+    {
+      if (!last_out_of_sync_sequence_1)
+      {
+        last_out_of_sync_sequence_10 = last_sequence_0;
+        last_out_of_sync_sequence_1 = m_sequence_number;
+      }
+      else
+      {
+        //std::cout << "1. m_sequence_number = " << m_sequence_number << ", last_out_of_sync_sequence_10 = " << last_out_of_sync_sequence_10 << ", last_sequence_0 = " << last_sequence_0 << ", last_out_of_sync_sequence_1 = " << last_out_of_sync_sequence_1 << std::endl;
+        if (last_sequence_0 == last_out_of_sync_sequence_1)
+        {
+          if (m_sequence_number == last_out_of_sync_sequence_10)
+            last_out_of_sync_sequence_1 = 0;
+          else
+            last_out_of_sync_sequence_1 = m_sequence_number;
+        }
+        else if (m_sequence_number == last_out_of_sync_sequence_10)
+          last_out_of_sync_sequence_10 = last_sequence_0;
+        else
+        {
+          std::cout << "1. ERROR: Expiring a timer with m_sequence_number = " << m_sequence_number << "; should be: " << last_out_of_sync_sequence_10 << std::endl;
+          assert(last_sequence_0 == last_out_of_sync_sequence_1);
+        }
+      }
     }
     //std::cout << /*m_sequence_number <<*/ " : call_back()\t\t\t" << m_expiration_point.time_since_epoch().count() << "\n";
     m_call_back();
@@ -205,6 +224,52 @@ struct TimerImpl<2> : public Timer
   TimerImpl() : m_sequence_number(++s_sequence_number) { }
   TimerImpl(Timer timer) : Timer(timer), m_sequence_number(++s_sequence_number) { }
 };
+
+void expire0()
+{
+}
+
+void expire1()
+{
+}
+
+void expire2()
+{
+  //std::cout << "2. Expiring timer " << static_cast<TimerImpl<2>*>(last_timer_2)->m_sequence_number << " @" << last_timer_2->get_expiration_point().time_since_epoch().count() << std::endl;
+  if (last_time_point != last_timer_2->get_expiration_point())
+  {
+    std::cout << "2. ERROR: Expiring a timer with m_expiration_point = " << last_timer_2->get_expiration_point().time_since_epoch().count() <<
+        "; should be: " << last_time_point.time_since_epoch().count() << std::endl;
+    assert(last_time_point == last_timer_2->get_expiration_point());
+  }
+  int m_sequence_number = static_cast<TimerImpl<2>*>(last_timer_2)->m_sequence_number;
+  if (m_sequence_number != last_sequence_0)
+  {
+    if (!last_out_of_sync_sequence_2)
+    {
+      last_out_of_sync_sequence_20 = last_sequence_0;
+      last_out_of_sync_sequence_2 = m_sequence_number;
+    }
+    else
+    {
+      //std::cout << "2. m_sequence_number = " << m_sequence_number << ", last_out_of_sync_sequence_20 = " << last_out_of_sync_sequence_20 << ", last_sequence_0 = " << last_sequence_0 << ", last_out_of_sync_sequence_2 = " << last_out_of_sync_sequence_2 << std::endl;
+      if (last_sequence_0 == last_out_of_sync_sequence_2)
+      {
+        if (m_sequence_number == last_out_of_sync_sequence_20)
+          last_out_of_sync_sequence_2 = 0;
+        else
+          last_out_of_sync_sequence_2 = m_sequence_number;
+      }
+      else if (m_sequence_number == last_out_of_sync_sequence_20)
+        last_out_of_sync_sequence_20 = last_sequence_0;
+      else
+      {
+        std::cout << "2. ERROR: Expiring a timer with m_sequence_number = " << m_sequence_number << "; should be: " << last_out_of_sync_sequence_20 << std::endl;
+        assert(last_sequence_0 == last_out_of_sync_sequence_2);
+      }
+    }
+  }
+}
 
 //static
 int TimerImpl<0>::s_sequence_number = 0;
@@ -267,11 +332,6 @@ class RunningTimersImpl<INTERVALS, 0>
       timer = b->second;
       if (timer)
         timer->expire();
-      else
-      {
-        ++erase_count[0];
-        --cancelled[0];
-      }
       m_map.erase(b);
     }
     while (!timer);
@@ -324,11 +384,6 @@ class RunningTimersImpl<INTERVALS, 1>
       timer = data.second;
       if (!timer->m_cancelled_1)
         timer->expire();
-      else
-      {
-        ++erase_count[1];
-        --cancelled[1];
-      }
       m_pqueue.pop();
     }
     while (timer->m_cancelled_1);
@@ -339,8 +394,6 @@ template<class INTERVALS>
 class RunningTimersImpl<INTERVALS, 2> : public statefultask::RunningTimers<INTERVALS>
 {
  public:
-  RunningTimersImpl() { sanity_check(); }
-
   bool cancel(Timer::Handle const handle)
   {
     assert(handle.is_running());
@@ -349,17 +402,7 @@ class RunningTimersImpl<INTERVALS, 2> : public statefultask::RunningTimers<INTER
     //print();
     sanity_check();
 
-    bool res;
-    {
-      statefultask::TimerQueue& queue{this->m_queues[handle.m_interval]};
-      size_t size_diff = queue.debug_size();
-
-      res = statefultask::RunningTimers<INTERVALS>::cancel(handle);
-
-      size_diff -= queue.debug_size();
-      erase_count[2] += size_diff;
-      cancelled[2] -= size_diff;
-    }
+    bool res = statefultask::RunningTimers<INTERVALS>::cancel(handle);
 
     //std::cout << "After:\n";
     //print();
@@ -429,6 +472,13 @@ class RunningTimersImpl<INTERVALS, 2> : public statefultask::RunningTimers<INTER
   void expire_next()
   {
     sanity_check();
+    int const interval = this->m_tree[1];                             // The interval of the timer that will expire next.
+    //std::cout << "  m_tree[1] = " << interval << '\n';
+    statefultask::TimerQueue& queue{this->m_queues[interval]};
+    // During this test there will always be more timers.
+    assert(!queue.debug_empty());
+    last_timer_2 = *queue.debug_begin();
+
     statefultask::RunningTimers<INTERVALS>::expire_next();
     sanity_check();
   }
@@ -439,60 +489,7 @@ class RunningTimersImpl<INTERVALS, 2> : public statefultask::RunningTimers<INTER
 std::mutex running_timers_mutex;
 RunningTimersImpl<Intervals, 0> running_timers0;
 RunningTimersImpl<Intervals, 1> running_timers1;
-RunningTimersImpl<Intervals, 2> running_timers2;
-
-namespace statefultask {
-
-template<class INTERVALS>
-RunningTimers<INTERVALS>::RunningTimers()
-{
-  for (interval_t interval = 0; interval < tree_size; ++interval)
-  {
-    m_cache[interval] = Timer::none;
-    int parent_ti = interval_to_parent_index(interval);
-    m_tree[parent_ti] = interval & ~1;
-  }
-  for (int index = tree_size / 2 - 1; index > 0; --index)
-  {
-    m_tree[index] = m_tree[left_child_of(index)];
-  }
-}
-
-template<class INTERVALS>
-void RunningTimers<INTERVALS>::expire_next()
-{
-  //std::cout << "Calling expire_next()" << std::endl;
-  int const interval = m_tree[1];                             // The interval of the timer that will expire next.
-  //std::cout << "  m_tree[1] = " << interval << '\n';
-  statefultask::TimerQueue& queue{m_queues[interval]};
-  // During this test there will always be more timers.
-  assert(!queue.debug_empty());
-  Timer* timer;
-
-  // Execute the algorithm for cache value becoming greater.
-  {
-    size_t size_diff = queue.debug_size() - 1; // -1 because pop() removes one timer that wasn't cancelled and is accounted for by the call to timer->expire() below.
-
-    timer = queue.pop();
-    increase_cache(interval, queue.next_expiration_point());
-
-    size_diff -= queue.debug_size();
-    erase_count[2] += size_diff;
-    cancelled[2] -= size_diff;
-    //running_timers2.print();
-  }
-
-  //std::cout << "  calling expire on timer [" << timer->m_sequence_number << "]" << std::endl;
-  if (last_time_point != timer->get_expiration_point())
-  {
-    std::cout << "ERROR: Expiring a timer with m_expiration_point = " << timer->get_expiration_point().time_since_epoch().count() << "; should be: " << last_time_point.time_since_epoch().count() << std::endl;
-    assert(last_time_point == timer->get_expiration_point());
-  }
-  timer->expire();
-  //running_timers2.print();
-}
-
-} // namespace statefultask
+statefultask::RunningTimers<Intervals> running_timers2;
 
 template<class INTERVALS>
 void RunningTimersImpl<INTERVALS, 2>::sanity_check() const
@@ -579,9 +576,9 @@ void Timer::start(interval_t interval, std::function<void()> call_back, int n)
   m_expiration_point = /*Timer::clock_type::*/now(n) + Intervals::durations[interval];
   m_call_back = call_back;
   std::lock_guard<std::mutex> lk(running_timers_mutex);
-  running_timers2.sanity_check();
+//  running_timers2.sanity_check();
   m_handle = running_timers2.push(interval, this);
-  running_timers2.sanity_check();
+//  running_timers2.sanity_check();
 
   //std::cout << "  expires at " << m_expiration_point.time_since_epoch().count() << std::endl;
   if (running_timers2.is_current(m_handle))
@@ -596,7 +593,6 @@ void TimerImpl<0>::stop()
   {
     bool update = running_timers0.is_current(m_handle);
     m_handle.set_not_running();
-    cancelled[0]++;
     if (update)
       update_running_timer();
   }
@@ -615,7 +611,6 @@ void TimerImpl<1>::stop()
     m_cancelled_1 = true;
 
     m_handle.set_not_running();
-    cancelled[1]++;
     if (update)
       update_running_timer();
   }
@@ -629,10 +624,9 @@ void Timer::stop()
   if (m_handle.is_running())
   {
     bool update;
-    update = running_timers2.cancel(m_handle);
+    update = static_cast<RunningTimersImpl<Intervals, 2>&>(running_timers2).cancel(m_handle);
 
     m_handle.set_not_running();
-    cancelled[2]++;
     if (update)
       update_running_timer();
   }
@@ -710,18 +704,15 @@ void generate()
 
     if (n % 2 == 0 && interval > 0)     // Half the time, cancel the timer before it expires.
     {
-      timers<0>[nt].start(interval - 1, [&timer0](){ /*"destruct" timer*/ timer0.stop(); expire_count[0]++; }, n);
-      timers<1>[nt].start(interval - 1, [&timer1](){ /*"destruct" timer*/ timer1.stop(); expire_count[1]++; }, n);
-      timers<2>[nt].start(interval - 1, [&timer2](){ /*"destruct" timer*/ timer2.stop(); expire_count[2]++; }, n);
+      timers<0>[nt].start(interval - 1, [&timer0](){ /*"destruct" timer*/ timer0.stop(); }, n);
+      timers<1>[nt].start(interval - 1, [&timer1](){ /*"destruct" timer*/ timer1.stop(); }, n);
+      timers<2>[nt].start(interval - 1, [&timer2](){ /*"destruct" timer*/ timer2.stop(); }, n);
       ++nt;
       running_timers0.expire_next();
       running_timers1.expire_next();
-      running_timers2.expire_next();
+      static_cast<RunningTimersImpl<Intervals, 2>&>(running_timers2).expire_next();
     }
   }
-  std::cout << "Running timers: " << (running_timers0.size() - cancelled[0]) << '\n';
-  std::cout << "Running timers: " << (running_timers1.size() - cancelled[1]) << '\n';
-  std::cout << "Running timers: " << (running_timers2.debug_size() - cancelled[2]) << '\n';
   // For the remainder we wish to keep the number of running timers at around 100,000.
   // Therefore on average we should remove 1.5 timers per loop, the same amount that we add.
   // During this loop the ratio x/y goes to 1. Therefore each call to expire_next() removes
@@ -742,31 +733,25 @@ void generate()
 
     if (n % 2 == 0 && interval > 0)     // Half the time, cancel the timer before it expires.
     {
-      timers<0>[nt].start(interval - 1, [&timer0](){ /*"destruct" timer*/ timer0.stop(); expire_count[0]++; }, n);
-      timers<1>[nt].start(interval - 1, [&timer1](){ /*"destruct" timer*/ timer1.stop(); expire_count[1]++; }, n);
-      timers<2>[nt].start(interval - 1, [&timer2](){ /*"destruct" timer*/ timer2.stop(); expire_count[2]++; }, n);
+      timers<0>[nt].start(interval - 1, [&timer0](){ /*"destruct" timer*/ timer0.stop(); }, n);
+      timers<1>[nt].start(interval - 1, [&timer1](){ /*"destruct" timer*/ timer1.stop(); }, n);
+      timers<2>[nt].start(interval - 1, [&timer2](){ /*"destruct" timer*/ timer2.stop(); }, n);
       ++nt;
     }
 
     // Call expire_next() 1 + fraction times per loop.
     running_timers0.expire_next();
     running_timers1.expire_next();
-    running_timers2.expire_next();
+    static_cast<RunningTimersImpl<Intervals, 2>&>(running_timers2).expire_next();
     if (m < n * fraction)
     {
       running_timers0.expire_next();
       running_timers1.expire_next();
-      running_timers2.expire_next();
+      static_cast<RunningTimersImpl<Intervals, 2>&>(running_timers2).expire_next();
       ++m;
     }
   }
-  std::cout << "Running timers: " << (running_timers0.size() - cancelled[0]) << '\n';
-  std::cout << "Running timers: " << (running_timers1.size() - cancelled[1]) << '\n';
-  std::cout << "Running timers: " << (running_timers2.debug_size() - cancelled[2]) << '\n';
   auto end = std::chrono::high_resolution_clock::now();
-  std::cout << "Running: " << (running_timers0.size() - cancelled[0]) << '\n';
-  std::cout << "Running: " << (running_timers1.size() - cancelled[1]) << '\n';
-  std::cout << "Running: " << (running_timers2.debug_size() - cancelled[2]) << '\n';
   std::cout << "Benchmark finished.\n";
 
   std::chrono::duration<double> diff = end - start;
@@ -777,36 +762,12 @@ void generate()
 
 int main()
 {
+  static_cast<RunningTimersImpl<Intervals, 2>&>(running_timers2).sanity_check();
+
   std::thread generator(&generate);
 
   generator.join();
 
-  int sum0 = running_timers0.size() + expire_count[0] + erase_count[0];
-  int sum1 = running_timers1.size() + expire_count[1] + erase_count[1];
-  int sum2 = running_timers2.debug_size() + expire_count[2] + erase_count[2];
-  std::cout << "running_timers.size() = " << running_timers0.size() << "; cancelled = " << cancelled[0] << '\n';
-  std::cout << "running_timers.size() = " << running_timers1.size() << "; cancelled = " << cancelled[1] << '\n';
-  std::cout << "running_timers.size() = " << running_timers2.debug_size() << "; cancelled = " << cancelled[2] << '\n';
-  std::cout << "loopsize (type X timers) = " << loopsize <<
-      "; type Y timers: " << extra_timers <<
-      "; still running timers: " << (running_timers0.size() - cancelled[0]) <<
-      "; cancelled timers still in queue: " << cancelled[0] <<
-      "; cancelled timers removed from queue = " << erase_count[0] <<
-      "; expired timers = " << expire_count[0] << std::endl;
-  std::cout << "loopsize (type X timers) = " << loopsize <<
-      "; type Y timers: " << extra_timers <<
-      "; still running timers: " << (running_timers1.size() - cancelled[1]) <<
-      "; cancelled timers still in queue: " << cancelled[1] <<
-      "; cancelled timers removed from queue = " << erase_count[1] <<
-      "; expired timers = " << expire_count[1] << std::endl;
-  std::cout << "loopsize (type X timers) = " << loopsize <<
-      "; type Y timers: " << extra_timers <<
-      "; still running timers: " << (running_timers2.debug_size() - cancelled[2]) <<
-      "; cancelled timers still in queue: " << cancelled[2] <<
-      "; cancelled timers removed from queue = " << erase_count[2] <<
-      "; expired timers = " << expire_count[2] << std::endl;
-  assert(sum0 == loopsize + extra_timers);
-  assert(sum1 == loopsize + extra_timers);
-  assert(sum2 == loopsize + extra_timers);
-  assert(cancelled[2] == running_timers2.debug_cancelled_in_queue());
+  std::cout << "loopsize (type X timers) = " << loopsize << "; type Y timers: " << extra_timers << std::endl;
+  std::cout << "Success." << std::endl;
 }
