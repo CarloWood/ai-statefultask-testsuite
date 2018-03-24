@@ -53,6 +53,11 @@ struct TimerImpl;
 template<int implementation>
 struct TimerHandleImpl;
 
+int running_timers_0;
+int expired_timers_0;
+int cancelled_removed_0;
+int cancelled_timers_0;
+
 template<>
 struct TimerHandleImpl<0>
 {
@@ -71,6 +76,8 @@ struct TimerHandleImpl<0>
   {
     assert(m_iter != end);
     assert(m_iter->second);
+    ++cancelled_timers_0;
+    --running_timers_0;
     m_iter->second = nullptr;   // Cancel timer.
     m_iter = end;               // Mark this handle as being 'not running'.
   }
@@ -140,6 +147,7 @@ struct TimerImpl<0>
     //std::cout << "0. Expiring timer " << m_sequence_number << " @" << m_expiration_point.time_since_epoch().count() << '\n';
     //std::cout << /*m_sequence_number <<*/ " : call_back()\t\t\t" << m_expiration_point.time_since_epoch().count() << "\n";
     m_call_back();
+    ++expired_timers_0;
   }
 
   time_point get_expiration_point() const { return m_expiration_point; }
@@ -306,6 +314,7 @@ class RunningTimersImpl<INTERVALS, 0>
   // Add \a timer to the list of running timers, using \a interval as timeout.
   TimerHandleImpl<0> push(int, TimerImpl<0>* timer)
   {
+    ++running_timers_0;
     return m_map.emplace(timer->get_expiration_point(), timer);
   }
 
@@ -326,6 +335,8 @@ class RunningTimersImpl<INTERVALS, 0>
       timer = b->second;
       if (timer)
         timer->expire();
+      else
+        ++cancelled_removed_0;
       m_map.erase(b);
     }
     while (!timer);
@@ -757,4 +768,6 @@ int main()
 
   std::cout << "loopsize (type X timers) = " << loopsize << "; type Y timers: " << extra_timers << std::endl;
   std::cout << "Success." << std::endl;
+
+  std::cout << "running_timers_0 = " << running_timers_0 << "; expired_timers_0 = " << expired_timers_0 << "; cancelled_removed_0 = " << cancelled_removed_0 << "; cancelled_timers_0 = " << cancelled_timers_0 << std::endl;
 }
