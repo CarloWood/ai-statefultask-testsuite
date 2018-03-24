@@ -30,7 +30,6 @@ using ticks = time_point::rep;
 using microseconds = std::chrono::microseconds;
 using milliseconds = std::chrono::milliseconds;
 using seconds = std::chrono::seconds;
-using Interval = Timer::Interval;
 int constexpr loopsize = 10000000;
 
 // In order to be reproducable, invent our own 'now()' function.
@@ -44,22 +43,9 @@ int constexpr max_interval_index = 38;
 struct Intervals
 {
   static int constexpr number = max_interval_index + 1;
-  using array_t = std::array<duration, number>;
-  static array_t constexpr durations = {
-    { microseconds(100), microseconds(150), microseconds(200), microseconds(250), microseconds(500),
-
-      milliseconds(1),    milliseconds(2),    milliseconds(3),    milliseconds(4),    milliseconds(5),    milliseconds(6),    milliseconds(8),
-      milliseconds(10),   milliseconds(12),   milliseconds(15),   milliseconds(20),   milliseconds(25),   milliseconds(30),   milliseconds(50),
-      milliseconds(100),  milliseconds(200),  milliseconds(500),
-      milliseconds(1000), milliseconds(1200), milliseconds(1500), milliseconds(1800), milliseconds(2000), milliseconds(2200), milliseconds(2500),
-                          milliseconds(5000), milliseconds(7000),
-
-      seconds(3), seconds(4), seconds(5), seconds(6), seconds(7), seconds(8), seconds(9), seconds(10) }
-  };
 };
 
-//static
-std::array<duration, max_interval_index + 1> constexpr Intervals::durations;
+template<Timer::time_point::rep count, typename Unit> using Interval = statefultask::Interval<count, Unit>;
 
 template<int implementation>
 struct TimerImpl;
@@ -142,7 +128,7 @@ struct TimerImpl<0>
   TimerImpl() : m_sequence_number(++s_sequence_number) { }
   ~TimerImpl() { stop(); }
 
-  void start(Interval interval, std::function<void()> call_back, time_point now_);
+  void start(Timer::Interval interval, std::function<void()> call_back, time_point now_);
   void stop();
 
   void expire()
@@ -173,7 +159,7 @@ struct TimerImpl<1>
   TimerImpl() : m_sequence_number(++s_sequence_number), m_cancelled_1(false) { }
   ~TimerImpl() { stop(); }
 
-  void start(Interval interval, std::function<void()> call_back, time_point now_);
+  void start(Timer::Interval interval, std::function<void()> call_back, time_point now_);
   void stop();
 
   void expire()
@@ -423,18 +409,18 @@ class RunningTimersImpl<INTERVALS, 2> : public statefultask::RunningTimers
   void print() const
   {
     std::cout << "Running timers:\n";
-    int i = 0; // interval
+    int number = 0; // interval
     for (auto&& queue : this->m_queues)
     {
       if (!queue.empty())
       {
-        std::cout << "  " << i << " :";
+        std::cout << "  " << number << " :";
         queue.print();
         std::cout << '\n';
       }
-      ++i;
+      ++number;
     }
-    i = 0;
+    int i = 0;
     std::cout << "  cache:\n";
     for (auto&& tp : this->m_cache)
     {
@@ -462,14 +448,14 @@ class RunningTimersImpl<INTERVALS, 2> : public statefultask::RunningTimers
         in = dist / 2;
       }
     }
-    for (i = 0; i < INTERVALS::number; ++i)
+    for (i = 0; i < number; ++i)
     {
       std::cout << std::setw(in) << (i / 10);
       in = dist;
     }
     std::cout << '\n';
     in = dist / 2;
-    for (i = 0; i < INTERVALS::number; ++i)
+    for (i = 0; i < number; ++i)
     {
       std::cout << std::setw(in) << (i % 10);
       in = dist;
@@ -504,10 +490,13 @@ void RunningTimersImpl<INTERVALS, 2>::sanity_check() const
   //static int count;
   //std::cout << "sanity check #" << ++count << std::endl;
 
+  // Initialize RunningTimers correctly.
+  assert(this->m_queues.size() == INTERVALS::number - 2);       // 5000ms and 7000ms are duplicates of 5s and 7s.
+
   // Every cache entry needs to have either no_timer in it when the corresponding queue is empty, or the first entry of that queue.
   for (int interval = 0; interval < statefultask::RunningTimers::tree_size; ++interval)
   {
-    if (interval >= INTERVALS::number)
+    if ((size_t)interval >= this->m_queues.size())
       assert(this->m_cache[interval] == Timer::none);
     else
     {
@@ -545,7 +534,7 @@ void update_running_timer()
   //std::cout << "Calling update_running_timer()\n";
 }
 
-void TimerImpl<0>::start(Interval interval, std::function<void()> call_back, time_point now_)
+void TimerImpl<0>::start(Timer::Interval interval, std::function<void()> call_back, time_point now_)
 {
   //std::cout << "Calling Timer::start(interval = " << interval.index << ", ..., now_ = " << now_ << ") with this = [" << m_sequence_number << "]" << std::endl;
   // Call stop() first.
@@ -560,7 +549,7 @@ void TimerImpl<0>::start(Interval interval, std::function<void()> call_back, tim
     update_running_timer();
 }
 
-void TimerImpl<1>::start(Interval interval, std::function<void()> call_back, time_point now_)
+void TimerImpl<1>::start(Timer::Interval interval, std::function<void()> call_back, time_point now_)
 {
   //std::cout << "Calling Timer::start(interval = " << interval.index << ", ..., now_ = " << now_ << ") with this = [" << m_sequence_number << "]" << std::endl;
   // Call stop() first.
@@ -620,6 +609,18 @@ std::vector<TimerImpl<2>> timers<2>;
 
 void generate()
 {
+  std::array<Timer::Interval, max_interval_index + 1> durations = {
+    Interval<100, microseconds>(), Interval<150, microseconds>(), Interval<200, microseconds>(), Interval<250, microseconds>(), Interval<500, microseconds>(),
+
+    Interval<1, milliseconds>(),    Interval<2, milliseconds>(),    Interval<3, milliseconds>(),    Interval<4, milliseconds>(),    Interval<5, milliseconds>(),    Interval<6, milliseconds>(),    Interval<8, milliseconds>(),
+    Interval<10, milliseconds>(),   Interval<12, milliseconds>(),   Interval<15, milliseconds>(),   Interval<20, milliseconds>(),   Interval<25, milliseconds>(),   Interval<30, milliseconds>(),   Interval<50, milliseconds>(),
+    Interval<100, milliseconds>(),  Interval<200, milliseconds>(),  Interval<500, milliseconds>(),
+    Interval<1000, milliseconds>(), Interval<1200, milliseconds>(), Interval<1500, milliseconds>(), Interval<1800, milliseconds>(), Interval<2000, milliseconds>(), Interval<2200, milliseconds>(), Interval<2500, milliseconds>(),
+    Interval<5000, milliseconds>(), Interval<7000, milliseconds>(),
+
+    Interval<3, seconds>(), Interval<4, seconds>(), Interval<5, seconds>(), Interval<6, seconds>(), Interval<7, seconds>(), Interval<8, seconds>(), Interval<9, seconds>(), Interval<10, seconds>()
+  };
+
   std::mt19937 rng;
   rng.seed(958723985);
   std::uniform_int_distribution<int> dist(0, max_interval_index);
@@ -672,7 +673,7 @@ void generate()
     TimerImpl<2>& timer2(timers<2>[nt]);
     ++nt;
     int index = random_intervals[n];
-    Interval interval = Interval(statefultask::TimerQueueIndex(index), Intervals::durations[index]);
+    Timer::Interval interval = durations[index];
 
     timer0.start(interval, &expire0, now_);     // The actual benchmark: how many timers can we add per second?
     timer1.start(interval, &expire1, now_);     // The actual benchmark: how many timers can we add per second?
@@ -680,7 +681,7 @@ void generate()
 
     if (n % 2 == 0 && index > 0)     // Half the time, cancel the timer before it expires.
     {
-      Interval interval2 = Interval(statefultask::TimerQueueIndex(index - 1), Intervals::durations[index - 1]);
+      Timer::Interval interval2 = durations[index - 1];
       timers<0>[nt].start(interval2, [&timer0](){ /*"destruct" timer*/ timer0.stop(); }, now_);
       timers<1>[nt].start(interval2, [&timer1](){ /*"destruct" timer*/ timer1.stop(); }, now_);
       timers<2>[nt].start(interval2, [&timer2](){ /*"destruct" timer*/ timer2.stop(); }, now_);
@@ -705,7 +706,7 @@ void generate()
     TimerImpl<2>& timer2(timers<2>[nt]);
     ++nt;
     int index = random_intervals[n];
-    Interval interval = Interval(statefultask::TimerQueueIndex(index), Intervals::durations[index]);
+    Timer::Interval interval = durations[index];
 
     timer0.start(interval, &expire0, now_);     // The actual benchmark: how many timers can we add per second?
     timer1.start(interval, &expire1, now_);     // The actual benchmark: how many timers can we add per second?
@@ -713,7 +714,7 @@ void generate()
 
     if (n % 2 == 0 && index > 0)                // Half the time, cancel the timer before it expires.
     {
-      Interval interval2 = Interval(statefultask::TimerQueueIndex(index - 1), Intervals::durations[index - 1]);
+      Timer::Interval interval2 = durations[index - 1];
       timers<0>[nt].start(interval2, [&timer0](){ /*"destruct" timer*/ timer0.stop(); }, now_);
       timers<1>[nt].start(interval2, [&timer1](){ /*"destruct" timer*/ timer1.stop(); }, now_);
       timers<2>[nt].start(interval2, [&timer2](){ /*"destruct" timer*/ timer2.stop(); }, now_);
