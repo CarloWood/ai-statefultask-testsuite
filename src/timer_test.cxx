@@ -18,6 +18,7 @@
 #include "debug.h"
 
 #define COMPARE_SEQUENCE_NUMBERS 1
+#define TEST_ALL_THREE
 
 // 0: multimap
 // 1: priority_queue
@@ -225,16 +226,22 @@ struct TimerImpl<2> : public Timer
   TimerImpl(Timer timer) : Timer(timer), m_sequence_number(++s_sequence_number) { }
 };
 
+int volatile output;
+
 void expire0()
 {
+  output = 1;
 }
 
 void expire1()
 {
+  output = 1;
 }
 
 void expire2()
 {
+  output = 1;
+#ifdef TEST_ALL_THREE
   //std::cout << "2. Expiring timer " << static_cast<TimerImpl<2>*>(last_timer_2)->m_sequence_number << " @" << last_timer_2->get_expiration_point().time_since_epoch().count() << std::endl;
   if (last_time_point != last_timer_2->get_expiration_point())
   {
@@ -270,6 +277,7 @@ void expire2()
       }
     }
   }
+#endif
 #endif
 }
 
@@ -395,6 +403,8 @@ class RunningTimersImpl<INTERVALS, 1>
   }
 };
 
+static Timer::time_point constexpr none{Timer::time_point::duration(std::numeric_limits<Timer::time_point::rep>::max())};
+
 template<class INTERVALS>
 class RunningTimersImpl<INTERVALS, 2> : public statefultask::RunningTimers
 {
@@ -435,7 +445,7 @@ class RunningTimersImpl<INTERVALS, 2> : public statefultask::RunningTimers
     std::cout << "  cache:\n";
     for (auto&& tp : this->m_cache)
     {
-      if (tp != Timer::none)
+      if (tp != none)
       {
         std::cout << "  " << i << " :" << tp.time_since_epoch().count() << '\n';
       }
@@ -492,8 +502,10 @@ class RunningTimersImpl<INTERVALS, 2> : public statefultask::RunningTimers
 };
 
 std::mutex running_timers_mutex;
+#ifdef TEST_ALL_THREE
 RunningTimersImpl<Intervals, 0> running_timers0;
 RunningTimersImpl<Intervals, 1> running_timers1;
+#endif
 
 template<class INTERVALS>
 void RunningTimersImpl<INTERVALS, 2>::sanity_check() const
@@ -508,7 +520,7 @@ void RunningTimersImpl<INTERVALS, 2>::sanity_check() const
   for (int interval = 0; interval < statefultask::RunningTimers::tree_size; ++interval)
   {
     if ((size_t)interval >= this->m_queues.size())
-      assert(this->m_cache[interval] == Timer::none);
+      assert(this->m_cache[interval] == none);
     else
     {
       statefultask::TimerQueueIndex tqi{to_queues_index(interval)};
@@ -535,9 +547,11 @@ void RunningTimersImpl<INTERVALS, 2>::sanity_check() const
   }
 }
 
+#ifdef TEST_ALL_THREE
 // I'm assuming that end() doesn't invalidate, ever.
 //static
 std::multimap<time_point, TimerImpl<0>*>::iterator const TimerHandleImpl<0>::end{running_timers0.end()};
+#endif
 
 void update_running_timer()
 {
@@ -545,15 +559,16 @@ void update_running_timer()
   //std::cout << "Calling update_running_timer()\n";
 }
 
+#ifdef TEST_ALL_THREE
 void TimerImpl<0>::start(Timer::Interval interval, std::function<void()> call_back, time_point now_)
 {
   //std::cout << "Calling Timer::start(interval = " << interval.index << ", ..., now_ = " << now_ << ") with this = [" << m_sequence_number << "]" << std::endl;
   // Call stop() first.
   assert(!m_handle.is_running());
-  m_expiration_point = now_ + interval.duration;
+  m_expiration_point = now_ + interval.duration();
   m_call_back = call_back;
   std::lock_guard<std::mutex> lk(running_timers_mutex);
-  m_handle = running_timers0.push(interval.index.get_value(), this);
+  m_handle = running_timers0.push(0, this);
 
   //std::cout << "  expires at " << m_expiration_point.time_since_epoch().count() << std::endl;
   if (running_timers0.is_current(m_handle))
@@ -565,10 +580,10 @@ void TimerImpl<1>::start(Timer::Interval interval, std::function<void()> call_ba
   //std::cout << "Calling Timer::start(interval = " << interval.index << ", ..., now_ = " << now_ << ") with this = [" << m_sequence_number << "]" << std::endl;
   // Call stop() first.
   assert(!m_handle.is_running());
-  m_expiration_point = now_ + interval.duration;
+  m_expiration_point = now_ + interval.duration();
   m_call_back = call_back;
   std::lock_guard<std::mutex> lk(running_timers_mutex);
-  m_handle = running_timers1.push(interval.index.get_value(), this);
+  m_handle = running_timers1.push(0, this);
 
   m_cancelled_1 = false;
   //std::cout << "  expires at " << m_expiration_point.time_since_epoch().count() << std::endl;
@@ -607,14 +622,17 @@ void TimerImpl<1>::stop()
   //else
   //  std::cout << "NOT running!\n";
 }
+#endif
 
 int extra_timers{0};
 template<int implementation>
 std::vector<TimerImpl<implementation>> timers;
+#ifdef TEST_ALL_THREE
 template<>
 std::vector<TimerImpl<0>> timers<0>;
 template<>
 std::vector<TimerImpl<1>> timers<1>;
+#endif
 template<>
 std::vector<TimerImpl<2>> timers<2>;
 
@@ -646,8 +664,10 @@ void generate()
   }
 
   size_t nt = 0;
+#ifdef TEST_ALL_THREE
   timers<0>.resize(loopsize + extra_timers);
   timers<1>.resize(loopsize + extra_timers);
+#endif
   timers<2>.resize(loopsize + extra_timers);
 
   std::cout << "Starting benchmark test..." << std::endl;
@@ -679,26 +699,34 @@ void generate()
   {
     time_point now_ = now(n);
 
+#ifdef TEST_ALL_THREE
     TimerImpl<0>& timer0(timers<0>[nt]);
     TimerImpl<1>& timer1(timers<1>[nt]);
+#endif
     TimerImpl<2>& timer2(timers<2>[nt]);
     ++nt;
     int index = random_intervals[n];
     Timer::Interval interval = durations[index];
 
-    timer0.start(interval, &expire0, now_);     // The actual benchmark: how many timers can we add per second?
-    timer1.start(interval, &expire1, now_);     // The actual benchmark: how many timers can we add per second?
+#ifdef TEST_ALL_THREE
+    timer0.start(interval, &expire0, now_);
+    timer1.start(interval, &expire1, now_);
+#endif
     timer2.start(interval, &expire2, now_);     // The actual benchmark: how many timers can we add per second?
 
     if (n % 2 == 0 && index > 0)     // Half the time, cancel the timer before it expires.
     {
       Timer::Interval interval2 = durations[index - 1];
+#ifdef TEST_ALL_THREE
       timers<0>[nt].start(interval2, [&timer0](){ /*"destruct" timer*/ timer0.stop(); }, now_);
       timers<1>[nt].start(interval2, [&timer1](){ /*"destruct" timer*/ timer1.stop(); }, now_);
+#endif
       timers<2>[nt].start(interval2, [&timer2](){ /*"destruct" timer*/ timer2.stop(); }, now_);
       ++nt;
+#ifdef TEST_ALL_THREE
       running_timers0.expire_next();
       running_timers1.expire_next();
+#endif
       static_cast<RunningTimersImpl<Intervals, 2>&>(statefultask::RunningTimers::instance()).expire_next();
     }
   }
@@ -712,34 +740,44 @@ void generate()
   {
     time_point now_ = now(n);
 
+#ifdef TEST_ALL_THREE
     TimerImpl<0>& timer0(timers<0>[nt]);
     TimerImpl<1>& timer1(timers<1>[nt]);
+#endif
     TimerImpl<2>& timer2(timers<2>[nt]);
     ++nt;
     int index = random_intervals[n];
     Timer::Interval interval = durations[index];
 
-    timer0.start(interval, &expire0, now_);     // The actual benchmark: how many timers can we add per second?
-    timer1.start(interval, &expire1, now_);     // The actual benchmark: how many timers can we add per second?
+#ifdef TEST_ALL_THREE
+    timer0.start(interval, &expire0, now_);
+    timer1.start(interval, &expire1, now_);
+#endif
     timer2.start(interval, &expire2, now_);     // The actual benchmark: how many timers can we add per second?
 
     if (n % 2 == 0 && index > 0)                // Half the time, cancel the timer before it expires.
     {
       Timer::Interval interval2 = durations[index - 1];
+#ifdef TEST_ALL_THREE
       timers<0>[nt].start(interval2, [&timer0](){ /*"destruct" timer*/ timer0.stop(); }, now_);
       timers<1>[nt].start(interval2, [&timer1](){ /*"destruct" timer*/ timer1.stop(); }, now_);
+#endif
       timers<2>[nt].start(interval2, [&timer2](){ /*"destruct" timer*/ timer2.stop(); }, now_);
       ++nt;
     }
 
     // Call expire_next() 1 + fraction times per loop.
+#ifdef TEST_ALL_THREE
     running_timers0.expire_next();
     running_timers1.expire_next();
+#endif
     static_cast<RunningTimersImpl<Intervals, 2>&>(statefultask::RunningTimers::instance()).expire_next();
     if (m < n * fraction)
     {
+#ifdef TEST_ALL_THREE
       running_timers0.expire_next();
       running_timers1.expire_next();
+#endif
       static_cast<RunningTimersImpl<Intervals, 2>&>(statefultask::RunningTimers::instance()).expire_next();
       ++m;
     }
@@ -769,5 +807,7 @@ int main()
   std::cout << "loopsize (type X timers) = " << loopsize << "; type Y timers: " << extra_timers << std::endl;
   std::cout << "Success." << std::endl;
 
+#ifdef TEST_ALL_THREE
   std::cout << "running_timers_0 = " << running_timers_0 << "; expired_timers_0 = " << expired_timers_0 << "; cancelled_removed_0 = " << cancelled_removed_0 << "; cancelled_timers_0 = " << cancelled_timers_0 << std::endl;
+#endif
 }
