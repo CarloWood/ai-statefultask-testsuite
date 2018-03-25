@@ -17,8 +17,7 @@
 #include "statefultask/RunningTimers.h"
 #include "debug.h"
 
-#define COMPARE_SEQUENCE_NUMBERS 1
-#define TEST_ALL_THREE
+//#define TEST_ALL_THREE
 
 // 0: multimap
 // 1: priority_queue
@@ -115,10 +114,6 @@ struct TimerHandleImpl<2> : public Timer::Handle
 static Timer* last_timer_2;
 static time_point last_time_point;
 static int last_sequence_0;
-static int last_out_of_sync_sequence_1;
-static int last_out_of_sync_sequence_10;
-static int last_out_of_sync_sequence_2;
-static int last_out_of_sync_sequence_20;
 
 template<int implementation>
 struct TimerImpl;
@@ -182,34 +177,6 @@ struct TimerImpl<1>
       std::cout << "1. ERROR: Expiring a timer with m_expiration_point = " << m_expiration_point.time_since_epoch().count() << "; should be: " << last_time_point.time_since_epoch().count() << std::endl;
       assert(last_time_point == m_expiration_point);
     }
-#if COMPARE_SEQUENCE_NUMBERS
-    if (m_sequence_number != last_sequence_0)
-    {
-      if (!last_out_of_sync_sequence_1)
-      {
-        last_out_of_sync_sequence_10 = last_sequence_0;
-        last_out_of_sync_sequence_1 = m_sequence_number;
-      }
-      else
-      {
-        //std::cout << "1. m_sequence_number = " << m_sequence_number << ", last_out_of_sync_sequence_10 = " << last_out_of_sync_sequence_10 << ", last_sequence_0 = " << last_sequence_0 << ", last_out_of_sync_sequence_1 = " << last_out_of_sync_sequence_1 << std::endl;
-        if (last_sequence_0 == last_out_of_sync_sequence_1)
-        {
-          if (m_sequence_number == last_out_of_sync_sequence_10)
-            last_out_of_sync_sequence_1 = 0;
-          else
-            last_out_of_sync_sequence_1 = m_sequence_number;
-        }
-        else if (m_sequence_number == last_out_of_sync_sequence_10)
-          last_out_of_sync_sequence_10 = last_sequence_0;
-        else
-        {
-          std::cout << "1. ERROR: Expiring a timer with m_sequence_number = " << m_sequence_number << "; should be: " << last_out_of_sync_sequence_10 << std::endl;
-          assert(last_sequence_0 == last_out_of_sync_sequence_1);
-        }
-      }
-    }
-#endif
     //std::cout << /*m_sequence_number <<*/ " : call_back()\t\t\t" << m_expiration_point.time_since_epoch().count() << "\n";
     m_call_back();
   }
@@ -249,35 +216,6 @@ void expire2()
         "; should be: " << last_time_point.time_since_epoch().count() << std::endl;
     assert(last_time_point == last_timer_2->get_expiration_point());
   }
-#if COMPARE_SEQUENCE_NUMBERS
-  int m_sequence_number = static_cast<TimerImpl<2>*>(last_timer_2)->m_sequence_number;
-  if (m_sequence_number != last_sequence_0)
-  {
-    if (!last_out_of_sync_sequence_2)
-    {
-      last_out_of_sync_sequence_20 = last_sequence_0;
-      last_out_of_sync_sequence_2 = m_sequence_number;
-    }
-    else
-    {
-      //std::cout << "2. m_sequence_number = " << m_sequence_number << ", last_out_of_sync_sequence_20 = " << last_out_of_sync_sequence_20 << ", last_sequence_0 = " << last_sequence_0 << ", last_out_of_sync_sequence_2 = " << last_out_of_sync_sequence_2 << std::endl;
-      if (last_sequence_0 == last_out_of_sync_sequence_2)
-      {
-        if (m_sequence_number == last_out_of_sync_sequence_20)
-          last_out_of_sync_sequence_2 = 0;
-        else
-          last_out_of_sync_sequence_2 = m_sequence_number;
-      }
-      else if (m_sequence_number == last_out_of_sync_sequence_20)
-        last_out_of_sync_sequence_20 = last_sequence_0;
-      else
-      {
-        std::cout << "2. ERROR: Expiring a timer with m_sequence_number = " << m_sequence_number << "; should be: " << last_out_of_sync_sequence_20 << std::endl;
-        assert(last_sequence_0 == last_out_of_sync_sequence_2);
-      }
-    }
-  }
-#endif
 #endif
 }
 
@@ -336,18 +274,38 @@ class RunningTimersImpl<INTERVALS, 0>
   void expire_next()
   {
     TimerImpl<0>* timer;
+    time_point now;
     do
     {
       auto b = m_map.begin();
       assert(b != m_map.end());
       timer = b->second;
       if (timer)
+      {
+        now = timer->m_expiration_point;
         timer->expire();
+      }
       else
         ++cancelled_removed_0;
       m_map.erase(b);
     }
     while (!timer);
+    // Expire all timers that expired now too.
+    while (!m_map.empty())
+    {
+      auto b = m_map.begin();
+      timer = b->second;
+      if (timer)
+      {
+        assert(timer->m_expiration_point >= now);
+        if (timer->m_expiration_point != now)
+          return;
+        timer->expire();
+      }
+      else
+        ++cancelled_removed_0;
+      m_map.erase(b);
+    }
   }
 
   std::multimap<time_point, TimerImpl<0>*>::iterator end()
@@ -390,16 +348,34 @@ class RunningTimersImpl<INTERVALS, 1>
   void expire_next()
   {
     TimerImpl<1>* timer;
+    time_point now;
     do
     {
       assert(!m_pqueue.empty());
       data_t const& data = m_pqueue.top();
       timer = data.second;
       if (!timer->m_cancelled_1)
+      {
+        now = timer->m_expiration_point;
         timer->expire();
+      }
       m_pqueue.pop();
     }
     while (timer->m_cancelled_1);
+    // Expire all timers that expired now too.
+    while (!m_pqueue.empty())
+    {
+      data_t const& data = m_pqueue.top();
+      timer = data.second;
+      if (!timer->m_cancelled_1)
+      {
+        assert(timer->m_expiration_point >= now);
+        if (timer->m_expiration_point != now)
+          return;
+        timer->expire();
+      }
+      m_pqueue.pop();
+    }
   }
 };
 
@@ -487,14 +463,14 @@ class RunningTimersImpl<INTERVALS, 2> : public statefultask::RunningTimers
   void expire_next()
   {
     //sanity_check();
-    statefultask::TimerQueueIndex const interval(this->m_tree[1]);            // The interval of the timer that will expire next.
+    statefultask::TimerQueueIndex const interval(this->m_tree[1]);              // The interval of the timer that will expire next.
     //std::cout << "  m_tree[1] = " << interval << '\n';
     statefultask::TimerQueue& queue{this->m_queues[interval]};
     // During this test there will always be more timers.
     assert(!queue.debug_empty());
     last_timer_2 = *queue.debug_begin();
 
-    statefultask::RunningTimers::expire_next();
+    statefultask::RunningTimers::expire_next(queue.next_expiration_point());    // Pretend it is already that time.
     //sanity_check();
   }
 
