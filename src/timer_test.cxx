@@ -470,7 +470,9 @@ class RunningTimersImpl<INTERVALS, 2> : public statefultask::RunningTimers
     assert(!queue.debug_empty());
     last_timer_2 = *queue.debug_begin();
 
-    statefultask::RunningTimers::expire_next(queue.next_expiration_point());    // Pretend it is already that time.
+    Timer::time_point now = queue.next_expiration_point();                      // Pretend it is already that time.
+    while (Timer* timer = statefultask::RunningTimers::next_expired(now))
+      timer->expire();
     //sanity_check();
   }
 
