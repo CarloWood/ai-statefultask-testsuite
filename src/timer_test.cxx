@@ -17,7 +17,7 @@
 #include "statefultask/RunningTimers.h"
 #include "debug.h"
 
-//#define TEST_ALL_THREE
+#define TEST_ALL_THREE
 
 // 0: multimap
 // 1: priority_queue
@@ -209,7 +209,7 @@ void expire2()
 {
   output = 1;
 #ifdef TEST_ALL_THREE
-  //std::cout << "2. Expiring timer " << static_cast<TimerImpl<2>*>(last_timer_2)->m_sequence_number << " @" << last_timer_2->get_expiration_point().time_since_epoch().count() << std::endl;
+  std::cout << "2. Expiring timer " << static_cast<TimerImpl<2>*>(last_timer_2)->m_sequence_number << " @" << last_timer_2->get_expiration_point().time_since_epoch().count() << std::endl;
   if (last_time_point != last_timer_2->get_expiration_point())
   {
     std::cout << "2. ERROR: Expiring a timer with m_expiration_point = " << last_timer_2->get_expiration_point().time_since_epoch().count() <<
@@ -471,8 +471,15 @@ class RunningTimersImpl<INTERVALS, 2> : public statefultask::RunningTimers
     last_timer_2 = *queue.debug_begin();
 
     Timer::time_point now = queue.next_expiration_point();                      // Pretend it is already that time.
-    while (Timer* timer = statefultask::RunningTimers::next_expired(now))
+    auto current_w = statefultask::RunningTimers::instance().access_current();
+    while (true)
+    {
+      current_w->timer = nullptr;
+      Timer* timer = statefultask::RunningTimers::next_expired(current_w, now);
+      if (!timer)
+        break;
       timer->expire();
+    }
     //sanity_check();
   }
 

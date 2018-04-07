@@ -26,3 +26,6 @@
 	path = microbench
 	url = https://github.com/CarloWood/microbench.git
 	branch = master
+[submodule "gnuplot-iostream"]
+	path = gnuplot-iostream
+	url = ./gnuplot-iostream
