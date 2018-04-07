@@ -18,7 +18,7 @@
 
 int constexpr cachelinesize = 64;
 int constexpr loopsize = 100000;
-unsigned constexpr num_threads = 4;
+unsigned constexpr num_threads = 2;
 
 std::mutex iomutex;
 
@@ -94,7 +94,9 @@ struct Plot
   void show(std::string with)
   {
     gp << "set title '" << m_title << "'\n";
-    gp << "set xrange [" << m_x_min << ":" << m_x_max << "]\nset yrange [0:]\n";
+    gp << "set xrange [" << m_x_min << ":" << m_x_max << "]\nset yrange [40:]\n";
+    gp << "set xlabel 'Interval between calls to the lock/unlock pair (in ns)'\n";
+    gp << "set ylabel 'Time to lock and unlock a mutex (in clks)'\n";
     char const* separator = "plot ";
     for (auto&& e : m_map)
     {
@@ -108,16 +110,16 @@ struct Plot
 };
 
 Plot plot1;
-std::array<Plot, 100> plot2;
+std::array<Plot, 300> plot2;
 std::mutex all_mutex;
-std::array<int, 100> max_clks_all;
-std::array<int, 100> min_clks_all;
+std::array<int, 300> max_clks_all;
+std::array<int, 300> min_clks_all;
 int max_repeats;
 
 void benchmark(int thread, int test_nr, int repeats, std::string desc, uint64_t (*func)(int, int), int loop_count)
 {
   iomutex.lock();
-  std::cout << "Calling benchmark(" << thread << ", " << test_nr << ", " << repeats << ", \"" << desc << "\", func)" << std::endl;
+  std::cout << "Calling benchmark(" << thread << ", " << test_nr << ", " << repeats << ", \"" << desc << "\", func, " << loop_count << ")" << std::endl;
   iomutex.unlock();
   if (thread == 0)
     max_repeats = repeats;
@@ -172,7 +174,7 @@ void benchmark(int thread, int test_nr, int repeats, std::string desc, uint64_t 
         min_clks = dt[i + zone];
       }
     }
-    int mc = 5 * max_clks;
+    int mc = std::min(1000, 5 * max_clks);
     max_clks = 0;
     for (int i = min_clks; i < mc; ++i)
     {
@@ -194,17 +196,20 @@ void benchmark(int thread, int test_nr, int repeats, std::string desc, uint64_t 
     }
     double clks = (double)sum / size;
     //std::cout << thread << ". Clocks: " << clks << std::endl;
-    clocks.push_back(clks);
+    clocks.push_back(clks - 39);        // 39 is the rdtsc overhead on my box.
 
-    std::unique_lock<std::mutex> lk(all_mutex);
-    max_clks_all[test_nr] = std::max(max_clks_all[test_nr], max_clks);
-    min_clks_all[test_nr] = std::min(min_clks_all[test_nr], min_clks);
+    if (j > 1) // The first measurement is thrown away.
+    {
+      std::unique_lock<std::mutex> lk(all_mutex);
+      max_clks_all[test_nr] = std::max(max_clks_all[test_nr], max_clks);
+      min_clks_all[test_nr] = std::min(min_clks_all[test_nr], min_clks);
+    }
   }
   {
     std::string title = std::to_string(repeats) + " " + desc;
     std::unique_lock<std::mutex> lk(all_mutex);
-    plot2[test_nr].set_xrange(min_clks_all[test_nr], max_clks_all[test_nr]);
-    plot2[test_nr].set_title(title);
+    //plot2[test_nr].set_xrange(0, 550); //(min_clks_all[test_nr], max_clks_all[test_nr]);
+    //plot2[test_nr].set_title(title);
   }
   for (auto&& e : mv)
   {
@@ -213,8 +218,8 @@ void benchmark(int thread, int test_nr, int repeats, std::string desc, uint64_t 
       e.second.erase(e.second.begin());
       if (e.second.size() > 20)
         e.second.resize(20);
-      auto mv_result = stats(e.second, 50);
-      plot2[test_nr].add_data_point(e.first, mv_result.first, mv_result.second, "CPU #" + std::to_string(thread));
+      auto mv_result = stats(e.second, 99);
+      //plot2[test_nr].add_data_point(e.first, mv_result.first, mv_result.second, "CPU #" + std::to_string(thread));
     }
   }
 
@@ -229,24 +234,24 @@ void benchmark(int thread, int test_nr, int repeats, std::string desc, uint64_t 
   auto clocks_result = stats(clocks, 99.9);
 
   std::unique_lock<std::mutex> lk(iomutex);
-  std::cout << "===Thread #" << thread << " 99.9% confidence interval========================================================\n";
+  std::cout << "===Thread #" << thread << "==================================================================================\n";
   std::cout << "Description: " << repeats << ' ' << desc << "\n";
-  std::cout << "Time: " << data_ns_result.first << " ± " << data_ns_result.second << " ns.\n";
-  std::cout << "Clocks: " << clocks_result.first << " ± " << clocks_result.second << ".\n";
+  std::cout << "Time: " << data_ns_result.first << " ± " << data_ns_result.second << " ns (99.9% confidence interval).\n";
+  std::cout << "Clocks: " << clocks_result.first << " ± " << clocks_result.second << " (99% confidence interval).\n";
 
-  plot1.add_data_point((double)repeats, data_ns_result.first * 3.612361, data_ns_result.second * 3.612361, "CPU #" + std::to_string(thread) + " (ns)");
-  plot1.add_data_point((double)repeats, clocks_result.first, clocks_result.second, "CPU #" + std::to_string(thread) + "(clks)");
+  plot1.add_data_point(data_ns_result.first, clocks_result.first, clocks_result.second, "CPU #" + std::to_string(thread));
+  //plot1.add_data_point((double)repeats, clocks_result.first, clocks_result.second, "CPU #" + std::to_string(thread) + "(clks)");
 }
 
 std::atomic_int count;
+int test_nr2 = 0;
 
 void run(int thread)
 {
   std::cout << thread << ". Calling run(" << thread << ")\n";
   int test_nr = 0;
 #if 1
-  //for (int loop_count = 1; loop_count < 65; ++loop_count)
-  int loop_count = 2000;
+  for (int loop_count = 150; loop_count >= 70; --loop_count)
   {
     ++test_nr;
     benchmark(thread, test_nr, loop_count, "dec", do_Ndec, loop_count);
@@ -254,6 +259,8 @@ void run(int thread)
     while (count.load() < test_nr * num_threads);
   }
 #endif
+  if (thread == 0)
+    test_nr2 = test_nr;
   std::unique_lock<std::mutex> lk(iomutex);
   std::cout << "Leaving run(" << thread << ")\n";
 }
@@ -279,11 +286,11 @@ int main()
     threads[t].join();
   if (plot1.has_data())
   {
-    plot1.set_title("Average time per number of fetch\\_add`s");
-    plot1.set_xrange(0, max_repeats + 1);
+    plot1.set_title("Number of clocks it takes to lock/unlock a mutex as function of frequency (in ns).");
+    plot1.set_xrange(100, 130 /*max_repeats + 1*/);
     plot1.show("errorbars");
   }
-  for (int n = 1; n <= 8; ++n)
+  for (int n = 1; n <= test_nr2; ++n)
     if (plot2[n].has_data())
       plot2[n].show("errorlines");
 }
@@ -307,13 +314,8 @@ uint64_t do_Ndec(int thread, int loop_count)
                 :
                 : "%rdx");
 
-  asm volatile ("\n"
-                "1:\n\t"
-                "decl %%ecx\n\t"
-                "jnz 1b"
-                : "=c" (__d0)
-                : "c" (loop_count)
-                : "cc");
+  m[0].m.lock();
+  m[0].m.unlock();
 
   asm volatile ("rdtsc\n\t"
                 "shl $32, %%rdx\n\t"
@@ -321,6 +323,14 @@ uint64_t do_Ndec(int thread, int loop_count)
                 : "=a" (end)
                 :
                 : "%rdx");
+
+  asm volatile ("\n"
+                "1:\n\t"
+                "decl %%ecx\n\t"
+                "jnz 1b"
+                : "=c" (__d0)
+                : "c" (loop_count - thread)
+                : "cc");
 
   return end - start;
 }
