@@ -17,7 +17,7 @@
 #include "gnuplot-iostream.h"
 
 int constexpr cachelinesize = 64;
-int constexpr loopsize = 1000000;
+int constexpr loopsize = 100000;
 unsigned constexpr num_threads = 4;
 
 std::mutex iomutex;
@@ -65,32 +65,7 @@ static_assert((((size_t)&g_count_5) % cachelinesize) == 0, "g_count_5 not aligne
 static_assert((((size_t)&g_count_6) % cachelinesize) == 0, "g_count_6 not aligned on cache line.");
 static_assert((((size_t)&g_count_7) % cachelinesize) == 0, "g_count_7 not aligned on cache line.");
 
-extern uint64_t do_one_fetch_add(int thread);
-extern uint64_t do_two_fetch_add(int thread);
-extern uint64_t do_three_fetch_add(int thread);
-extern uint64_t do_four_fetch_add(int thread);
-extern uint64_t do_five_fetch_add(int thread);
-extern uint64_t do_six_fetch_add(int thread);
-extern uint64_t do_seven_fetch_add(int thread);
-extern uint64_t do_eight_fetch_add(int thread);
-extern uint64_t do_1dec(int thread);
-extern uint64_t do_2dec(int thread);
-extern uint64_t do_4dec(int thread);
-extern uint64_t do_8dec(int thread);
-extern uint64_t do_12dec(int thread);
-extern uint64_t do_16dec(int thread);
-extern uint64_t do_20dec(int thread);
-extern uint64_t do_24dec(int thread);
-extern uint64_t do_28dec(int thread);
-extern uint64_t do_32dec(int thread);
-extern uint64_t do_36dec(int thread);
-extern uint64_t do_40dec(int thread);
-extern uint64_t do_44dec(int thread);
-extern uint64_t do_48dec(int thread);
-extern uint64_t do_52dec(int thread);
-extern uint64_t do_56dec(int thread);
-extern uint64_t do_60dec(int thread);
-extern uint64_t do_64dec(int thread);
+extern uint64_t do_Ndec(int thread, int loop_count);
 
 using clock_type = std::chrono::high_resolution_clock;
 using time_point = clock_type::time_point;
@@ -133,13 +108,13 @@ struct Plot
 };
 
 Plot plot1;
-Plot plot2[34];
+std::array<Plot, 100> plot2;
 std::mutex all_mutex;
-int max_clks_all[34] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-int min_clks_all[34] = { 1000000, 1000000, 1000000, 1000000, 1000000, 1000000, 1000000, 1000000, 1000000, 1000000, 1000000, 1000000, 1000000, 1000000, 1000000, 1000000, 1000000, 1000000, 1000000, 1000000, 1000000, 1000000, 1000000, 1000000, 1000000, 1000000, 1000000, 1000000, 1000000, 1000000, 1000000, 1000000, 1000000, 1000000 };
+std::array<int, 100> max_clks_all;
+std::array<int, 100> min_clks_all;
 int max_repeats;
 
-void benchmark(int thread, int test_nr, int repeats, std::string desc, uint64_t (*func)(int))
+void benchmark(int thread, int test_nr, int repeats, std::string desc, uint64_t (*func)(int, int), int loop_count)
 {
   iomutex.lock();
   std::cout << "Calling benchmark(" << thread << ", " << test_nr << ", " << repeats << ", \"" << desc << "\", func)" << std::endl;
@@ -169,7 +144,7 @@ void benchmark(int thread, int test_nr, int repeats, std::string desc, uint64_t 
     // Benchmark.
     time_point start = clock_type::now();
     for (int i = 0; i < loopsize; ++i)
-      dt[i + zone] = func(thread);
+      dt[i + zone] = func(thread, loop_count);
     time_point end = clock_type::now();
 
     time_point::duration delta = end - start;
@@ -197,7 +172,7 @@ void benchmark(int thread, int test_nr, int repeats, std::string desc, uint64_t 
         min_clks = dt[i + zone];
       }
     }
-    int mc = 2 * max_clks;
+    int mc = 5 * max_clks;
     max_clks = 0;
     for (int i = min_clks; i < mc; ++i)
     {
@@ -259,8 +234,8 @@ void benchmark(int thread, int test_nr, int repeats, std::string desc, uint64_t 
   std::cout << "Time: " << data_ns_result.first << " ± " << data_ns_result.second << " ns.\n";
   std::cout << "Clocks: " << clocks_result.first << " ± " << clocks_result.second << ".\n";
 
-  plot1.add_data_point((double)repeats, data_ns_result.first, data_ns_result.second, "CPU #" + std::to_string(thread) + " (ns)");
-  plot1.add_data_point((double)repeats, clocks_result.first, clocks_result.second, "CPU #" + std::to_string(thread));
+  plot1.add_data_point((double)repeats, data_ns_result.first * 3.612361, data_ns_result.second * 3.612361, "CPU #" + std::to_string(thread) + " (ns)");
+  plot1.add_data_point((double)repeats, clocks_result.first, clocks_result.second, "CPU #" + std::to_string(thread) + "(clks)");
 }
 
 std::atomic_int count;
@@ -270,112 +245,14 @@ void run(int thread)
   std::cout << thread << ". Calling run(" << thread << ")\n";
   int test_nr = 0;
 #if 1
-  ++test_nr;
-  benchmark(thread, test_nr, 1, "dec", do_1dec);
-  count.fetch_add(1);
-  while (count.load() < test_nr * num_threads);
-#endif
-#if 1
-  ++test_nr;
-  benchmark(thread, test_nr, 2, "dec", do_2dec);
-  count.fetch_add(1);
-  while (count.load() < test_nr * num_threads);
-#endif
-#if 1
-  ++test_nr;
-  benchmark(thread, test_nr, 4, "dec", do_4dec);
-  count.fetch_add(1);
-  while (count.load() < test_nr * num_threads);
-#endif
-#if 1
-  ++test_nr;
-  benchmark(thread, test_nr, 8, "dec", do_8dec);
-  count.fetch_add(1);
-  while (count.load() < test_nr * num_threads);
-#endif
-#if 1
-  ++test_nr;
-  benchmark(thread, test_nr, 12, "dec", do_12dec);
-  count.fetch_add(1);
-  while (count.load() < test_nr * num_threads);
-#endif
-#if 1
-  ++test_nr;
-  benchmark(thread, test_nr, 16, "dec", do_16dec);
-  count.fetch_add(1);
-  while (count.load() < test_nr * num_threads);
-#endif
-#if 1
-  ++test_nr;
-  benchmark(thread, test_nr, 20, "dec", do_20dec);
-  count.fetch_add(1);
-  while (count.load() < test_nr * num_threads);
-#endif
-#if 1
-  ++test_nr;
-  benchmark(thread, test_nr, 24, "dec", do_24dec);
-  count.fetch_add(1);
-  while (count.load() < test_nr * num_threads);
-#endif
-#if 1
-  ++test_nr;
-  benchmark(thread, test_nr, 28, "dec", do_28dec);
-  count.fetch_add(1);
-  while (count.load() < test_nr * num_threads);
-#endif
-#if 1
-  ++test_nr;
-  benchmark(thread, test_nr, 32, "dec", do_32dec);
-  count.fetch_add(1);
-  while (count.load() < test_nr * num_threads);
-#endif
-#if 1
-  ++test_nr;
-  benchmark(thread, test_nr, 36, "dec", do_36dec);
-  count.fetch_add(1);
-  while (count.load() < test_nr * num_threads);
-#endif
-#if 1
-  ++test_nr;
-  benchmark(thread, test_nr, 40, "dec", do_40dec);
-  count.fetch_add(1);
-  while (count.load() < test_nr * num_threads);
-#endif
-#if 1
-  ++test_nr;
-  benchmark(thread, test_nr, 44, "dec", do_44dec);
-  count.fetch_add(1);
-  while (count.load() < test_nr * num_threads);
-#endif
-#if 1
-  ++test_nr;
-  benchmark(thread, test_nr, 48, "dec", do_48dec);
-  count.fetch_add(1);
-  while (count.load() < test_nr * num_threads);
-#endif
-#if 1
-  ++test_nr;
-  benchmark(thread, test_nr, 52, "dec", do_52dec);
-  count.fetch_add(1);
-  while (count.load() < test_nr * num_threads);
-#endif
-#if 1
-  ++test_nr;
-  benchmark(thread, test_nr, 56, "dec", do_56dec);
-  count.fetch_add(1);
-  while (count.load() < test_nr * num_threads);
-#endif
-#if 1
-  ++test_nr;
-  benchmark(thread, test_nr, 60, "dec", do_60dec);
-  count.fetch_add(1);
-  while (count.load() < test_nr * num_threads);
-#endif
-#if 1
-  ++test_nr;
-  benchmark(thread, test_nr, 64, "dec", do_64dec);
-  count.fetch_add(1);
-  while (count.load() < test_nr * num_threads);
+  //for (int loop_count = 1; loop_count < 65; ++loop_count)
+  int loop_count = 2000;
+  {
+    ++test_nr;
+    benchmark(thread, test_nr, loop_count, "dec", do_Ndec, loop_count);
+    count.fetch_add(1);
+    while (count.load() < test_nr * num_threads);
+  }
 #endif
   std::unique_lock<std::mutex> lk(iomutex);
   std::cout << "Leaving run(" << thread << ")\n";
@@ -383,6 +260,8 @@ void run(int thread)
 
 int main()
 {
+  for (int i = 0; i < min_clks_all.size(); ++i)
+    min_clks_all[i] = 1000000;
   std::array<std::thread, num_threads> threads;
   for (int t = 0; t < num_threads; ++t)
   {
@@ -415,770 +294,33 @@ struct B {
 };
 std::array<B, 8> m;
 
-uint64_t do_one_fetch_add(int thread)
-{
-  uint64_t start;
-  asm volatile ("rdtsc\n\t"
-                "shl $32, %%rdx\n\t"
-                "or %%rdx, %0"
-                : "=a" (start)
-                :
-                : "rdx");
-
-  //m[thread].m.lock();
-  g_count_0[thread].a.fetch_add(1, std::memory_order_seq_cst);
-  //m[thread].m.unlock();
-
-  uint64_t end;
-  asm volatile ("rdtsc\n\t"
-                "shl $32, %%rdx\n\t"
-                "or %%rdx, %0"
-                : "=a" (end)
-                :
-                : "rdx");
-
-  return end - start;
-}
-
-uint64_t do_two_fetch_add(int thread)
-{
-  uint64_t start;
-  asm volatile ("rdtsc\n\t"
-                "shl $32, %%rdx\n\t"
-                "or %%rdx, %0"
-                : "=a" (start)
-                :
-                : "rdx");
-
-  //m[thread].m.lock();
-  g_count_0[thread].a.fetch_add(1, std::memory_order_seq_cst);
-  g_count_1[thread].a.fetch_add(1, std::memory_order_seq_cst);
-  //m[thread].m.unlock();
-
-  uint64_t end;
-  asm volatile ("rdtsc\n\t"
-                "shl $32, %%rdx\n\t"
-                "or %%rdx, %0"
-                : "=a" (end)
-                :
-                : "rdx");
-
-  return end - start;
-}
-
-uint64_t do_three_fetch_add(int thread)
-{
-  uint64_t start;
-  asm volatile ("rdtsc\n\t"
-                "shl $32, %%rdx\n\t"
-                "or %%rdx, %0"
-                : "=a" (start)
-                :
-                : "rdx");
-
-  //m[thread].m.lock();
-  g_count_0[thread].a.fetch_add(1, std::memory_order_seq_cst);
-  g_count_1[thread].a.fetch_add(1, std::memory_order_seq_cst);
-  g_count_2[thread].a.fetch_add(1, std::memory_order_seq_cst);
-  //m[thread].m.unlock();
-
-  uint64_t end;
-  asm volatile ("rdtsc\n\t"
-                "shl $32, %%rdx\n\t"
-                "or %%rdx, %0"
-                : "=a" (end)
-                :
-                : "rdx");
-
-  return end - start;
-}
-
-uint64_t do_four_fetch_add(int thread)
-{
-  uint64_t start;
-  asm volatile ("rdtsc\n\t"
-                "shl $32, %%rdx\n\t"
-                "or %%rdx, %0"
-                : "=a" (start)
-                :
-                : "rdx");
-
-  //m[thread].m.lock();
-  g_count_0[thread].a.fetch_add(1, std::memory_order_seq_cst);
-  g_count_1[thread].a.fetch_add(1, std::memory_order_seq_cst);
-  g_count_2[thread].a.fetch_add(1, std::memory_order_seq_cst);
-  g_count_3[thread].a.fetch_add(1, std::memory_order_seq_cst);
-  //m[thread].m.unlock();
-
-  uint64_t end;
-  asm volatile ("rdtsc\n\t"
-                "shl $32, %%rdx\n\t"
-                "or %%rdx, %0"
-                : "=a" (end)
-                :
-                : "rdx");
-
-  return end - start;
-}
-
-uint64_t do_five_fetch_add(int thread)
-{
-  uint64_t start;
-  asm volatile ("rdtsc\n\t"
-                "shl $32, %%rdx\n\t"
-                "or %%rdx, %0"
-                : "=a" (start)
-                :
-                : "rdx");
-
-  //m[thread].m.lock();
-  g_count_0[thread].a.fetch_add(1, std::memory_order_seq_cst);
-  g_count_1[thread].a.fetch_add(1, std::memory_order_seq_cst);
-  g_count_2[thread].a.fetch_add(1, std::memory_order_seq_cst);
-  g_count_3[thread].a.fetch_add(1, std::memory_order_seq_cst);
-  g_count_4[thread].a.fetch_add(1, std::memory_order_seq_cst);
-  //m[thread].m.unlock();
-
-  uint64_t end;
-  asm volatile ("rdtsc\n\t"
-                "shl $32, %%rdx\n\t"
-                "or %%rdx, %0"
-                : "=a" (end)
-                :
-                : "rdx");
-
-  return end - start;
-}
-
-uint64_t do_six_fetch_add(int thread)
-{
-  uint64_t start;
-  asm volatile ("rdtsc\n\t"
-                "shl $32, %%rdx\n\t"
-                "or %%rdx, %0"
-                : "=a" (start)
-                :
-                : "rdx");
-
-  //m[thread].m.lock();
-  g_count_0[thread].a.fetch_add(1, std::memory_order_seq_cst);
-  g_count_1[thread].a.fetch_add(1, std::memory_order_seq_cst);
-  g_count_2[thread].a.fetch_add(1, std::memory_order_seq_cst);
-  g_count_3[thread].a.fetch_add(1, std::memory_order_seq_cst);
-  g_count_4[thread].a.fetch_add(1, std::memory_order_seq_cst);
-  g_count_5[thread].a.fetch_add(1, std::memory_order_seq_cst);
-  //m[thread].m.unlock();
-
-  uint64_t end;
-  asm volatile ("rdtsc\n\t"
-                "shl $32, %%rdx\n\t"
-                "or %%rdx, %0"
-                : "=a" (end)
-                :
-                : "rdx");
-
-  return end - start;
-}
-
-uint64_t do_seven_fetch_add(int thread)
-{
-  uint64_t start;
-  asm volatile ("rdtsc\n\t"
-                "shl $32, %%rdx\n\t"
-                "or %%rdx, %0"
-                : "=a" (start)
-                :
-                : "rdx");
-
-  //m[thread].m.lock();
-  g_count_0[thread].a.fetch_add(1, std::memory_order_seq_cst);
-  g_count_1[thread].a.fetch_add(1, std::memory_order_seq_cst);
-  g_count_2[thread].a.fetch_add(1, std::memory_order_seq_cst);
-  g_count_3[thread].a.fetch_add(1, std::memory_order_seq_cst);
-  g_count_4[thread].a.fetch_add(1, std::memory_order_seq_cst);
-  g_count_5[thread].a.fetch_add(1, std::memory_order_seq_cst);
-  g_count_6[thread].a.fetch_add(1, std::memory_order_seq_cst);
-  //m[thread].m.unlock();
-
-  uint64_t end;
-  asm volatile ("rdtsc\n\t"
-                "shl $32, %%rdx\n\t"
-                "or %%rdx, %0"
-                : "=a" (end)
-                :
-                : "rdx");
-
-  return end - start;
-}
-
-uint64_t do_eight_fetch_add(int thread)
-{
-  uint64_t start;
-  asm volatile ("rdtsc\n\t"
-                "shl $32, %%rdx\n\t"
-                "or %%rdx, %0"
-                : "=a" (start)
-                :
-                : "rdx");
-
-  //m[thread].m.lock();
-  g_count_0[thread].a.fetch_add(1, std::memory_order_seq_cst);
-  g_count_1[thread].a.fetch_add(1, std::memory_order_seq_cst);
-  g_count_2[thread].a.fetch_add(1, std::memory_order_seq_cst);
-  g_count_3[thread].a.fetch_add(1, std::memory_order_seq_cst);
-  g_count_4[thread].a.fetch_add(1, std::memory_order_seq_cst);
-  g_count_5[thread].a.fetch_add(1, std::memory_order_seq_cst);
-  g_count_6[thread].a.fetch_add(1, std::memory_order_seq_cst);
-  g_count_7[thread].a.fetch_add(1, std::memory_order_seq_cst);
-  //m[thread].m.unlock();
-
-  uint64_t end;
-  asm volatile ("rdtsc\n\t"
-                "shl $32, %%rdx\n\t"
-                "or %%rdx, %0"
-                : "=a" (end)
-                :
-                : "rdx");
-
-  return end - start;
-}
-
-uint64_t do_1dec(int thread)
+uint64_t do_Ndec(int thread, int loop_count)
 {
   uint64_t start;
   uint64_t end;
+  int __d0;
 
   asm volatile ("rdtsc\n\t"
                 "shl $32, %%rdx\n\t"
                 "or %%rdx, %0"
                 : "=a" (start)
                 :
-                : "rdx");
+                : "%rdx");
 
-  asm volatile ("movl $1, %%ecx\n\t"
+  asm volatile ("\n"
                 "1:\n\t"
                 "decl %%ecx\n\t"
                 "jnz 1b"
-                :
-                :
-                : "ecx");
+                : "=c" (__d0)
+                : "c" (loop_count)
+                : "cc");
 
   asm volatile ("rdtsc\n\t"
                 "shl $32, %%rdx\n\t"
                 "or %%rdx, %0"
                 : "=a" (end)
                 :
-                : "rdx");
-
-  return end - start;
-}
-
-uint64_t do_2dec(int thread)
-{
-  uint64_t start;
-  uint64_t end;
-
-  asm volatile ("rdtsc\n\t"
-                "shl $32, %%rdx\n\t"
-                "or %%rdx, %0"
-                : "=a" (start)
-                :
-                : "rdx");
-
-  asm volatile ("movl $2, %%ecx\n\t"
-                "1:\n\t"
-                "decl %%ecx\n\t"
-                "jnz 1b"
-                :
-                :
-                : "ecx");
-
-  asm volatile ("rdtsc\n\t"
-                "shl $32, %%rdx\n\t"
-                "or %%rdx, %0"
-                : "=a" (end)
-                :
-                : "rdx");
-
-  return end - start;
-}
-
-uint64_t do_4dec(int thread)
-{
-  uint64_t start;
-  uint64_t end;
-
-  asm volatile ("rdtsc\n\t"
-                "shl $32, %%rdx\n\t"
-                "or %%rdx, %0"
-                : "=a" (start)
-                :
-                : "rdx");
-
-  asm volatile ("movl $4, %%ecx\n\t"
-                "1:\n\t"
-                "decl %%ecx\n\t"
-                "jnz 1b"
-                :
-                :
-                : "ecx");
-
-  asm volatile ("rdtsc\n\t"
-                "shl $32, %%rdx\n\t"
-                "or %%rdx, %0"
-                : "=a" (end)
-                :
-                : "rdx");
-
-  return end - start;
-}
-
-uint64_t do_8dec(int thread)
-{
-  uint64_t start;
-  uint64_t end;
-
-  asm volatile ("rdtsc\n\t"
-                "shl $32, %%rdx\n\t"
-                "or %%rdx, %0"
-                : "=a" (start)
-                :
-                : "rdx");
-
-  asm volatile ("movl $8, %%ecx\n\t"
-                "1:\n\t"
-                "decl %%ecx\n\t"
-                "jnz 1b"
-                :
-                :
-                : "ecx");
-
-  asm volatile ("rdtsc\n\t"
-                "shl $32, %%rdx\n\t"
-                "or %%rdx, %0"
-                : "=a" (end)
-                :
-                : "rdx");
-
-  return end - start;
-}
-
-uint64_t do_12dec(int thread)
-{
-  uint64_t start;
-  uint64_t end;
-
-  asm volatile ("rdtsc\n\t"
-                "shl $32, %%rdx\n\t"
-                "or %%rdx, %0"
-                : "=a" (start)
-                :
-                : "rdx");
-
-  asm volatile ("movl $12, %%ecx\n\t"
-                "1:\n\t"
-                "decl %%ecx\n\t"
-                "jnz 1b"
-                :
-                :
-                : "ecx");
-
-  asm volatile ("rdtsc\n\t"
-                "shl $32, %%rdx\n\t"
-                "or %%rdx, %0"
-                : "=a" (end)
-                :
-                : "rdx");
-
-  return end - start;
-}
-
-uint64_t do_16dec(int thread)
-{
-  uint64_t start;
-  uint64_t end;
-
-  asm volatile ("rdtsc\n\t"
-                "shl $32, %%rdx\n\t"
-                "or %%rdx, %0"
-                : "=a" (start)
-                :
-                : "rdx");
-
-  asm volatile ("movl $16, %%ecx\n\t"
-                "1:\n\t"
-                "decl %%ecx\n\t"
-                "jnz 1b"
-                :
-                :
-                : "ecx");
-
-  asm volatile ("rdtsc\n\t"
-                "shl $32, %%rdx\n\t"
-                "or %%rdx, %0"
-                : "=a" (end)
-                :
-                : "rdx");
-
-  return end - start;
-}
-
-uint64_t do_20dec(int thread)
-{
-  uint64_t start;
-  uint64_t end;
-
-  asm volatile ("rdtsc\n\t"
-                "shl $32, %%rdx\n\t"
-                "or %%rdx, %0"
-                : "=a" (start)
-                :
-                : "rdx");
-
-  asm volatile ("movl $20, %%ecx\n\t"
-                "1:\n\t"
-                "decl %%ecx\n\t"
-                "jnz 1b"
-                :
-                :
-                : "ecx");
-
-  asm volatile ("rdtsc\n\t"
-                "shl $32, %%rdx\n\t"
-                "or %%rdx, %0"
-                : "=a" (end)
-                :
-                : "rdx");
-
-  return end - start;
-}
-
-uint64_t do_24dec(int thread)
-{
-  uint64_t start;
-  uint64_t end;
-
-  asm volatile ("rdtsc\n\t"
-                "shl $32, %%rdx\n\t"
-                "or %%rdx, %0"
-                : "=a" (start)
-                :
-                : "rdx");
-
-  asm volatile ("movl $24, %%ecx\n\t"
-                "1:\n\t"
-                "decl %%ecx\n\t"
-                "jnz 1b"
-                :
-                :
-                : "ecx");
-
-  asm volatile ("rdtsc\n\t"
-                "shl $32, %%rdx\n\t"
-                "or %%rdx, %0"
-                : "=a" (end)
-                :
-                : "rdx");
-
-  return end - start;
-}
-
-uint64_t do_28dec(int thread)
-{
-  uint64_t start;
-  uint64_t end;
-
-  asm volatile ("rdtsc\n\t"
-                "shl $32, %%rdx\n\t"
-                "or %%rdx, %0"
-                : "=a" (start)
-                :
-                : "rdx");
-
-  asm volatile ("movl $28, %%ecx\n\t"
-                "1:\n\t"
-                "decl %%ecx\n\t"
-                "jnz 1b"
-                :
-                :
-                : "ecx");
-
-  asm volatile ("rdtsc\n\t"
-                "shl $32, %%rdx\n\t"
-                "or %%rdx, %0"
-                : "=a" (end)
-                :
-                : "rdx");
-
-  return end - start;
-}
-
-uint64_t do_32dec(int thread)
-{
-  uint64_t start;
-  uint64_t end;
-
-  asm volatile ("rdtsc\n\t"
-                "shl $32, %%rdx\n\t"
-                "or %%rdx, %0"
-                : "=a" (start)
-                :
-                : "rdx");
-
-  asm volatile ("movl $32, %%ecx\n\t"
-                "1:\n\t"
-                "decl %%ecx\n\t"
-                "jnz 1b"
-                :
-                :
-                : "ecx");
-
-  asm volatile ("rdtsc\n\t"
-                "shl $32, %%rdx\n\t"
-                "or %%rdx, %0"
-                : "=a" (end)
-                :
-                : "rdx");
-
-  return end - start;
-}
-
-uint64_t do_36dec(int thread)
-{
-  uint64_t start;
-  uint64_t end;
-
-  asm volatile ("rdtsc\n\t"
-                "shl $32, %%rdx\n\t"
-                "or %%rdx, %0"
-                : "=a" (start)
-                :
-                : "rdx");
-
-  asm volatile ("movl $36, %%ecx\n\t"
-                "1:\n\t"
-                "decl %%ecx\n\t"
-                "jnz 1b"
-                :
-                :
-                : "ecx");
-
-  asm volatile ("rdtsc\n\t"
-                "shl $32, %%rdx\n\t"
-                "or %%rdx, %0"
-                : "=a" (end)
-                :
-                : "rdx");
-
-  return end - start;
-}
-
-uint64_t do_40dec(int thread)
-{
-  uint64_t start;
-  uint64_t end;
-
-  asm volatile ("rdtsc\n\t"
-                "shl $32, %%rdx\n\t"
-                "or %%rdx, %0"
-                : "=a" (start)
-                :
-                : "rdx");
-
-  asm volatile ("movl $40, %%ecx\n\t"
-                "1:\n\t"
-                "decl %%ecx\n\t"
-                "jnz 1b"
-                :
-                :
-                : "ecx");
-
-  asm volatile ("rdtsc\n\t"
-                "shl $32, %%rdx\n\t"
-                "or %%rdx, %0"
-                : "=a" (end)
-                :
-                : "rdx");
-
-  return end - start;
-}
-
-uint64_t do_44dec(int thread)
-{
-  uint64_t start;
-  uint64_t end;
-
-  asm volatile ("rdtsc\n\t"
-                "shl $32, %%rdx\n\t"
-                "or %%rdx, %0"
-                : "=a" (start)
-                :
-                : "rdx");
-
-  asm volatile ("movl $44, %%ecx\n\t"
-                "1:\n\t"
-                "decl %%ecx\n\t"
-                "jnz 1b"
-                :
-                :
-                : "ecx");
-
-  asm volatile ("rdtsc\n\t"
-                "shl $32, %%rdx\n\t"
-                "or %%rdx, %0"
-                : "=a" (end)
-                :
-                : "rdx");
-
-  return end - start;
-}
-
-uint64_t do_48dec(int thread)
-{
-  uint64_t start;
-  uint64_t end;
-
-  asm volatile ("rdtsc\n\t"
-                "shl $32, %%rdx\n\t"
-                "or %%rdx, %0"
-                : "=a" (start)
-                :
-                : "rdx");
-
-  asm volatile ("movl $48, %%ecx\n\t"
-                "1:\n\t"
-                "decl %%ecx\n\t"
-                "jnz 1b"
-                :
-                :
-                : "ecx");
-
-  asm volatile ("rdtsc\n\t"
-                "shl $32, %%rdx\n\t"
-                "or %%rdx, %0"
-                : "=a" (end)
-                :
-                : "rdx");
-
-  return end - start;
-}
-
-uint64_t do_52dec(int thread)
-{
-  uint64_t start;
-  uint64_t end;
-
-  asm volatile ("rdtsc\n\t"
-                "shl $32, %%rdx\n\t"
-                "or %%rdx, %0"
-                : "=a" (start)
-                :
-                : "rdx");
-
-  asm volatile ("movl $52, %%ecx\n\t"
-                "1:\n\t"
-                "decl %%ecx\n\t"
-                "jnz 1b"
-                :
-                :
-                : "ecx");
-
-  asm volatile ("rdtsc\n\t"
-                "shl $32, %%rdx\n\t"
-                "or %%rdx, %0"
-                : "=a" (end)
-                :
-                : "rdx");
-
-  return end - start;
-}
-
-uint64_t do_56dec(int thread)
-{
-  uint64_t start;
-  uint64_t end;
-
-  asm volatile ("rdtsc\n\t"
-                "shl $32, %%rdx\n\t"
-                "or %%rdx, %0"
-                : "=a" (start)
-                :
-                : "rdx");
-
-  asm volatile ("movl $56, %%ecx\n\t"
-                "1:\n\t"
-                "decl %%ecx\n\t"
-                "jnz 1b"
-                :
-                :
-                : "ecx");
-
-  asm volatile ("rdtsc\n\t"
-                "shl $32, %%rdx\n\t"
-                "or %%rdx, %0"
-                : "=a" (end)
-                :
-                : "rdx");
-
-  return end - start;
-}
-
-uint64_t do_60dec(int thread)
-{
-  uint64_t start;
-  uint64_t end;
-
-  asm volatile ("rdtsc\n\t"
-                "shl $32, %%rdx\n\t"
-                "or %%rdx, %0"
-                : "=a" (start)
-                :
-                : "rdx");
-
-  asm volatile ("movl $60, %%ecx\n\t"
-                "1:\n\t"
-                "decl %%ecx\n\t"
-                "jnz 1b"
-                :
-                :
-                : "ecx");
-
-  asm volatile ("rdtsc\n\t"
-                "shl $32, %%rdx\n\t"
-                "or %%rdx, %0"
-                : "=a" (end)
-                :
-                : "rdx");
-
-  return end - start;
-}
-
-uint64_t do_64dec(int thread)
-{
-  uint64_t start;
-  uint64_t end;
-
-  asm volatile ("rdtsc\n\t"
-                "shl $32, %%rdx\n\t"
-                "or %%rdx, %0"
-                : "=a" (start)
-                :
-                : "rdx");
-
-  asm volatile ("movl $64, %%ecx\n\t"
-                "1:\n\t"
-                "decl %%ecx\n\t"
-                "jnz 1b"
-                :
-                :
-                : "ecx");
-
-  asm volatile ("rdtsc\n\t"
-                "shl $32, %%rdx\n\t"
-                "or %%rdx, %0"
-                : "=a" (end)
-                :
-                : "rdx");
+                : "%rdx");
 
   return end - start;
 }
