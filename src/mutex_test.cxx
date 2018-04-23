@@ -87,7 +87,7 @@ struct Plot
 
   void add_data_point(double x, double y, double dy, std::string const& description)
   {
-    std::unique_lock<std::mutex> lk(m_mutex);
+    std::lock_guard<std::mutex> lk(m_mutex);
     m_map[description].emplace_back(x, y, dy); 
   }
 
@@ -200,14 +200,14 @@ void benchmark(int thread, int test_nr, int repeats, std::string desc, uint64_t 
 
     if (j > 1) // The first measurement is thrown away.
     {
-      std::unique_lock<std::mutex> lk(all_mutex);
+      std::lock_guard<std::mutex> lk(all_mutex);
       max_clks_all[test_nr] = std::max(max_clks_all[test_nr], max_clks);
       min_clks_all[test_nr] = std::min(min_clks_all[test_nr], min_clks);
     }
   }
   {
     std::string title = std::to_string(repeats) + " " + desc;
-    std::unique_lock<std::mutex> lk(all_mutex);
+    std::lock_guard<std::mutex> lk(all_mutex);
     //plot2[test_nr].set_xrange(0, 550); //(min_clks_all[test_nr], max_clks_all[test_nr]);
     //plot2[test_nr].set_title(title);
   }
@@ -233,7 +233,7 @@ void benchmark(int thread, int test_nr, int repeats, std::string desc, uint64_t 
   auto data_ns_result = stats(data_ns, 99.9);
   auto clocks_result = stats(clocks, 99.9);
 
-  std::unique_lock<std::mutex> lk(iomutex);
+  std::lock_guard<std::mutex> lk(iomutex);
   std::cout << "===Thread #" << thread << "==================================================================================\n";
   std::cout << "Description: " << repeats << ' ' << desc << "\n";
   std::cout << "Time: " << data_ns_result.first << " ± " << data_ns_result.second << " ns (99.9% confidence interval).\n";
@@ -261,7 +261,7 @@ void run(int thread)
 #endif
   if (thread == 0)
     test_nr2 = test_nr;
-  std::unique_lock<std::mutex> lk(iomutex);
+  std::lock_guard<std::mutex> lk(iomutex);
   std::cout << "Leaving run(" << thread << ")\n";
 }
 

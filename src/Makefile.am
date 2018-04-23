@@ -1,6 +1,6 @@
 AM_CPPFLAGS = -iquote $(top_srcdir) -iquote $(top_srcdir)/cwds
 
-bin_PROGRAMS = helloworld fibonacci fiboquick filelock runthread function objectqueue threadpool cv_wait timer_test timer_thread
+bin_PROGRAMS = helloworld fibonacci fiboquick filelock runthread function objectqueue threadpool cv_wait timer_test timer_thread signal_test
 
 helloworld_SOURCES = \
 	helloworld.cxx
@@ -35,6 +35,9 @@ timer_test_SOURCES = \
 timer_thread_SOURCES = \
 	timer_thread.cxx
 
+signal_test_SOURCES = \
+	signal_test.cxx
+
 helloworld_CXXFLAGS = @LIBCWD_R_FLAGS@
 helloworld_LDADD = ../statefultask/libstatefultask.la ../threadsafe/libthreadsafe.la ../utils/libutils_r.la ../cwds/libcwds_r.la
 
@@ -66,9 +69,11 @@ timer_test_CXXFLAGS = @LIBCWD_R_FLAGS@
 timer_test_LDADD = ../statefultask/libstatefultask.la ../threadsafe/libthreadsafe.la ../utils/libutils_r.la ../cwds/libcwds_r.la
 timer_test_LDFLAGS = -pthread
 
-timer_thread_CXXFLAGS = @LIBCWD_R_FLAGS@
+timer_thread_CXXFLAGS = @LIBCWD_R_FLAGS@ -pthread
 timer_thread_LDADD = ../statefultask/libstatefultask.la ../threadsafe/libthreadsafe.la ../utils/libutils_r.la ../cwds/libcwds_r.la
-timer_thread_LDFLAGS = -pthread
+
+signal_test_CXXFLAGS = @LIBCWD_R_FLAGS@ -pthread
+signal_test_LDADD = ../cwds/libcwds_r.la
 
 # --------------- Maintainer's Section
 

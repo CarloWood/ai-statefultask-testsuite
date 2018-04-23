@@ -465,17 +465,17 @@ class RunningTimersImpl<INTERVALS, 2> : public statefultask::RunningTimers
     //sanity_check();
     statefultask::TimerQueueIndex const interval(this->m_tree[1]);              // The interval of the timer that will expire next.
     //std::cout << "  m_tree[1] = " << interval << '\n';
-    statefultask::TimerQueue& queue{this->m_queues[interval]};
+    statefultask::RunningTimers::timer_queue_t::wat queue_w(this->m_queues[interval]);
     // During this test there will always be more timers.
-    assert(!queue.debug_empty());
-    last_timer_2 = *queue.debug_begin();
+    assert(!queue_w->debug_empty());
+    last_timer_2 = *queue_w->debug_begin();
 
-    Timer::time_point now = queue.next_expiration_point();                      // Pretend it is already that time.
+    Timer::time_point now = queue_w->next_expiration_point();                   // Pretend it is already that time.
     auto current_w = statefultask::RunningTimers::instance().access_current();
     while (true)
     {
       current_w->timer = nullptr;
-      Timer* timer = statefultask::RunningTimers::next_expired(current_w, now);
+      Timer* timer = statefultask::RunningTimers::update_current_timer(current_w, now);
       if (!timer)
         break;
       timer->expire();
@@ -509,8 +509,9 @@ void RunningTimersImpl<INTERVALS, 2>::sanity_check() const
     else
     {
       statefultask::TimerQueueIndex tqi{to_queues_index(interval)};
-      assert(this->m_queues[tqi].debug_empty() || *this->m_queues[tqi].debug_begin() != nullptr);
-      assert(this->m_cache[interval] == this->m_queues[tqi].next_expiration_point());
+      timer_queue_t::crat queue_r(this->m_queues[tqi]);
+      assert(queue_r->debug_empty() || *queue_r->debug_begin() != nullptr);
+      assert(this->m_cache[interval] == queue_r->next_expiration_point());
     }
   }
   for (int interval = 0; interval < statefultask::RunningTimers::tree_size; interval += 2)

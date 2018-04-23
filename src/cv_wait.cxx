@@ -47,7 +47,7 @@ int main()
 
   {
     // 4. Block on m (because foo_thread has it, which is sleeping now).
-    std::unique_lock<std::mutex> lk(m);
+    std::lock_guard<std::mutex> lk(m);
     // 7. We obtained the lock on m: foo_thread is now in wait() (point 6.)
   } // 8. Immediately release the lock again.
   // 9. CALL notify_one()!
