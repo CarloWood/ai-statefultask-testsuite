@@ -72,8 +72,8 @@ timer_test_LDFLAGS = -pthread
 timer_thread_CXXFLAGS = @LIBCWD_R_FLAGS@ -pthread
 timer_thread_LDADD = ../statefultask/libstatefultask.la ../threadsafe/libthreadsafe.la ../utils/libutils_r.la ../cwds/libcwds_r.la
 
-signal_test_CXXFLAGS = @LIBCWD_R_FLAGS@ -pthread
-signal_test_LDADD = ../cwds/libcwds_r.la
+signal_test_CXXFLAGS = @LIBCWD_R_FLAGS@ -pthread -O3
+signal_test_LDADD = ../threadsafe/libthreadsafe.la ../cwds/libcwds_r.la
 
 # --------------- Maintainer's Section
 

@@ -25,11 +25,13 @@ void Callback::callback() const
     if (length < 32)
     {
       for (int i = 0; i < std::min(32 - length, m_nr + 1); ++ i)
-        queue_access.move_in([this, i](){ std::cout << "Pool executed task #" << i << " added by callback of timer " << m_nr << "\n"; return false; });
+        queue_access.move_in([this, i](){ Dout(dc::notice, "Pool executed task #" << i << " added by callback of timer " << m_nr); return false; });
     }
   }
   queue.notify_one();
 }
+
+#define SIMPLE 0
 
 int main()
 {
@@ -38,10 +40,19 @@ int main()
 #endif
   Debug(NAMESPACE_DEBUG::init());
 
+#if !SIMPLE
   AIThreadPool thread_pool;
+#else
+  AIThreadPool thread_pool(1, 1);
+#endif
   AIQueueHandle high_priority = thread_pool.new_queue(32);
+#if !SIMPLE
   AIQueueHandle mid_priority = thread_pool.new_queue(32);
   AIQueueHandle low_priority = thread_pool.new_queue(32);
+#else
+  AIQueueHandle mid_priority = high_priority;
+  AIQueueHandle low_priority = high_priority;
+#endif
 
   std::this_thread::sleep_for(std::chrono::seconds(1));
 
@@ -76,6 +87,7 @@ int main()
   };
 
   timers[0].start(statefultask::Interval<1, std::chrono::seconds>());
+#if !SIMPLE
   timers[1].start(statefultask::Interval<2, std::chrono::seconds>());
   timers[2].start(statefultask::Interval<3, std::chrono::seconds>());
   timers[3].start(statefultask::Interval<4, std::chrono::seconds>());
@@ -85,6 +97,7 @@ int main()
   timers[7].start(statefultask::Interval<8, std::chrono::seconds>());
   timers[8].start(statefultask::Interval<9, std::chrono::seconds>());
   timers[9].start(statefultask::Interval<10, std::chrono::seconds>());
+#endif
 
   std::this_thread::sleep_for(std::chrono::seconds(11));
   std::cout << "Leaving main()\n" << std::endl;
