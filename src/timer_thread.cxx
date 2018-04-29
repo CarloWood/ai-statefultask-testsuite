@@ -17,6 +17,7 @@ class Callback
 void Callback::callback() const
 {
   Dout(dc::notice, "Timer " << m_nr << " expired.");
+  int added_tasks = 0;
   auto queues_access = AIThreadPool::instance().queues_read_access();
   auto& queue = AIThreadPool::instance().get_queue(queues_access, m_queue_handle);
   {
@@ -24,11 +25,16 @@ void Callback::callback() const
     int length = queue_access.length();
     if (length < 32)
     {
-      for (int i = 0; i < std::min(32 - length, m_nr + 1); ++ i)
+      added_tasks = std::min(32 - length, m_nr + 1);
+      for (int i = 0; i < added_tasks; ++ i)
+      {
         queue_access.move_in([this, i](){ Dout(dc::notice, "Pool executed task #" << i << " added by callback of timer " << m_nr); return false; });
+        Dout(dc::notice, "Added task #" << i << " to queue " << m_queue_handle);
+      }
     }
   }
-  queue.notify_one();
+  for (int i = 0; i < added_tasks; ++ i)
+    queue.notify_one();
 }
 
 #define SIMPLE 0
