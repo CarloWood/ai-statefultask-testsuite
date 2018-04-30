@@ -3,6 +3,8 @@
 #include "statefultask/Timer.h"
 #include "debug.h"
 
+int const queue_size = 32;
+
 class Callback
 {
  private:
@@ -16,16 +18,16 @@ class Callback
 
 void Callback::callback() const
 {
-  Dout(dc::notice, "Timer " << m_nr << " expired.");
+  Dout(dc::notice|flush_cf, "Timer " << m_nr << " expired.");
   int added_tasks = 0;
   auto queues_access = AIThreadPool::instance().queues_read_access();
   auto& queue = AIThreadPool::instance().get_queue(queues_access, m_queue_handle);
   {
     auto queue_access = queue.producer_access();
     int length = queue_access.length();
-    if (length < 32)
+    if (length < queue_size)
     {
-      added_tasks = std::min(32 - length, m_nr + 1);
+      added_tasks = std::min(queue_size - length, 10 * (m_nr + 1));
       for (int i = 0; i < added_tasks; ++ i)
       {
         queue_access.move_in([this, i](){ Dout(dc::notice, "Pool executed task #" << i << " added by callback of timer " << m_nr); return false; });
@@ -51,16 +53,16 @@ int main()
 #else
   AIThreadPool thread_pool(1, 1);
 #endif
-  AIQueueHandle high_priority = thread_pool.new_queue(32);
+  AIQueueHandle high_priority = thread_pool.new_queue(queue_size);
 #if !SIMPLE
-  AIQueueHandle mid_priority = thread_pool.new_queue(32);
-  AIQueueHandle low_priority = thread_pool.new_queue(32);
+  AIQueueHandle mid_priority = thread_pool.new_queue(queue_size);
+  AIQueueHandle low_priority = thread_pool.new_queue(queue_size);
 #else
   AIQueueHandle mid_priority = high_priority;
   AIQueueHandle low_priority = high_priority;
 #endif
 
-  std::this_thread::sleep_for(std::chrono::seconds(1));
+  std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
   std::array<Callback, 10> callbacks = {
     Callback(0, high_priority),
@@ -92,19 +94,19 @@ int main()
     pf[0], pf[1], pf[2], pf[3], pf[4], pf[5], pf[6], pf[7], pf[8], pf[9]
   };
 
-  timers[0].start(statefultask::Interval<1, std::chrono::seconds>());
+  timers[0].start(statefultask::Interval<1, std::chrono::microseconds>());
 #if !SIMPLE
-  timers[1].start(statefultask::Interval<2, std::chrono::seconds>());
-  timers[2].start(statefultask::Interval<3, std::chrono::seconds>());
-  timers[3].start(statefultask::Interval<4, std::chrono::seconds>());
-  timers[4].start(statefultask::Interval<5, std::chrono::seconds>());
-  timers[5].start(statefultask::Interval<6, std::chrono::seconds>());
-  timers[6].start(statefultask::Interval<7, std::chrono::seconds>());
-  timers[7].start(statefultask::Interval<8, std::chrono::seconds>());
-  timers[8].start(statefultask::Interval<9, std::chrono::seconds>());
-  timers[9].start(statefultask::Interval<10, std::chrono::seconds>());
+  timers[1].start(statefultask::Interval<2, std::chrono::microseconds>());
+  timers[2].start(statefultask::Interval<3, std::chrono::microseconds>());
+  timers[3].start(statefultask::Interval<4, std::chrono::microseconds>());
+  timers[4].start(statefultask::Interval<5, std::chrono::microseconds>());
+  timers[5].start(statefultask::Interval<6, std::chrono::microseconds>());
+  timers[6].start(statefultask::Interval<7, std::chrono::microseconds>());
+  timers[7].start(statefultask::Interval<8, std::chrono::microseconds>());
+  timers[8].start(statefultask::Interval<9, std::chrono::microseconds>());
+  timers[9].start(statefultask::Interval<10, std::chrono::microseconds>());
 #endif
 
-  std::this_thread::sleep_for(std::chrono::seconds(11));
+  std::this_thread::sleep_for(std::chrono::milliseconds(200));
   std::cout << "Leaving main()\n" << std::endl;
 }
