@@ -70,5 +70,3 @@ struct Plot
     Dout(dc::finish|flush_cf, "done");
   }
 };
-
-
