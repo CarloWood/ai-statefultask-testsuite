@@ -5,13 +5,14 @@
 #include <limits>
 #include <iostream>
 #include <thread>
+#include <cassert>
 #include "cwds/benchmark.h"
 
 int constexpr bufsize = 64;
-int const cpu_nr[2] = { 0, 3 };
+int const cpu_nr[2] = { 0, 1 };
 
-std::atomic<uint32_t> s_atomic;
-std::array<std::array<std::atomic<int64_t>, bufsize>, 2> m_ringbuffers;
+std::atomic<uint16_t> s_atomic;
+std::array<std::array<std::atomic<uint64_t>, bufsize>, 2> m_ringbuffers;
 std::array<std::array<int64_t, bufsize>, 2> m_diff;
 
 void init()
@@ -25,13 +26,25 @@ void init()
 
 #define barrier() asm volatile("": : :"memory")
 
+union Mix
+{
+  uint64_t data;
+  struct X {
+    uint64_t m_tsc : 48;        // The least significant bits.
+    uint64_t m_index : 16;
+  } x;
+};
+
 void f(int cpu)
 {
   benchmark::Stopwatch stopwatch(cpu_nr[cpu]);
   stopwatch.start();
+  Mix u;
+  u.x.m_tsc = stopwatch.start_cycles();
+  assert((u.x.m_tsc & 0xf00000000000) != 0xf00000000000);
 
-  std::array<std::atomic<int64_t>, bufsize>& my_tsc_buffer{m_ringbuffers[cpu]};
-  std::array<std::atomic<int64_t>, bufsize>& other_tsc_buffer{m_ringbuffers[1 - cpu]};
+  std::array<std::atomic<uint64_t>, bufsize>& my_tsc_buffer = m_ringbuffers[cpu];
+  std::array<std::atomic<uint64_t>, bufsize>& other_tsc_buffer = m_ringbuffers[1 - cpu];
   std::array<int64_t, bufsize>& my_diff_buffer{m_diff[cpu]};
 
   uint64_t count = 0;
@@ -52,13 +65,17 @@ void f(int cpu)
 
     int64_t r2 = r1 - 1;
     int64_t r0 = (tsc_hi << 32) | tsc_lo;
+    u.x.m_tsc = (uint64_t)r0;
+    u.x.m_index = r1;
     r1 &= bufsize - 1;
-    my_tsc_buffer[r1] = r0;
+    my_tsc_buffer[r1] = u.data;
 
     barrier();
 
     r2 &= bufsize - 1;
-    r1 = other_tsc_buffer[r2];
+    Mix u2;
+    u2.data = other_tsc_buffer[r2];
+    r1 = u2.x.m_tsc;
 
     __asm__ __volatile__ (
         "rdtscp"
@@ -67,12 +84,13 @@ void f(int cpu)
 
     int64_t r3 = (tsc_hi << 32) | tsc_lo;
     r3 -= r0;
-    if (r3 < 400)      // 6000 should be roughly 32 * the lowest value of r3. On my box r3 >= 191.
+    if (r3 < 6000)      // 6000 should be roughly 32 * the lowest value of r3. On my box r3 >= 191.
     {
+      r0 = u.x.m_tsc;
       r0 -= r1;
       if (r0 < 0)
       {
-        std::cout << "CPU " << cpu_nr[cpu] << ": Huh... " << r0 << std::endl;
+        std::cout << "CPU " << cpu_nr[cpu] << ": Huh... " << r0 << "; index " << u.x.m_index << " - " << u2.x.m_index << std::endl;
       }
       else if (r0 < my_diff_buffer[r2])
       {
