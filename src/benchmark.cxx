@@ -16,9 +16,9 @@ int constexpr loopsize = 100;
 
 using clock_type = std::chrono::high_resolution_clock;
 using time_point = clock_type::time_point;
-template<typename T> using MinAvgMax = debug::MinAvgMax<T>;
-template<typename T> using FrequencyCounter = debug::FrequencyCounter<T>;
-using Plot = debug::Plot;
+template<typename T> using MinAvgMax = eda::MinAvgMax<T>;
+template<typename T> using FrequencyCounter = eda::FrequencyCounter<T>;
+using Plot = eda::Plot;
 
 namespace benchmark {
 

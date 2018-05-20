@@ -118,7 +118,7 @@ int main()
   int64_t min[2] = { std::numeric_limits<int64_t>::max(), std::numeric_limits<int64_t>::max() };
   for (int cpu = 0; cpu <= 1; ++cpu)
   {
-    debug::FrequencyCounter<int64_t> frequency_counter;
+    eda::FrequencyCounter<int64_t> frequency_counter;
     std::cout << "CPU " << cpu_nr[cpu] << ":";
     for (int64_t e : m_diff[cpu])
     {
@@ -127,7 +127,7 @@ int main()
       frequency_counter.add(e / 10);
     }
     std::cout << std::endl;
-    debug::PlotHistogram plot("Minimum stable for 100,000 runs, CPU #" + std::to_string(cpu_nr[cpu]), "Minimum (clocks)", "Frequency (count)");
+    eda::PlotHistogram plot("Minimum stable for 100,000 runs, CPU #" + std::to_string(cpu_nr[cpu]), "Minimum (clocks)", "Frequency (count)");
     plot.show(frequency_counter);
   }
   int64_t offset = (min[0] - min[1]) / 2;
