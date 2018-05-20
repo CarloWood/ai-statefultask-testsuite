@@ -9,13 +9,16 @@
 #include <iomanip>
 #include <thread>
 #include "cwds/benchmark.h"
+#include "cwds/gnuplot_tools.h"
 #include "utils/macros.h"
-#include "Plot.h"
 
 int constexpr loopsize = 100;
 
 using clock_type = std::chrono::high_resolution_clock;
 using time_point = clock_type::time_point;
+template<typename T> using MinAvgMax = debug::MinAvgMax<T>;
+template<typename T> using FrequencyCounter = debug::FrequencyCounter<T>;
+using Plot = debug::Plot;
 
 namespace benchmark {
 
@@ -24,75 +27,6 @@ enum show_nt
   hide_calibration_graph = 0x1,
   hide_delta_graphs = 0x2,
   hide_stopwatch_overhead = 0x4
-};
-
-template<typename T>
-class FrequencyCounter
-{
-  using counters_type = std::map<T, size_t>;
-  using iterator = typename counters_type::iterator;
-
-  counters_type m_counters;
-  iterator m_hint;
-
- public:
-  FrequencyCounter() : m_hint(m_counters.end()) { }
-
-  void add(T data)
-  {
-    m_hint = m_counters.emplace_hint(m_hint, data, 0);
-    m_hint->second++;
-  }
-
-  T most() const
-  {
-    size_t max = 0;
-    T result;
-    for (auto e : m_counters)
-    {
-      if (e.second > max)
-      {
-        max = e.second;
-        result = e.first;
-      }
-    }
-    return result;
-  }
-};
-
-template<typename T>
-class MinAvgMax
-{
- private:
-  T m_min;
-  T m_max;
-  T m_sum;
-  size_t m_cnt;
-
- public:
-  T min() const { return m_min; }
-  T max() const { return m_max; }
-  T avg() const { return m_sum / m_cnt; }
-
-  MinAvgMax() : m_min(std::numeric_limits<T>::max()), m_max(-std::numeric_limits<T>::max()), m_sum(0.0), m_cnt(0) { }
-
-  void data_point(T data)
-  {
-    if (data < m_min)
-      m_min = data;
-    if (data >m_max)
-      m_max = data;
-    m_sum += data;
-    ++m_cnt;
-  }
-
-  size_t count() const { return m_cnt; }
-
-  friend std::ostream& operator<<(std::ostream& os, MinAvgMax<T> const& mma)
-  {
-    os << mma.m_min << '/' << mma.avg() << '/' << mma.m_max;
-    return os;
-  }
 };
 
 struct Data
