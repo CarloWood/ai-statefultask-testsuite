@@ -1,0 +1,14 @@
+ifneq ($(KERNELRELEASE),)
+obj-m += tsc_kmod.o
+else
+
+KDIR ?= /lib/modules/`uname -r`/build
+srcdir = @srcdir@
+builddir = $$PWD
+ccflags-y = -O3
+
+kmod:
+	ln -sf $(srcdir)/tsc_kmod.c
+	$(MAKE) -C "$(KDIR)" M="$(builddir)" modules
+
+endif

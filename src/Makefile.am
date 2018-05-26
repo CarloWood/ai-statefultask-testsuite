@@ -1,6 +1,6 @@
 AM_CPPFLAGS = -iquote $(top_srcdir) -iquote $(top_srcdir)/cwds
 
-bin_PROGRAMS = helloworld fibonacci fiboquick filelock runthread function objectqueue threadpool cv_wait timer_test timer_thread signal_test benchmark
+bin_PROGRAMS = helloworld fibonacci fiboquick filelock runthread function objectqueue threadpool cv_wait timer_test timer_thread signal_test benchmark mutex_benchmark test_frequency_counter
 
 helloworld_SOURCES = \
 	helloworld.cxx
@@ -41,6 +41,12 @@ signal_test_SOURCES = \
 benchmark_SOURCES = \
 	benchmark.cxx
 
+mutex_benchmark_SOURCES = \
+	mutex_benchmark.cxx
+
+test_frequency_counter_SOURCES = \
+	test_frequency_counter.cxx
+
 helloworld_CXXFLAGS = @LIBCWD_R_FLAGS@
 helloworld_LDADD = ../statefultask/libstatefultask.la ../threadsafe/libthreadsafe.la ../utils/libutils_r.la ../cwds/libcwds_r.la
 
@@ -80,6 +86,12 @@ signal_test_LDADD = ../threadsafe/libthreadsafe.la ../cwds/libcwds_r.la
 
 benchmark_CXXFLAGS = @LIBCWD_R_FLAGS@ -pthread
 benchmark_LDADD = ../cwds/libcwds_r.la -lboost_iostreams -lboost_system
+
+mutex_benchmark_CXXFLAGS = @LIBCWD_R_FLAGS@ -pthread -O3
+mutex_benchmark_LDADD = ../cwds/libcwds_r.la
+
+test_frequency_counter_CXXFLAGS = @LIBCWD_R_FLAGS@
+test_frequency_counter_LDADD = ../cwds/libcwds_r.la -lboost_iostreams -lboost_system
 
 # --------------- Maintainer's Section
 

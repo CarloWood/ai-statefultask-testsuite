@@ -1,4 +1,4 @@
-// Compile as: g++ -std=c++14 -I../gnuplot-iostream -D_GNU_SOURCE -O2 -pthread mutex_test.cxx -lboost_iostreams -lboost_system
+// Compile as: g++ -std=c++14 -I.. -D_GNU_SOURCE -O2 -pthread mutex_test.cxx -lboost_iostreams -lboost_system
 
 #include <iostream>
 #include <thread>
@@ -14,7 +14,7 @@
 #include <pthread.h>
 #include <boost/tuple/tuple.hpp>
 #include <boost/math/distributions/students_t.hpp>
-#include "gnuplot-iostream.h"
+#include "cwds/gnuplot_tools.h"
 
 int constexpr cachelinesize = 64;
 int constexpr loopsize = 100000;
@@ -72,45 +72,9 @@ using time_point = clock_type::time_point;
 
 std::atomic_int ready;
 
-struct Plot
-{
-  Gnuplot gp;
-  std::string m_title;
-  std::mutex m_mutex;
-  std::map<std::string, std::vector<boost::tuple<double, double, double>>> m_map;
-  int m_x_min;
-  int m_x_max;
-
-  void set_title(std::string title) { m_title = title; }
-  void set_xrange(int x_min, int x_max) { m_x_min = x_min; m_x_max = x_max; }
-  bool has_data() const { return !m_map.empty(); }
-
-  void add_data_point(double x, double y, double dy, std::string const& description)
-  {
-    std::lock_guard<std::mutex> lk(m_mutex);
-    m_map[description].emplace_back(x, y, dy); 
-  }
-
-  void show(std::string with)
-  {
-    gp << "set title '" << m_title << "'\n";
-    gp << "set xrange [" << m_x_min << ":" << m_x_max << "]\nset yrange [40:]\n";
-    gp << "set xlabel 'Interval between calls to the lock/unlock pair (in ns)'\n";
-    gp << "set ylabel 'Time to lock and unlock a mutex (in clks)'\n";
-    char const* separator = "plot ";
-    for (auto&& e : m_map)
-    {
-      gp << separator << "'-' with " << with << " title '" << e.first << "'";
-      separator = ", ";
-    }
-    gp << '\n';
-    for (auto&& e : m_map)
-      gp.send1d(e.second);
-  }
-};
-
-Plot plot1;
-std::array<Plot, 300> plot2;
+eda::Plot plot("Number of clocks it takes to lock/unlock a mutex as function of frequency (in ns).",
+          "Interval between calls to the lock/unlock pair (in ns)",
+          "Time to lock and unlock a mutex (in clks)");
 std::mutex all_mutex;
 std::array<int, 300> max_clks_all;
 std::array<int, 300> min_clks_all;
@@ -208,8 +172,6 @@ void benchmark(int thread, int test_nr, int repeats, std::string desc, uint64_t 
   {
     std::string title = std::to_string(repeats) + " " + desc;
     std::lock_guard<std::mutex> lk(all_mutex);
-    //plot2[test_nr].set_xrange(0, 550); //(min_clks_all[test_nr], max_clks_all[test_nr]);
-    //plot2[test_nr].set_title(title);
   }
   for (auto&& e : mv)
   {
@@ -219,7 +181,6 @@ void benchmark(int thread, int test_nr, int repeats, std::string desc, uint64_t 
       if (e.second.size() > 20)
         e.second.resize(20);
       auto mv_result = stats(e.second, 99);
-      //plot2[test_nr].add_data_point(e.first, mv_result.first, mv_result.second, "CPU #" + std::to_string(thread));
     }
   }
 
@@ -239,8 +200,8 @@ void benchmark(int thread, int test_nr, int repeats, std::string desc, uint64_t 
   std::cout << "Time: " << data_ns_result.first << " ± " << data_ns_result.second << " ns (99.9% confidence interval).\n";
   std::cout << "Clocks: " << clocks_result.first << " ± " << clocks_result.second << " (99% confidence interval).\n";
 
-  plot1.add_data_point(data_ns_result.first, clocks_result.first, clocks_result.second, "CPU #" + std::to_string(thread));
-  //plot1.add_data_point((double)repeats, clocks_result.first, clocks_result.second, "CPU #" + std::to_string(thread) + "(clks)");
+  plot.add_data_point(data_ns_result.first, clocks_result.first, clocks_result.second, "CPU #" + std::to_string(thread));
+  //plot.add_data_point((double)repeats, clocks_result.first, clocks_result.second, "CPU #" + std::to_string(thread) + "(clks)");
 }
 
 std::atomic_int count;
@@ -251,7 +212,7 @@ void run(int thread)
   std::cout << thread << ". Calling run(" << thread << ")\n";
   int test_nr = 0;
 #if 1
-  for (int loop_count = 150; loop_count >= 70; --loop_count)
+  for (int loop_count = 1000; loop_count >= 30; loop_count -= 2)
   {
     ++test_nr;
     benchmark(thread, test_nr, loop_count, "dec", do_Ndec, loop_count);
@@ -276,7 +237,7 @@ int main()
     // Pin thread to a single CPU.
     cpu_set_t cpuset;
     CPU_ZERO(&cpuset);
-    CPU_SET(t, &cpuset);
+    CPU_SET(2 * t, &cpuset);
     int rc = pthread_setaffinity_np(threads[t].native_handle(), sizeof(cpu_set_t), &cpuset);
     if (rc != 0) {
       std::cerr << "Error calling pthread_setaffinity_np: " << rc << "\n";
@@ -284,15 +245,12 @@ int main()
   }
   for (int t = 0; t < num_threads; ++t)
     threads[t].join();
-  if (plot1.has_data())
+  if (plot.has_data())
   {
-    plot1.set_title("Number of clocks it takes to lock/unlock a mutex as function of frequency (in ns).");
-    plot1.set_xrange(100, 130 /*max_repeats + 1*/);
-    plot1.show("errorbars");
+    //plot.set_xrange(125, 150 /*max_repeats + 1*/);
+    //plot.set_yrange(150, 250 /*max_repeats + 1*/);
+    plot.show("errorbars");
   }
-  for (int n = 1; n <= test_nr2; ++n)
-    if (plot2[n].has_data())
-      plot2[n].show("errorlines");
 }
 
 struct B {
@@ -307,7 +265,8 @@ uint64_t do_Ndec(int thread, int loop_count)
   uint64_t end;
   int __d0;
 
-  asm volatile ("rdtsc\n\t"
+  asm volatile ("lfence\n\t"
+                "rdtsc\n\t"
                 "shl $32, %%rdx\n\t"
                 "or %%rdx, %0"
                 : "=a" (start)
@@ -317,12 +276,12 @@ uint64_t do_Ndec(int thread, int loop_count)
   m[0].m.lock();
   m[0].m.unlock();
 
-  asm volatile ("rdtsc\n\t"
+  asm volatile ("rdtscp\n\t"
                 "shl $32, %%rdx\n\t"
                 "or %%rdx, %0"
                 : "=a" (end)
                 :
-                : "%rdx");
+                : "%rdx", "%rcx");
 
   asm volatile ("\n"
                 "1:\n\t"

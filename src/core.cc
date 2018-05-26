@@ -38,10 +38,10 @@ void f(int cpu, eda::FrequencyCounter<int64_t>& fc)
 
   eda::MinAvgMax<int64_t> delta_2_1_mam;
   eda::MinAvgMax<int64_t> delta_3_1_mam;
-  static int64_t constexpr delta_1_3_min = 193;
+  static int64_t constexpr delta_3_1_min = 200;
 
   uint64_t count = 0;
-  while (count < 100000000)
+  while (count < 1000000)
   {
     uint64_t tsc1;
     uint64_t tsc2;
@@ -71,7 +71,7 @@ void f(int cpu, eda::FrequencyCounter<int64_t>& fc)
     int16_t other_index = index - 1;
 
     index &= bufsize - 1;
-    my_tsc_buffer[index] = tsc1;
+    my_tsc_buffer[index] = tsc2;
 
     barrier();
 
@@ -90,21 +90,17 @@ void f(int cpu, eda::FrequencyCounter<int64_t>& fc)
     int64_t delta_3_1 = tsc3 - tsc1;
     delta_3_1_mam.data_point(delta_3_1);
 
-    if (delta_2_1 < 200 && delta_3_1 < delta_1_3_min * bufsize / 2) // On my box the minimum value of delta_1_3 is 193, so it takes at least
-                                                 // delta_1_3_min * bufsize clocks to wrap around the ringbuffer (devide by 2 just to be sure).
+    if (delta_2_1 < 200 && delta_3_1 < delta_3_1_min * bufsize / 2) // On my box the minimum value of delta_3_1 is 193 cycles, so it takes at least
+                                                                    // delta_3_1_min * bufsize clocks to wrap around the ringbuffer (devide by 2 just to be sure).
     {
-      int64_t diff = tsc1 - other_tsc;
+      int64_t diff = tsc2 - other_tsc;
       if (diff < 40000)         // Under 50000 I never see the wrong s_atomic indexes be compared (aka, if delta is less than 50,000
                                 // than we can be sure that other_tsc is the timestamp ready by the other core JUST prior to incrementing
                                 // s_atomic to the value that WE read into index. And that's the timestamps that we want to compare.
       {
-        if (diff < -300)
+        if (diff > -300)
         {
-          //std::cout << "CPU " << cpu_nr[cpu] << ": Huh... tsc3 - tsc1 = " << delta << "; tsc2 - tsc1 = " << (tsc2 - tsc1) << std::endl;
-        }
-        else
-        {
-          if (diff < 300)
+          if (delta_2_1 == 34 && -50 <= diff && diff <= 50)
             fc.add(diff);
           if (diff < my_diff_buffer[other_index])
           {
@@ -119,21 +115,28 @@ void f(int cpu, eda::FrequencyCounter<int64_t>& fc)
   stopwatch.stop();
   std::cout << "CPU " << cpu_nr[cpu] << " ran for " << stopwatch.diff_cycles() << " cycles." << std::endl;
   std::cout << "The min/avg/max value of delta_3_1 is " << delta_3_1_mam << std::endl;
+  assert(std::abs(delta_3_1_mam.min() - delta_3_1_min) <= delta_3_1_mam.min() / 4);     // Time to update delta_3_1_min.
   std::cout << "The min/avg/max value of delta_2_1 is " << delta_2_1_mam << std::endl;
 }
 
 int main()
 {
-  init();
   std::array<eda::FrequencyCounter<int64_t>, 2> fcs;
-  std::thread t0([&fcs](){ f(0, fcs[0]); });
-  std::thread t1([&fcs](){ f(1, fcs[1]); });
-  t0.join();
-  t1.join();
+  for (int i = 0; i < 100; ++i)
+  {
+    std::cout << "i = " << i << std::endl;
+    init();
+    std::thread t0([&fcs](){ f(0, fcs[0]); });
+    std::thread t1([&fcs](){ f(1, fcs[1]); });
+    t0.join();
+    t1.join();
+  }
   int64_t min[2] = { std::numeric_limits<int64_t>::max(), std::numeric_limits<int64_t>::max() };
   for (int cpu = 0; cpu <= 1; ++cpu)
   {
-    eda::PlotHistogram plot1("Histogram of diffs on CPU #" + std::to_string(cpu_nr[cpu]), "diff (clocks)", "Frequency (count)");
+    eda::PlotHistogram plot1("Histogram of TSC difference when CPU #" + std::to_string(cpu_nr[cpu]) + " incremented s\\_atomic last.",
+        "diff (clocks), peak: " + std::to_string(fcs[cpu].most()), "Frequency (count)");
+    //plot1.set_yrange(0, 350000);
     plot1.show(fcs[cpu]);
     eda::FrequencyCounter<int64_t> frequency_counter;
     std::cout << "CPU " << cpu_nr[cpu] << ":";

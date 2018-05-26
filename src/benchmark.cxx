@@ -116,9 +116,6 @@ class Benchmark
     delete m_stopwatch1;
   }
 
-  template<class T>
-  int get_minimum_of(int number_of_runs, T const functor);
-
   struct Measurement
   {
     int m_cycles;
@@ -465,23 +462,6 @@ void Benchmark::calibrate_cycles_per_ns()
 }
 
 template<class T>
-int Benchmark::get_minimum_of(int number_of_runs, T const functor)
-{
-  m_stopwatch1->prefetch();
-  int cycles = std::numeric_limits<int>::max();
-  for (int i = 0; i < number_of_runs; ++i)
-  {
-    m_stopwatch1->start();
-    functor();
-    m_stopwatch1->stop();
-    int ncycles = m_stopwatch1->diff_cycles();
-    if (ncycles < cycles)
-      cycles = ncycles;
-  }
-  return cycles;
-}
-
-template<class T>
 Benchmark::Measurement Benchmark::measure(T const functor)
 {
   DoutEntering(dc::notice, "Benchmark::measure()");
@@ -498,7 +478,7 @@ Benchmark::Measurement Benchmark::measure(T const functor)
   Measurement result;
   while (true)
   {
-    int cycles = get_minimum_of(1000, functor);
+    int cycles = m_stopwatch1->get_minimum_of(1000, functor);
     if (AI_LIKELY(cycles < (int)dist.size()))
     {
       ++dist[cycles];
@@ -563,7 +543,7 @@ void Benchmark::calibrate_stopwatch_overhead(bool show)
   static int volatile v;
   int volatile* vp = &v;
   // Warm up cache.
-  get_minimum_of(1000, [vp](){ for (int r = 0; r < 100; ++r) { *vp = r; }});
+  m_stopwatch1->get_minimum_of(1000, [vp](){ for (int r = 0; r < 100; ++r) { *vp = r; }});
   Plot plot("Calibration of Stopwatch overhead", "Loopsize", "Number of clocks");
   MinAvgMax<double> mma;
   FrequencyCounter<int> fc;
