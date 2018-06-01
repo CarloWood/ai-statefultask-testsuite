@@ -3,11 +3,11 @@
 
 int main()
 {
-  eda::FrequencyCounter<int> fc;
+  eda::FrequencyCounter<int, 4> fc;
 
   while (1)
   {
-    fc.print();
+    fc.print_on(std::cout);
     int input;
     std::cin >> input;
     fc.add(input);

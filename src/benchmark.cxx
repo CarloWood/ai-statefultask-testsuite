@@ -16,8 +16,9 @@ int constexpr loopsize = 100;
 
 using clock_type = std::chrono::high_resolution_clock;
 using time_point = clock_type::time_point;
+using Measurement = eda::FrequencyCounterResult;
 template<typename T> using MinAvgMax = eda::MinAvgMax<T>;
-template<typename T> using FrequencyCounter = eda::FrequencyCounter<T>;
+template<typename T, int nk> using FrequencyCounter = eda::FrequencyCounter<T, nk>;
 using Plot = eda::Plot;
 
 namespace benchmark {
@@ -26,7 +27,6 @@ enum show_nt
 {
   hide_calibration_graph = 0x1,
   hide_delta_graphs = 0x2,
-  hide_stopwatch_overhead = 0x4
 };
 
 struct Data
@@ -51,7 +51,6 @@ class Benchmark
   double m_now_offset;
   int m_delta;
   double m_cycles_per_ns;
-  int m_stopwatch_overhead;
   Stopwatch* m_stopwatch1;
   Stopwatch* m_stopwatch2;
 
@@ -59,26 +58,24 @@ class Benchmark
   void calibrate_now_offset(bool show);
   void calibrate_delta(bool show);
   void calibrate_cycles_per_ns();
-  void calibrate_stopwatch_overhead(bool show);
 
   double now_offset() const { return m_now_offset; }
   int delta() const { return m_delta; }
   std::string now_offset_str(int precision) { std::ostringstream ss; ss << std::fixed << std::setprecision(precision) << m_now_offset; return ss.str(); }
   double cycles_per_ns() const { return m_cycles_per_ns; }
-  int stopwatch_overhead() const { return m_stopwatch_overhead; }
 
-  Benchmark(unsigned int cpu_nr, int hide_graphs = 0) : m_cpu_nr(cpu_nr), m_now_offset(0), m_delta(0), m_stopwatch_overhead(0)
+  Benchmark(unsigned int cpu_nr, int hide_graphs = 0) : m_cpu_nr(cpu_nr), m_now_offset(0), m_delta(0)
   {
     m_stopwatch1 = new Stopwatch(m_cpu_nr);
     m_stopwatch2 = new Stopwatch(m_cpu_nr);
     calibrate_now_offset(!(hide_graphs & hide_calibration_graph));
     calibrate_delta(!(hide_graphs & hide_delta_graphs));
     calibrate_cycles_per_ns();
-    calibrate_stopwatch_overhead(!(hide_graphs & hide_stopwatch_overhead));
+    m_stopwatch1->calibrate_overhead();
   }
 
   Benchmark(unsigned int cpu_nr, double now_offset = 0.0, int delta = 0, double cycles_per_ns = 0.0, int stopwatch_overhead = 0, int hide_graphs = 0) :
-      m_cpu_nr(cpu_nr), m_now_offset(now_offset), m_delta(delta), m_cycles_per_ns(cycles_per_ns), m_stopwatch_overhead(stopwatch_overhead)
+      m_cpu_nr(cpu_nr), m_now_offset(now_offset), m_delta(delta), m_cycles_per_ns(cycles_per_ns)
   {
     m_stopwatch1 = new Stopwatch(m_cpu_nr);
     m_stopwatch2 = new Stopwatch(m_cpu_nr);
@@ -100,13 +97,15 @@ class Benchmark
     }
     if (stopwatch_overhead == 0)
     {
-      calibrate_stopwatch_overhead(!(hide_graphs & hide_stopwatch_overhead));
+      m_stopwatch1->calibrate_overhead();
       calibrated = true;
     }
+    else
+      Stopwatch::s_stopwatch_overhead = stopwatch_overhead;
     if (calibrated)
     {
       DoutFatal(dc::fatal, "Construct Benchmark with Benchmark(" << m_cpu_nr << ", " <<
-          m_now_offset << ", " << m_delta << ", " << m_cycles_per_ns << ", " << m_stopwatch_overhead << ").");
+          m_now_offset << ", " << m_delta << ", " << m_cycles_per_ns << ", " << Stopwatch::s_stopwatch_overhead << ").");
     }
   }
 
@@ -116,18 +115,11 @@ class Benchmark
     delete m_stopwatch1;
   }
 
-  struct Measurement
-  {
-    int m_cycles;
-    enum type_nt { t999, tm1, tm2 } m_type;
-    operator int() const { return m_cycles; }
-    bool is_t999() const { return m_type == t999; }
-    bool is_tm1() const { return m_type == tm1; }
-    bool is_tm2() const { return m_type == tm2; }
-  };
-
   template<class T>
-  Measurement measure(T const functor);
+  Measurement measure(T const functor)
+  {
+    return m_stopwatch1->measure(functor);
+  }
 };
 
 void Benchmark::calibrate_now_offset(bool show)
@@ -459,131 +451,6 @@ void Benchmark::calibrate_cycles_per_ns()
 
   m_cycles_per_ns = mma_delta.avg();
   Dout(dc::notice, "CPU clock: " << std::fixed << std::setprecision(9) << m_cycles_per_ns << " GHz.");
-}
-
-template<class T>
-Benchmark::Measurement Benchmark::measure(T const functor)
-{
-  DoutEntering(dc::notice, "Benchmark::measure()");
-
-  // Allocate something that should be large enough.
-  std::vector<int> dist(4000, 0);
-
-  int c1 = 0;
-  int c2 = 0;
-  int m1 = 0;
-  int m2 = 0;
-  int m3 = 0;
-
-  Measurement result;
-  while (true)
-  {
-    int cycles = m_stopwatch1->get_minimum_of(1000, functor);
-    if (AI_LIKELY(cycles < (int)dist.size()))
-    {
-      ++dist[cycles];
-      if (dist[cycles] > m1)
-      {
-        m1 = dist[cycles];
-        c1 = cycles;
-        if (m2 > 10)
-        {
-          // Stop if we are 99.9% sure that c1 is the most frequent occurring number of cycles.
-          double test_statistic = 1.0 * (m1 - m2) * (m1 - m2) / (m1 + m2);
-          if (test_statistic > 10.828)        // 10.828 = critical value of the upper-tail of the chi-square distribution
-          {                                   // with one degree of freedom and probability less than 0.999.
-            result.m_cycles = c1;
-            result.m_type = Measurement::t999;
-            break;
-          }
-          // Also stop when c1 and c2 are just one clock cycle apart and m2 is significantly larger than m3.
-          double test_statistic2 = 1.0 * (m2 - m3) * (m2 - m3) / (m2 + m3);
-          if (m2 >= 1000 && std::abs(c1 - c2) == 1 && test_statistic < 2.7 && m3 > 10 && test_statistic2 > 10.828)
-          {
-            // In this case take the lowest of the two values.
-            if (c2 < c1)
-            {
-              result.m_cycles = c2;
-              result.m_type = Measurement::tm2;
-            }
-            else
-            {
-              result.m_cycles = c1;
-              result.m_type = Measurement::tm1;
-            }
-            break;
-          }
-          if (m2 % 100 == 0)
-          {
-            Dout(dc::notice, "(c1, m1) = (" << c1 << ", " << m1 << "; (c2, m2) = " << c2 << ", " << m2 << "; m3 = " << m3 << "; test_statistic = " << test_statistic << ", test_statistic2 = " << test_statistic2);
-          }
-        }
-      }
-      else if (dist[cycles] > m2)
-      {
-        m2 = dist[cycles];
-        c2 = cycles;
-      }
-      else if (dist[cycles] > m3)
-      {
-        m3 = dist[cycles];
-      }
-    }
-    else
-      dist.resize(4 * cycles);
-  }
-  result.m_cycles -= m_stopwatch_overhead;
-  if (AI_UNLIKELY(result.m_cycles < 0))
-      result.m_cycles = 0;
-  return result;
-}
-
-void Benchmark::calibrate_stopwatch_overhead(bool show)
-{
-  static int volatile v;
-  int volatile* vp = &v;
-  // Warm up cache.
-  m_stopwatch1->get_minimum_of(1000, [vp](){ for (int r = 0; r < 100; ++r) { *vp = r; }});
-  Plot plot("Calibration of Stopwatch overhead", "Loopsize", "Number of clocks");
-  MinAvgMax<double> mma;
-  FrequencyCounter<int> fc;
-
-  // The expected function for the number of cycles is: cycles(rm) = offset + rm;
-  // Hence we can calculate offset by minimizing the sum of squares of 'cycles(rm) - rm',
-  // which turns out to be simply the average thereof.
-  for (int rm = 1; rm <= 12; ++rm)
-  {
-    auto measurement = measure(
-        [rm, vp](){
-          int r;
-          asm volatile (
-              "mov %1, %0\n"
-              ".LCUST1:"
-              : "=r" (r)
-              : "g" (rm));
-          *vp = r;
-          asm volatile (
-              "decl %0\n\t"
-              "jne .LCUST1"
-              : "+r" (r));
-        });
-    int overhead = measurement.m_cycles - rm;   // Anticipated overhead.
-    if (measurement.is_t999())
-    {
-      mma.data_point(overhead);
-      fc.add(overhead);
-      plot.add_data_point(rm, overhead, 0, "99.9%");
-    }
-    else
-      plot.add_data_point(rm, overhead, 0, measurement.is_tm1() ? "m1" : "m2");
-  }
-  m_stopwatch_overhead = fc.most();
-  if (show)
-  {
-    plot.add("unset key");
-    plot.set_yrange(mma.min() - 1, mma.max() + 1);
-    plot.show();
-  }
 }
 
 } // namespace benchmark

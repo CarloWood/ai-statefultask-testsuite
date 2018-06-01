@@ -1,6 +1,7 @@
 AM_CPPFLAGS = -iquote $(top_srcdir) -iquote $(top_srcdir)/cwds
 
-bin_PROGRAMS = helloworld fibonacci fiboquick filelock runthread function objectqueue threadpool cv_wait timer_test timer_thread signal_test benchmark mutex_benchmark test_frequency_counter
+bin_PROGRAMS = helloworld fibonacci fiboquick filelock runthread function objectqueue threadpool \
+	       cv_wait timer_test timer_thread signal_test benchmark mutex_benchmark test_frequency_counter
 
 helloworld_SOURCES = \
 	helloworld.cxx
@@ -84,7 +85,7 @@ timer_thread_LDADD = ../statefultask/libstatefultask.la ../threadsafe/libthreads
 signal_test_CXXFLAGS = @LIBCWD_R_FLAGS@ -pthread -O3
 signal_test_LDADD = ../threadsafe/libthreadsafe.la ../cwds/libcwds_r.la
 
-benchmark_CXXFLAGS = @LIBCWD_R_FLAGS@ -pthread
+benchmark_CXXFLAGS = @LIBCWD_R_FLAGS@ -pthread -O3
 benchmark_LDADD = ../cwds/libcwds_r.la -lboost_iostreams -lboost_system
 
 mutex_benchmark_CXXFLAGS = @LIBCWD_R_FLAGS@ -pthread -O3
