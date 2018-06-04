@@ -43,9 +43,6 @@ void Callback::callback() const
 
 int main()
 {
-#ifdef DEBUGGLOBAL
-  GlobalObjectManager::main_entered();
-#endif
   Debug(NAMESPACE_DEBUG::init());
 
 #if !SIMPLE

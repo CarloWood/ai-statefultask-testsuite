@@ -100,9 +100,6 @@ void Fibonacci::multiplex_impl(state_type run_state)
 
 int main()
 {
-#ifdef DEBUGGLOBAL
-  GlobalObjectManager::main_entered();
-#endif
   Debug(NAMESPACE_DEBUG::init());
   Debug(if (!dc::statefultask.is_on()) dc::statefultask.on());
 

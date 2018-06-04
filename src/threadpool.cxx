@@ -11,9 +11,6 @@ static int volatile vv;
 
 int main()
 {
-#ifdef DEBUGGLOBAL
-  GlobalObjectManager::main_entered();
-#endif
   Debug(NAMESPACE_DEBUG::init());
 
   std::atomic_int count{0};

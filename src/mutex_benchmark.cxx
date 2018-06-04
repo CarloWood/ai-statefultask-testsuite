@@ -27,7 +27,7 @@ struct Result
 
   void print(uint64_t time_offset) const
   {
-    Dout(dc::notice, "Thread on CPU #" << m_cpu << " started running at t = " << (m_start_cycles - time_offset) << " and ran for " << m_diff_cycles << " cycles.");
+    Dout(dc::notice, "Thread on CPU #" << m_cpu << " started running at t = " << (m_start_cycles - time_offset) << " and ran for " << m_diff_cycles / 3612059050.0 << " seconds.");
   }
 };
 
@@ -35,6 +35,8 @@ struct SortResultByStartCycles
 {
   bool operator()(Result const& a, Result const& b) { return a.m_start_cycles < b.m_start_cycles; }
 };
+
+std::mutex m;
 
 void thread_main(int cpu, Result& result)
 {
@@ -55,28 +57,40 @@ void thread_main(int cpu, Result& result)
 
   stopwatch.start();
 
+  volatile int v;
+  for (int i = 0; i < 240000 / number_of_threads; ++i)
+  {
+    m.lock();
+    for (int j = 0; j < 550; ++j)
+      v = j;
+    m.unlock();
+  }
+
   stopwatch.stop();
 
   result.m_cpu = cpu;
   result.m_start_cycles = stopwatch.start_cycles();
   result.m_diff_cycles = stopwatch.diff_cycles();
+  result.m_diff_cycles -= stopwatch.s_stopwatch_overhead;
 }
 
 int main()
 {
-#ifdef DEBUGGLOBAL
-  GlobalObjectManager::main_entered();
-#endif
-
   Debug(NAMESPACE_DEBUG::init());
-
-  //Benchmark benchmark(0);
 
   std::array<std::thread, number_of_threads> threads;
   std::array<Result, number_of_threads> results;
 
-  uint64_t fastest = 1000000;
-  for (int run = 0; run < 1000000; ++run)
+  {
+    benchmark::Stopwatch stopwatch(0);
+    stopwatch.calibrate_overhead();
+  }
+
+  eda::FrequencyCounter<uint64_t, 8> fc;
+  bool done = false;
+
+  uint64_t fastest = std::numeric_limits<uint64_t>::max();
+  for (int run = 0; run < 100; ++run)
   {
     start = false;
 
@@ -107,15 +121,39 @@ int main()
     for (auto&& thread : threads)
       thread.join();
 
+    for (auto&& result : results)
+    {
+      uint64_t bucket = result.m_diff_cycles / 3612059.05;      // milliseconds.
+      //Dout(dc::notice, "Adding " << bucket);
+      if (fc.add(bucket))
+      {
+        done = true;
+        break;
+      }
+    }
+    if (done)
+      break;
+
+#if 0
     // Print the results.
     std::sort(results.begin(), results.end(), SortResultByStartCycles()); 
     uint64_t time_offset = results[0].m_start_cycles;
-    uint64_t duration = results[number_of_threads - 1].m_start_cycles - time_offset;
+    //uint64_t duration = results[number_of_threads - 1].m_start_cycles - time_offset;
+    //if (number_of_threads == 1)
+    //if (number_of_threads == 1)
+    //  duration += results[0].m_diff_cycles;
+    uint64_t duration = results[number_of_threads - 1].m_diff_cycles;
     if (duration < fastest)
     {
       fastest = duration;
       for (auto&& result : results)
         result.print(time_offset);
     }
+#endif
   }
+  fc.print_on(std::cout);
+  if (done)
+    std::cout << "Result: " << fc.result().m_cycles << std::endl;
+  else
+    std::cout << "Result: " << fc.average() << std::endl;
 }

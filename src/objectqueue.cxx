@@ -40,10 +40,6 @@ void f(Big const& b)
 
 int main()
 {
-#ifdef DEBUGGLOBAL
-  GlobalObjectManager::main_entered();
-#endif
-
   Debug(NAMESPACE_DEBUG::init());
   //Debug(tracked::mute());
 

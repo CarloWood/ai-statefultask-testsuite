@@ -1,7 +1,8 @@
 AM_CPPFLAGS = -iquote $(top_srcdir) -iquote $(top_srcdir)/cwds
 
 bin_PROGRAMS = helloworld fibonacci fiboquick filelock runthread function objectqueue threadpool \
-	       cv_wait timer_test timer_thread signal_test benchmark mutex_benchmark test_frequency_counter
+	       cv_wait timer_test timer_thread signal_test benchmark mutex_benchmark test_frequency_counter \
+	       AITimer_test
 
 helloworld_SOURCES = \
 	helloworld.cxx
@@ -48,10 +49,13 @@ mutex_benchmark_SOURCES = \
 test_frequency_counter_SOURCES = \
 	test_frequency_counter.cxx
 
-helloworld_CXXFLAGS = @LIBCWD_R_FLAGS@
+AITimer_test_SOURCES = \
+	AITimer_test.cxx
+
+helloworld_CXXFLAGS = @LIBCWD_R_FLAGS@ -pthread
 helloworld_LDADD = ../statefultask/libstatefultask.la ../threadsafe/libthreadsafe.la ../utils/libutils_r.la ../cwds/libcwds_r.la
 
-fibonacci_CXXFLAGS = @LIBCWD_R_FLAGS@
+fibonacci_CXXFLAGS = @LIBCWD_R_FLAGS@ -pthread
 fibonacci_LDADD = ../statefultask/libstatefultask.la ../threadsafe/libthreadsafe.la ../utils/libutils_r.la ../cwds/libcwds_r.la
 
 fiboquick_CXXFLAGS =
@@ -60,7 +64,7 @@ fiboquick_LDADD =
 filelock_CXXFLAGS = @LIBCWD_R_FLAGS@
 filelock_LDADD = ../cwds/libcwds_r.la ../microbench/libmicrobench.la
 
-runthread_CXXFLAGS = @LIBCWD_R_FLAGS@
+runthread_CXXFLAGS = @LIBCWD_R_FLAGS@ -pthread
 runthread_LDADD = ../statefultask/libstatefultask.la ../threadsafe/libthreadsafe.la ../utils/libutils_r.la ../cwds/libcwds_r.la
 
 function_CXXFLAGS = @LIBCWD_R_FLAGS@
@@ -69,13 +73,13 @@ function_LDADD = ../cwds/libcwds_r.la ../microbench/libmicrobench.la
 objectqueue_CXXFLAGS = @LIBCWD_R_FLAGS@
 objectqueue_LDADD = ../cwds/libcwds_r.la
 
-threadpool_CXXFLAGS = @LIBCWD_R_FLAGS@
+threadpool_CXXFLAGS = @LIBCWD_R_FLAGS@ -pthread
 threadpool_LDADD = ../statefultask/libstatefultask.la ../threadsafe/libthreadsafe.la ../utils/libutils_r.la ../cwds/libcwds_r.la
 
 cv_wait_CXXFLAGS = -O3
 cv_wait_LDFLAGS = -pthread
 
-timer_test_CXXFLAGS = @LIBCWD_R_FLAGS@
+timer_test_CXXFLAGS = @LIBCWD_R_FLAGS@ -pthread
 timer_test_LDADD = ../statefultask/libstatefultask.la ../threadsafe/libthreadsafe.la ../utils/libutils_r.la ../cwds/libcwds_r.la
 timer_test_LDFLAGS = -pthread
 
@@ -93,6 +97,9 @@ mutex_benchmark_LDADD = ../cwds/libcwds_r.la
 
 test_frequency_counter_CXXFLAGS = @LIBCWD_R_FLAGS@
 test_frequency_counter_LDADD = ../cwds/libcwds_r.la -lboost_iostreams -lboost_system
+
+AITimer_test_CXXFLAGS = @LIBCWD_R_FLAGS@ -pthread
+AITimer_test_LDADD = ../statefultask/libstatefultask.la ../threadsafe/libthreadsafe.la ../utils/libutils_r.la ../cwds/libcwds_r.la
 
 # --------------- Maintainer's Section
 

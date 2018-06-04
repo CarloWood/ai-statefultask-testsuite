@@ -163,13 +163,13 @@ void Bumper::multiplex_impl(state_type run_state)
 
 int main()
 {
-#ifdef DEBUGGLOBAL
-  GlobalObjectManager::main_entered();
-#endif
   Debug(NAMESPACE_DEBUG::init());
+  // Make sure the debug channel 'statefultask' is turned on.
   Debug(if (!dc::statefultask.is_on()) dc::statefultask.on());
 
-  static_assert(!std::is_destructible<HelloWorld>::value && std::has_virtual_destructor<HelloWorld>::value, "Class must have a protected virtual destuctor.");
+  static_assert(!std::is_destructible<HelloWorld>::value &&
+                std::has_virtual_destructor<HelloWorld>::value,
+      "Class must have a protected virtual destuctor.");
 
   AIEngine engine("main:engine");
   AIThreadPool thread_pool;

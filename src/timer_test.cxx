@@ -779,9 +779,6 @@ void generate()
 
 int main()
 {
-#ifdef DEBUGGLOBAL
-  GlobalObjectManager::main_entered();
-#endif
   Debug(NAMESPACE_DEBUG::init());
 
   static_cast<RunningTimersImpl<Intervals, 2>&>(statefultask::RunningTimers::instance()).sanity_check();

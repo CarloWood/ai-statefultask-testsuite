@@ -116,9 +116,6 @@ void Task::multiplex_impl(state_type run_state)
 
 int main()
 {
-#ifdef DEBUGGLOBAL
-  GlobalObjectManager::main_entered();
-#endif
   Debug(NAMESPACE_DEBUG::init());
 
   AIThreadPool thread_pool;
