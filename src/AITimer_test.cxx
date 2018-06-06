@@ -23,7 +23,7 @@ int main()
   Debug(if (!dc::statefultask.is_on()) dc::statefultask.on());
 
   AIThreadPool thread_pool;
-  AIQueueHandle handler = thread_pool.new_queue(queue_capacity);
+  AIQueueHandle handler __attribute__ ((unused)) = thread_pool.new_queue(queue_capacity);
 
   AIEngine engine("main engine", 2.0);
   AITimer* timer = new AITimer(true);
