@@ -171,8 +171,8 @@ int main()
                 std::has_virtual_destructor<HelloWorld>::value,
       "Class must have a protected virtual destuctor.");
 
-  AIEngine engine("main:engine", 1000);
-  AIThreadPool thread_pool(2);
+  AIEngine engine("main:engine", 10);
+  AIThreadPool thread_pool;
   AIQueueHandle high_priority_queue = thread_pool.new_queue(8);
 
   hello_world = new HelloWorld;
