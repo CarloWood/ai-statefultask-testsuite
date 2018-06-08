@@ -61,14 +61,14 @@ fibonacci_LDADD = ../statefultask/libstatefultask.la ../threadsafe/libthreadsafe
 fiboquick_CXXFLAGS =
 fiboquick_LDADD =
 
-filelock_CXXFLAGS = @LIBCWD_R_FLAGS@
-filelock_LDADD = ../cwds/libcwds_r.la ../microbench/libmicrobench.la
+filelock_CXXFLAGS = @LIBCWD_R_FLAGS@ -O3
+filelock_LDADD = ../cwds/libcwds_r.la
 
 runthread_CXXFLAGS = @LIBCWD_R_FLAGS@ -pthread
 runthread_LDADD = ../statefultask/libstatefultask.la ../threadsafe/libthreadsafe.la ../utils/libutils_r.la ../cwds/libcwds_r.la
 
 function_CXXFLAGS = @LIBCWD_R_FLAGS@
-function_LDADD = ../cwds/libcwds_r.la ../microbench/libmicrobench.la
+function_LDADD = ../cwds/libcwds_r.la
 
 objectqueue_CXXFLAGS = @LIBCWD_R_FLAGS@
 objectqueue_LDADD = ../cwds/libcwds_r.la

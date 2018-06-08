@@ -13,6 +13,7 @@ namespace debug { void init() {} void init_thread() {} }
 #include <cstring>
 #include <csignal>
 #include <cassert>
+#include <climits>
 #include <unistd.h>
 #include <semaphore.h>
 

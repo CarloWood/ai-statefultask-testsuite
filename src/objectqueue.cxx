@@ -1,6 +1,8 @@
 #include "sys.h"
 #include "debug.h"
+#ifdef CWDEBUG
 #include "tracked.h"
+#endif
 #include "statefultask/AIObjectQueue.h"
 #include <mutex>
 #include <atomic>
@@ -8,6 +10,7 @@
 #include <cstdlib>
 
 namespace { constexpr char const* const name_F = "std::function<void()>"; }
+#ifdef CWDEBUG
 struct F : tracked::Tracked<&name_F> {
   std::function<void()> m_f;
   F() {}
@@ -22,15 +25,22 @@ struct F : tracked::Tracked<&name_F> {
   operator bool() const { return static_cast<bool>(m_f); }
   void operator()() const { m_f(); }
 };
+#else
+using F = std::function<void()>;
+#endif
 
 namespace { constexpr char const* const name_B = "Big"; }
+#ifdef CWDEBUG
 struct B : tracked::Tracked<&name_B> {
   using tracked::Tracked<&name_B>::Tracked;
 };
+#endif
 
 struct Big {
   char m_data[64] = "Big";
+#ifdef CWDEBUG
   B m_tracker;
+#endif
 };
 
 void f(Big const& b)

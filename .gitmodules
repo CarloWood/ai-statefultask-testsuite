@@ -22,10 +22,6 @@
 	path = statefultask/docs/html
 	url = https://github.com/CarloWood/ai-statefultask.git
 	branch = gh-pages
-[submodule "microbench"]
-	path = microbench
-	url = https://github.com/CarloWood/microbench.git
-	branch = master
 [submodule "gnuplot-iostream"]
 	path = gnuplot-iostream
 	url = https://github.com/dstahlke/gnuplot-iostream.git
