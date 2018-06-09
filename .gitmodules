@@ -25,3 +25,7 @@
 [submodule "gnuplot-iostream"]
 	path = gnuplot-iostream
 	url = https://github.com/dstahlke/gnuplot-iostream.git
+[submodule "evio"]
+	path = evio
+	url = https://github.com/CarloWood/evio.git
+	branch = master
