@@ -2,7 +2,7 @@ AM_CPPFLAGS = -iquote $(top_srcdir) -iquote $(top_srcdir)/cwds
 
 bin_PROGRAMS = helloworld fibonacci fiboquick filelock runthread function objectqueue threadpool \
 	       cv_wait timer_test timer_thread signal_test benchmark mutex_benchmark test_frequency_counter \
-	       AITimer_test evio_test
+	       AITimer_test evio_test evio_threads
 
 helloworld_SOURCES = \
 	helloworld.cxx
@@ -55,6 +55,9 @@ AITimer_test_SOURCES = \
 evio_test_SOURCES = \
 	evio_test.cxx
 
+evio_threads_SOURCES = \
+	evio_threads.cxx
+
 helloworld_CXXFLAGS = @LIBCWD_R_FLAGS@ -pthread
 helloworld_LDADD = ../statefultask/libstatefultask.la ../threadsafe/libthreadsafe.la ../utils/libutils_r.la ../cwds/libcwds_r.la
 
@@ -106,6 +109,9 @@ AITimer_test_LDADD = ../statefultask/libstatefultask.la ../threadsafe/libthreads
 
 evio_test_CXXFLAGS =
 evio_test_LDADD = ../evio/libev-4.24/libev.la
+
+evio_threads_CXXFLAGS = @LIBCWD_R_FLAGS@ -pthread
+evio_threads_LDADD = ../evio/libev-4.24/libev.la ../cwds/libcwds_r.la
 
 # --------------- Maintainer's Section
 
