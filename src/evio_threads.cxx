@@ -6,29 +6,32 @@
 #include <condition_variable>
 #include <iostream>
 #include <chrono>
+#include <atomic>
 
 class EventLoopThread
 {
  private:
   std::thread m_event_thread;
 
+#if EV_MULTIPLICITY
   struct ev_loop* loop;
+#endif
   std::mutex m_loop_mutex;
   std::condition_variable m_invoke_handled_cv;
   bool m_invoke_handled;
 
   ev_async m_async_w;
-  bool m_running;
+  std::atomic_bool m_running;
 
   std::mutex m_invoke_pending_mutex;
   std::condition_variable m_invoke_pending_cv;
   bool m_invoke_pending;
 
-  static void acquire(EV_P);
-  static void release(EV_P);
-  static void main(EV_P);
-  static void handle_invoke_pending(EV_P);
+  static void acquire_cb(EV_P);
+  static void release_cb(EV_P);
+  static void invoke_pending_cb(EV_P);
   static void async_cb(EV_P_ ev_async* w, int revents);
+  static void main(EV_P);
 
   void run();
   void handle_invoke_pending();
@@ -37,8 +40,6 @@ class EventLoopThread
   EventLoopThread();
   ~EventLoopThread();
 
-  bool running() const { return m_running; }
-
   void add(ev_timer& timeout_watcher);
   void add(ev_io& io_watcher);
   bool wait_for_events();
@@ -46,19 +47,19 @@ class EventLoopThread
 };
 
 //static
-void EventLoopThread::acquire(EV_P)
+void EventLoopThread::acquire_cb(EV_P)
 {
   static_cast<EventLoopThread*>(ev_userdata(EV_A))->m_loop_mutex.lock();
 }
 
 //static
-void EventLoopThread::release(EV_P)
+void EventLoopThread::release_cb(EV_P)
 {
   static_cast<EventLoopThread*>(ev_userdata(EV_A))->m_loop_mutex.unlock();
 }
 
 //static
-void EventLoopThread::handle_invoke_pending(EV_P)
+void EventLoopThread::invoke_pending_cb(EV_P)
 {
   static_cast<EventLoopThread*>(ev_userdata(EV_A))->handle_invoke_pending();
 }
@@ -72,30 +73,40 @@ void EventLoopThread::main(EV_P)
 }
 
 //static
-void EventLoopThread::async_cb(EV_P_ ev_async*, int)
-{
-  // Just used for the side effects.
-}
+#if EV_MULTIPLICITY
+// Just used for the side effects.
+void EventLoopThread::async_cb(struct ev_loop* UNUSED_ARG(loop), ev_async* UNUSED_ARG(w), int UNUSED_ARG(revents)) { }
+#else
+void EventLoopThread::async_cb(ev_async* UNUSED_ARG(w), int UNUSED_ARG(revents)) { }
+#endif
 
 void EventLoopThread::run()
 {
-  std::lock_guard<std::mutex> lock(m_loop_mutex);
-  m_running = true;
-  Dout(dc::notice, "Calling ev_run(0)");
-  ev_run(EV_A_ 0);
-  Dout(dc::notice, "Returned from ev_run(0)");
+  {
+    // Lock m_loop_mutex before calling ev_run.
+    std::lock_guard<std::mutex> lock(m_loop_mutex);
+    m_running = true;
+    Dout(dc::notice, "Calling ev_run(0)");
+    ev_run(EV_A_ 0);
+    Dout(dc::notice, "Returned from ev_run(0)");
+  }
   // Exit main thread loop.
   m_running = false;
-  // Wake up main loop.
-  m_invoke_pending = true;
-  m_invoke_pending_cv.notify_one();
+  {
+    // Wake up main loop so it will exit.
+    std::lock_guard<std::mutex> lock(m_invoke_pending_mutex);
+    m_invoke_pending = true;
+    m_invoke_pending_cv.notify_one();
+  }
 }
 
 bool EventLoopThread::wait_for_events()
 {
-  std::unique_lock<std::mutex> lock(m_invoke_pending_mutex);
-  m_invoke_pending = false;
-  m_invoke_pending_cv.wait(lock, [this](){ return m_invoke_pending; });
+  {
+    std::unique_lock<std::mutex> lock(m_invoke_pending_mutex);
+    m_invoke_pending = false;
+    m_invoke_pending_cv.wait(lock, [this](){ return m_invoke_pending; });
+  }
   return m_running;
 }
 
@@ -103,7 +114,7 @@ void EventLoopThread::invoke_pending()
 {
   std::unique_lock<std::mutex> lock(m_loop_mutex);
   ev_invoke_pending(EV_A);
-  // Notify ev_run_thread.
+  // Notify ev_run thread.
   m_invoke_handled = true;
   m_invoke_handled_cv.notify_one();
 }
@@ -114,10 +125,12 @@ void EventLoopThread::handle_invoke_pending()
   std::unique_lock<std::mutex> lock(m_loop_mutex, std::adopt_lock);
   while (ev_pending_count(EV_A))
   {
-    // Wake up external thread.
-    std::unique_lock<std::mutex> lock(m_invoke_pending_mutex);
-    m_invoke_pending = true;
-    m_invoke_pending_cv.notify_one();
+    {
+      // Wake up external thread.
+      std::unique_lock<std::mutex> lock2(m_invoke_pending_mutex);
+      m_invoke_pending = true;
+      m_invoke_pending_cv.notify_one();
+    }
 
     // Wait until invoke_pending() was called.
     m_invoke_handled = false;
@@ -127,12 +140,17 @@ void EventLoopThread::handle_invoke_pending()
   lock.release();
 }
 
-EventLoopThread::EventLoopThread() : loop(EV_DEFAULT)
+EventLoopThread::EventLoopThread()
 {
+#if EV_MULTIPLICITY
+  loop =
+#endif
+  ev_default_loop(EVBACKEND_EPOLL | EVFLAG_NOENV);
+
   // Associate `this` with the loop.
   ev_set_userdata(EV_A_ this);
-  ev_set_loop_release_cb(EV_A_ EventLoopThread::release, EventLoopThread::acquire);
-  ev_set_invoke_pending_cb(EV_A_ EventLoopThread::handle_invoke_pending);
+  ev_set_loop_release_cb(EV_A_ EventLoopThread::release_cb, EventLoopThread::acquire_cb);
+  ev_set_invoke_pending_cb(EV_A_ EventLoopThread::invoke_pending_cb);
   // Add an async watcher, this is used in add() to wake up the thread.
   ev_async_init(&m_async_w, EventLoopThread::async_cb);
   ev_async_start(EV_A_ &m_async_w);
@@ -170,17 +188,19 @@ void EventLoopThread::add(ev_io& io_watcher)
 // Start test program.
 
 // Callback for a time-out.
-static void timeout_cb(EV_P_ ev_timer* w, int revents)
+static void timeout_cb(EV_P_ ev_timer* UNUSED_ARG(w), int UNUSED_ARG(revents))
 {
   Dout(dc::notice, "Calling timeout_cb()!");
+  // Called from EventLoopThread::invoke_pending, hence m_loop_mutex is already locked.
   // This causes all nested ev_run's to stop iterating.
   ev_break(EV_A_ EVBREAK_ONE);
 }
 
 // Callback for stdin.
-static void stdin_cb(EV_P_ ev_io* w, int revents)
+static void stdin_cb(EV_P_ ev_io* w, int UNUSED_ARG(revents))
 {
   Dout(dc::notice, "Calling stdin_cb()");
+  // Called from EventLoopThread::invoke_pending, hence m_loop_mutex is already locked.
   // For one-shot events, one must manually stop the watcher with its corresponding stop function.
   ev_io_stop(EV_A_ w);
   // This causes all nested ev_run's to stop iterating.

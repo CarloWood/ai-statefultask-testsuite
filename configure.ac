@@ -23,6 +23,11 @@ define(CW_MAX_ERRORS, [2])
 # Include cwm4 header.
 m4_include([cwm4/configure_ac_top.m4])
 
+# Remove the default -O2 from CFLAGS when optimization isn't requested.
+if test x"${cw_config_optimize}" != x"yes"; then
+  CFLAGS=-g
+fi
+
 # Comment this out if the project is using doxygen to generate documentation.
 CW_DOXYGEN([statefultask])
 
