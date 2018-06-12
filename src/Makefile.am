@@ -111,7 +111,7 @@ evio_test_CXXFLAGS =
 evio_test_LDADD = ../evio/libev-4.24/libev.la
 
 evio_threads_CXXFLAGS = @LIBCWD_R_FLAGS@ -pthread
-evio_threads_LDADD = ../evio/libev-4.24/libev.la ../cwds/libcwds_r.la
+evio_threads_LDADD = ../statefultask/libstatefultask.la ../threadsafe/libthreadsafe.la ../utils/libutils_r.la ../evio/libev-4.24/libev.la ../cwds/libcwds_r.la
 
 # --------------- Maintainer's Section
 
