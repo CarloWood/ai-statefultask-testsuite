@@ -1,4 +1,5 @@
-#include "ev.h"
+#include "sys.h"
+#include "evio/evio.h"
 #include <stdio.h> // for puts
 
 // Every watcher type has its own typedef'd struct with the name ev_TYPE.
@@ -8,26 +9,29 @@ ev_timer timeout_watcher;
 // All watcher callbacks have a similar signature this callback is called when data is readable on stdin.
 static void stdin_cb (EV_P_ ev_io *w, int /*revents*/)
 {
-  puts ("stdin ready");
+  puts("stdin ready");
   // For one-shot events, one must manually stop the watcher
   // with its corresponding stop function.
-  ev_io_stop (EV_A_ w);
+  ev_io_stop(EV_A_ w);
 
   // This causes all nested ev_run's to stop iterating.
-  ev_break (EV_A_ EVBREAK_ALL);
+  ev_break(EV_A_ EVBREAK_ALL);
 }
 
 int main (void)
 {
   // Use the default event loop unless you have special needs.
-  struct ev_loop* loop = ev_default_loop(EVBACKEND_EPOLL | EVFLAG_NOENV);
+#if EV_MULTIPLICITY
+  struct ev_loop* loop =
+#endif
+    ev_default_loop(EVBACKEND_EPOLL | EVFLAG_NOENV);
 
   // Initialise an io watcher, then start it this one will watch for stdin to become readable.
   ev_io_init(&stdin_watcher, stdin_cb, /*STDIN_FILENO*/ 0, EV_READ);
-  ev_io_start(loop, &stdin_watcher);
+  ev_io_start(EV_A_ &stdin_watcher);
 
   // Now wait for events to arrive.
-  ev_run(loop, 0);
+  ev_run(EV_A_ 0);
 
   // Break was called, so exit.
   return 0;
