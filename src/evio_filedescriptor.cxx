@@ -18,11 +18,11 @@ int main()
   // Create the IO event loop thread.
   EventLoopThread evio_loop(low_priority_handler);
 
-  FileDescriptor* fdp0 = new FileDescriptor;
-  FileDescriptor* fdp1 = new FileDescriptor;
+  InputDevice* fdp0 = new InputDevice;
+  OutputDevice* fdp1 = new OutputDevice;
 
-  fdp0->init(0, evio::READ);
-  fdp1->init(1, evio::WRITE);
+  fdp0->init(0);
+  fdp1->init(1);
 
   fdp0->start(evio_loop);
   fdp1->start(evio_loop);
