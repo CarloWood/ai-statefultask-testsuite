@@ -136,7 +136,7 @@ int main()
 
 #if 0
     // Print the results.
-    std::sort(results.begin(), results.end(), SortResultByStartCycles()); 
+    std::sort(results.begin(), results.end(), SortResultByStartCycles());
     uint64_t time_offset = results[0].m_start_cycles;
     //uint64_t duration = results[number_of_threads - 1].m_start_cycles - time_offset;
     //if (number_of_threads == 1)

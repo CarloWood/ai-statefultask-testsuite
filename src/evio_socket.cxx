@@ -3,6 +3,7 @@
 #include "statefultask/AIThreadPool.h"
 #include "evio/EventLoopThread.h"
 #include "evio/FileDescriptor.h"
+#include "libcwd/buf2str.h"
 
 #include <cstdio>       // Needed for sprintf.
 #include <cstring>	// Needed for memset.
@@ -20,6 +21,17 @@ int connect_to_server(char const* remote_host, int remote_port);
 
 class Socket : public evio::InputDevice, public evio::OutputDevice
 {
+ private:
+  int m_request;
+
+ public:
+  Socket() : evio::InputDevice(new evio::input_buffer_ct(evio::InputDevice::default_blocksize_c)),
+             evio::OutputDevice(new evio::output_buffer_ct(evio::OutputDevice::default_blocksize_c)),
+             m_request(0) { }
+
+ protected:
+  void read_from_fd(int fd) override;
+  void write_to_fd(int fd) override;
 };
 
 int main()
@@ -160,4 +172,38 @@ int connect_to_server(char const* remote_host, int remote_port)
 
   Dout(dc::notice, "\"Connected\".");
   return fd_remote;
+}
+
+void Socket::read_from_fd(int fd)
+{
+  DoutEntering(dc::notice, "Socket::read_from_fd(" << fd << ")");
+  char buf[256];
+  ssize_t len;
+  do
+  {
+    len = read(fd, buf, 256);
+    Dout(dc::notice, "Read: \"" << libcwd::buf2str(buf, len) << "\".");
+  }
+  while (len == 256);
+  if (strncmp(buf + len - 17, "#5</body></html>\n", 17) == 0)
+  {
+    stop_input_device();
+    ev_break(EV_A_ EVBREAK_ALL);
+  }
+}
+
+void Socket::write_to_fd(int fd)
+{
+  DoutEntering(dc::notice, "Socket::write_to_fd(" << fd << ")");
+  if (m_request < 6)
+  {
+    std::stringstream ss;
+    ss << "GET / HTTP/1.1\r\nHost: localhost:9001\r\nAccept: */*\r\nX-Request: " << m_request++ << "\r\nX-Sleep: 100\r\n\r\n";
+    write(fd, ss.str().data(), ss.str().length());
+    Dout(dc::notice, "Wrote \"" << libcwd::buf2str(ss.str().data(), ss.str().length()) << "\".");
+  }
+  else
+  {
+    stop_output_device();
+  }
 }

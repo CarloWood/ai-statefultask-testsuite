@@ -127,11 +127,11 @@ int main()
   Dout(dc::notice, "SEM_VALUE_MAX = " << SEM_VALUE_MAX);
 
   sem_init(&tasks, 0, 0);
-  
+
   // Add signal handlers.
   struct sigaction action;
   std::memset(&action, 0, sizeof(struct sigaction));
-  action.sa_handler = sighandler;  
+  action.sa_handler = sighandler;
   int signr = SIGRTMIN;
   if (sigaction(signr, &action, nullptr) == -1)
     assert(false);
