@@ -39,7 +39,7 @@ int main()
   AIQueueHandle low_priority_handler = thread_pool.new_queue(16);
 
   // Create the IO event loop thread.
-  EventLoopThread evio_loop(low_priority_handler);
+  EventLoopThread::instance().init(low_priority_handler);
 
   // Fill the threadpool queue.
   for (int i = 0; i < 1000; ++i)
@@ -64,10 +64,13 @@ int main()
   // Add a timer watcher.
   ev_timer timeout_watcher;
   ev_timer_init(&timeout_watcher, timeout_cb, 2.0, 0.);
-  evio_loop.start(timeout_watcher);
+  EventLoopThread::instance().start(timeout_watcher);
 
   // Add stdin watcher.
   ev_io stdin_watcher;
   ev_io_init(&stdin_watcher, stdin_cb, /*STDIN_FILENO*/ 0, EV_READ);
-  evio_loop.start(stdin_watcher);
+  EventLoopThread::instance().start(stdin_watcher);
+
+  // Wait until ev_break(EV_A_ EVBREAK_ALL) is called (aka, when we press Enter).
+  EventLoopThread::instance().join();
 }

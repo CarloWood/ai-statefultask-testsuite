@@ -1,3 +1,5 @@
+// Run this test while './http_server' from the project https://github.com/CarloWood/curl_http_pipeline_tester.git is already running.
+
 #include "sys.h"
 #include "debug.h"
 #include "statefultask/AIThreadPool.h"
@@ -14,6 +16,7 @@
 #include <sys/types.h>  // Needed for socket, send etc.
 #include <sys/socket.h> // Needed for socket, send etc.
 #include <netinet/in.h> // Needed for htons.
+#include <arpa/inet.h>  // Needed for inet_ntoa.
 #include <unistd.h>     // Needed for close.
 #include <fcntl.h>      // Needed for fcntl.
 
@@ -43,8 +46,8 @@ int main()
   AIQueueHandle medium_priority_handler = thread_pool.new_queue(32);
   AIQueueHandle low_priority_handler = thread_pool.new_queue(16);
 
-  // Create the IO event loop thread.
-  EventLoopThread evio_loop(low_priority_handler);
+  // Initialize the IO event loop thread.
+  EventLoopThread::instance().init(low_priority_handler);
 
   {
     boost::intrusive_ptr<Socket> fdp0 = new Socket;
@@ -52,23 +55,11 @@ int main()
     int fd = connect_to_server("localhost", 9001);
 
     fdp0->init(fd);
-    fdp0->start(evio_loop);
+    fdp0->start();
   }
-}
 
-char* inetntoa(struct in_addr* in)
-{
-  static char buf[16];
-  unsigned char* s = (unsigned char*)&in->s_addr;
-  int a, b, c, d;
-
-  a = (int)*s++;
-  b = (int)*s++;
-  c = (int)*s++;
-  d = (int)*s++;
-  (void)sprintf(buf,"%d.%d.%d.%d", a, b, c, d);
-
-  return buf;
+  // Wait until ev_break(EV_A_ EVBREAK_ALL) is called and everything has finished.
+  EventLoopThread::instance().join();
 }
 
 int print_hostent(struct hostent* h)
@@ -91,30 +82,8 @@ int print_hostent(struct hostent* h)
   else
     Dout(dc::notice, "No network addresses.");
   for (int c = 0; h->h_addr_list[c]; ++c)
-    Dout(dc::notice, "\"" << inetntoa((struct in_addr *)h->h_addr_list[c]) << "\".");
+    Dout(dc::notice, "\"" << inet_ntoa((struct in_addr *)h->h_addr_list[c]) << "\".");
   return 0;
-}
-
-void set_non_blocking(int fd)
-{
-#if 1 // NBLOCK_POSIX
-  int nonb = O_NONBLOCK;
-#elif defined(NBLOCK_BSD)
-  int nonb = O_NDELAY;
-#endif
-#ifdef NBLOCK_SYSV
-  // This portion of code might also apply to NeXT.
-  int res = 1;
-  if (ioctl(fd, FIONBIO, &res) < 0)
-    perror("ioctl(fd, FIONBIO)");
-#else
-  int res;
-  if ((res = fcntl(fd, F_GETFL, 0)) == -1)
-    perror("fcntl(fd, F_GETFL)");
-  else if (fcntl(fd, F_SETFL, res | nonb) == -1)
-    perror("fcntl(fd, F_SETL, nonb)");
-#endif
-  return;
 }
 
 int connect_to_server(char const* remote_host, int remote_port)
@@ -159,7 +128,7 @@ int connect_to_server(char const* remote_host, int remote_port)
     exit(-1);
   }
 
-  set_non_blocking(fd_remote);
+  evio::set_nonblocking(fd_remote);
 
   // Connect the socket.
   if (connect(fd_remote, (struct sockaddr *)&remote_addr, sizeof(remote_addr)) < 0)
@@ -198,7 +167,7 @@ void Socket::write_to_fd(int fd)
   if (m_request < 6)
   {
     std::stringstream ss;
-    ss << "GET / HTTP/1.1\r\nHost: localhost:9001\r\nAccept: */*\r\nX-Request: " << m_request++ << "\r\nX-Sleep: 100\r\n\r\n";
+    ss << "GET / HTTP/1.1\r\nHost: localhost:9001\r\nAccept: */*\r\nX-Request: " << m_request++ << "\r\nX-Sleep: " << (200 * m_request) << "\r\n\r\n";
     write(fd, ss.str().data(), ss.str().length());
     Dout(dc::notice, "Wrote \"" << libcwd::buf2str(ss.str().data(), ss.str().length()) << "\".");
   }

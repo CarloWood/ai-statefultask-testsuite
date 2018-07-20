@@ -1,10 +1,11 @@
 #include "sys.h"
 #include "evio/evio.h"
-#include <stdio.h> // for puts
+#include <cstdio> // for puts
+
+// Test for libev.
 
 // Every watcher type has its own typedef'd struct with the name ev_TYPE.
 ev_io stdin_watcher;
-ev_timer timeout_watcher;
 
 // All watcher callbacks have a similar signature this callback is called when data is readable on stdin.
 static void stdin_cb (EV_P_ ev_io *w, int /*revents*/)

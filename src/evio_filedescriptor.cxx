@@ -35,16 +35,18 @@ int main()
   AIQueueHandle low_priority_handler = thread_pool.new_queue(16);
 
   // Create the IO event loop thread.
-  EventLoopThread evio_loop(low_priority_handler);
+  EventLoopThread::instance().init(low_priority_handler);
 
   InputDevice* fdp0 = new TestInputDevice;
   OutputDevice* fdp1 = new TestOutputDevice;
 
-  fdp0->init(0);
-  fdp1->init(1);
+  fdp0->init(0);        // Standard input.
+  fdp1->init(1);        // Standard output.
 
-  fdp0->start(evio_loop);
-  fdp1->start(evio_loop);
+  fdp0->start();
+  fdp1->start();
+
+  EventLoopThread::instance().join();
 }
 
 void TestInputDevice::read_from_fd(int fd)
@@ -62,8 +64,8 @@ void TestInputDevice::read_from_fd(int fd)
 
   if (strncmp(buf, "quit\n", 5) == 0)
   {
-    stop();
-    ev_break(EV_A_ EVBREAK_ALL);
+    ev_break(EV_A_ EVBREAK_ALL);        // Terminate EventLoopThread.
+    del();                              // Remove this object.
   }
 }
 
