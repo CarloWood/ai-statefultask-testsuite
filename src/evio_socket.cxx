@@ -4,7 +4,7 @@
 #include "debug.h"
 #include "statefultask/AIThreadPool.h"
 #include "evio/EventLoopThread.h"
-#include "evio/FileDescriptor.h"
+#include "evio/Device.h"
 #include "libcwd/buf2str.h"
 
 #include <cstdio>       // Needed for sprintf.
@@ -28,8 +28,8 @@ class Socket : public evio::InputDevice, public evio::OutputDevice
   int m_request;
 
  public:
-  Socket() : evio::InputDevice(new evio::input_buffer_ct(evio::InputDevice::default_blocksize_c)),
-             evio::OutputDevice(new evio::output_buffer_ct(evio::OutputDevice::default_blocksize_c)),
+  Socket() : evio::InputDevice(new evio::InputBuffer(evio::InputDevice::default_blocksize_c)),
+             evio::OutputDevice(new evio::OutputBuffer(evio::OutputDevice::default_blocksize_c)),
              m_request(0) { }
 
  protected:
@@ -82,7 +82,7 @@ int print_hostent(struct hostent* h)
   else
     Dout(dc::notice, "No network addresses.");
   for (int c = 0; h->h_addr_list[c]; ++c)
-    Dout(dc::notice, "\"" << inet_ntoa((struct in_addr *)h->h_addr_list[c]) << "\".");
+    Dout(dc::notice, "\"" << inet_ntoa(*(struct in_addr *)h->h_addr_list[c]) << "\".");
   return 0;
 }
 
@@ -167,12 +167,11 @@ void Socket::write_to_fd(int fd)
   if (m_request < 6)
   {
     std::stringstream ss;
-    ss << "GET / HTTP/1.1\r\nHost: localhost:9001\r\nAccept: */*\r\nX-Request: " << m_request++ << "\r\nX-Sleep: " << (200 * m_request) << "\r\n\r\n";
+    ss << "GET / HTTP/1.1\r\nHost: localhost:9001\r\nAccept: */*\r\nX-Request: " << m_request << "\r\nX-Sleep: " << (200 * m_request) << "\r\n\r\n";
+    ++m_request;
     write(fd, ss.str().data(), ss.str().length());
     Dout(dc::notice, "Wrote \"" << libcwd::buf2str(ss.str().data(), ss.str().length()) << "\".");
   }
   else
-  {
     stop_output_device();
-  }
 }

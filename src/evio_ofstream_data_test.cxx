@@ -12,9 +12,10 @@
 #include "sys.h"
 #include <fstream>
 #include "debug.h"
-#include "evio/file.h"
+#include "evio/EventLoopThread.h"
+#include "evio/File.h"
 
-int main();
+int main()
 {
   Debug(NAMESPACE_DEBUG::init());
 
@@ -22,8 +23,9 @@ int main();
   AIQueueHandle handler = thread_pool.new_queue(32);
   EventLoopThread::instance().init(handler);
 
-  file_dtct<write_ostream_ct>& f{*new file_dtct<write_ostream_ct>("blah.txt")};
+  evio::File<evio::OutputDeviceStream>& f(*new evio::File<evio::OutputDeviceStream>);
   AllocTag(&f, "blah.txt");
+  f.open("blah.txt");
 
   for (int i = 1; i <= 128; ++i)
     f << "Hello world " << i << std::endl;

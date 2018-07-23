@@ -1,5 +1,5 @@
 #include "sys.h"
-#include "evio/FileDescriptor.h"
+#include "evio/Device.h"
 #include "debug.h"
 #include "statefultask/AIThreadPool.h"
 #include "evio/EventLoopThread.h"
@@ -10,7 +10,7 @@ using namespace evio;
 class TestInputDevice : public InputDevice
 {
  public:
-  TestInputDevice() : InputDevice(new evio::input_buffer_ct(default_blocksize_c)) { }
+  TestInputDevice() : InputDevice(new evio::InputBuffer(default_blocksize_c)) { }
 
  protected:
   void read_from_fd(int fd) override;
@@ -19,7 +19,7 @@ class TestInputDevice : public InputDevice
 class TestOutputDevice : public OutputDevice
 {
  public:
-  TestOutputDevice() : OutputDevice(new evio::output_buffer_ct(default_blocksize_c)) { }
+  TestOutputDevice() : OutputDevice(new evio::OutputBuffer(default_blocksize_c)) { }
 
  protected:
   void write_to_fd(int fd) override;
