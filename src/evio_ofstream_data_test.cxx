@@ -23,15 +23,19 @@ int main()
   AIQueueHandle handler = thread_pool.new_queue(32);
   EventLoopThread::instance().init(handler);
 
-  evio::File<evio::OutputDeviceStream>& f(*new evio::File<evio::OutputDeviceStream>);
-  AllocTag(&f, "blah.txt");
+  auto& f(*new evio::File<evio::OutputDeviceStream>);
   f.open("blah.txt");
 
-  for (int i = 1; i <= 128; ++i)
+  for (int i = 1; i <= 200; ++i)
     f << "Hello world " << i << std::endl;
 
   f.del();		// Get rid of it (after buffered data has been written)
 
-  // Wait until ev_break(EV_A_ EVBREAK_ALL) is called and everything has finished.
+  // Finish active watchers and then return from main loop.
+  EventLoopThread::instance().flush();
+
+  // Wait until everything has finished and ev_run returned.
   EventLoopThread::instance().join();
+
+  Dout(dc::notice, "Leaving main()...");
 }
