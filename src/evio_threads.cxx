@@ -71,6 +71,6 @@ int main()
   ev_io_init(&stdin_watcher, stdin_cb, /*STDIN_FILENO*/ 0, EV_READ);
   EventLoopThread::instance().start(stdin_watcher);
 
-  // Wait until ev_break(EV_A_ EVBREAK_ALL) is called (aka, when we press Enter).
-  EventLoopThread::instance().join();
+  // Wait until all watchers have finished.
+  EventLoopThread::terminate();
 }

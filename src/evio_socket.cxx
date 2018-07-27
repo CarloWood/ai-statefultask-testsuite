@@ -58,8 +58,8 @@ int main()
     fdp0->start();
   }
 
-  // Wait until ev_break(EV_A_ EVBREAK_ALL) is called and everything has finished.
-  EventLoopThread::instance().join();
+  // Wait until all watchers have finished.
+  EventLoopThread::instance().terminate();
 }
 
 int print_hostent(struct hostent* h)

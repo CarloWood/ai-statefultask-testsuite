@@ -15,27 +15,62 @@
 #include "evio/EventLoopThread.h"
 #include "evio/File.h"
 
+using namespace evio;
+
+class MyLinkInputDevice : public LinkInputDevice
+{
+  using LinkInputDevice::LinkInputDevice;
+  // Do thing when read returns zero.
+  void read_returned_zero() override { }
+};
+
 int main()
 {
   Debug(NAMESPACE_DEBUG::init());
 
+  // Create the thread pool.
   AIThreadPool thread_pool;
+  // Create the event loop thread and let it handle new events through the thread pool.
   AIQueueHandle handler = thread_pool.new_queue(32);
   EventLoopThread::instance().init(handler);
 
-  auto& f(*new evio::File<evio::OutputDeviceStream>);
-  f.open("blah.txt");
+  // Open a buffered output file that uses a buffer with a minimum block size of 64 bytes.
+  auto& device1 = File<OutputDeviceStream>::create(new OutputBuffer(64), "blah.txt", std::ios_base::trunc);
 
+#if 0
+  // Fill the buffer.
   for (int i = 1; i <= 200; ++i)
-    f << "Hello world " << i << std::endl;
+    device1 << "Hello world " << i << '\n';
 
-  f.del();		// Get rid of it (after buffered data has been written)
+  // Start writing the buffer to the file (this returns immediately; the thread pool will do the writing).
+  device1.flush();      // This is just ostream::flush().
 
-  // Finish active watchers and then return from main loop.
-  EventLoopThread::instance().flush();
+  // We're done with the device; delete it automatically once all buffered data has been written.
+  device1.del();
+#endif
 
-  // Wait until everything has finished and ev_run returned.
-  EventLoopThread::instance().join();
+  auto* link_buffer = new LinkBuffer(64);
+  auto& device2 = File<MyLinkInputDevice>::create(link_buffer, "blah.txt");
+  auto& device3 = File<LinkOutputDevice>::create(link_buffer, "blah2.txt");
 
+  // Only write to the file while device2 already has it open.
+  Dout(dc::notice, "Sleeping 1 second...");
+  std::this_thread::sleep_for(std::chrono::seconds(1));
+  for (int i = 1; i <= 200; ++i)
+    device1 << "Hello world " << i << '\n';
+  device1.flush();      // This is just ostream::flush().
+  device1.del();
+
+  // Start writing.
+  //device3.flush();
+
+  // Clean up when done.
+  //device2.del();
+  device3.del();
+
+  // Finish active watchers and then return from main loop and join the thread.
+  //EventLoopThread::terminate();
+  Dout(dc::notice, "Sleeping 1 second...");
+  std::this_thread::sleep_for(std::chrono::seconds(1));
   Dout(dc::notice, "Leaving main()...");
 }

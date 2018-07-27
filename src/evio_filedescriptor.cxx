@@ -46,7 +46,8 @@ int main()
   fdp0->start();
   fdp1->start();
 
-  EventLoopThread::instance().join();
+  // Wait until all watchers have finished.
+  EventLoopThread::terminate();
 }
 
 void TestInputDevice::read_from_fd(int fd)
