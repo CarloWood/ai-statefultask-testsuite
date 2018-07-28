@@ -10,19 +10,62 @@
 //
 
 #include "sys.h"
-#include <fstream>
 #include "debug.h"
 #include "evio/EventLoopThread.h"
 #include "evio/File.h"
+#include "evio/INotify.h"
+#include <fstream>
 
 using namespace evio;
 
+class MyLinkInputDevice;
+
+class MyINotify : public INotify
+{
+  MyLinkInputDevice* m_link_input_device;
+
+ public:
+  MyINotify(MyLinkInputDevice* link_input_device) : m_link_input_device(link_input_device) { }
+
+ protected:
+  void event_occurred(inotify_event const* event) override;
+};
+
 class MyLinkInputDevice : public LinkInputDevice
 {
-  using LinkInputDevice::LinkInputDevice;
-  // Do thing when read returns zero.
-  void read_returned_zero() override { }
+  MyINotify m_inotify;
+
+  friend File<MyLinkInputDevice>;
+  MyLinkInputDevice(LinkBuffer* lbuf) : LinkInputDevice(lbuf), m_inotify(this) { }
+
+  // Do things when read returns zero.
+  void read_returned_zero() override;
+  friend MyINotify;
+  void in_modify() { start_input_device(); }
 };
+
+void MyLinkInputDevice::read_returned_zero()
+{
+  stop_input_device();
+  File<MyLinkInputDevice>* file_device = dynamic_cast<File<MyLinkInputDevice>*>(this);
+  // This should always be the case because File<MyLinkInputDevice> is the only one that can use MyLinkInputDevice!
+  ASSERT(file_device);
+  if (file_device && !file_device->open_filename().empty())
+    m_inotify.add_watch(file_device->open_filename().c_str(), IN_MODIFY);
+}
+
+void MyINotify::event_occurred(inotify_event const* event)
+{
+  if ((event->mask & IN_MODIFY))
+    m_link_input_device->in_modify();
+}
+
+#define DoutMark(text, statements...) \
+  Dout(dc::notice, text); \
+  libcwd::libcw_do.push_marker(); \
+  libcwd::libcw_do.marker().append("| "); \
+  statements; \
+  libcwd::libcw_do.pop_marker()
 
 int main()
 {
@@ -35,7 +78,9 @@ int main()
   EventLoopThread::instance().init(handler);
 
   // Open a buffered output file that uses a buffer with a minimum block size of 64 bytes.
-  auto& device1 = File<OutputDeviceStream>::create(new OutputBuffer(64), "blah.txt", std::ios_base::trunc);
+  DoutMark("Opening File<OutputDeviceStream> \"blah.txt\" (device1)...",
+    auto& device1 = File<OutputDeviceStream>::create(new OutputBuffer(64), "blah.txt", std::ios_base::trunc);
+  );
 
 #if 0
   // Fill the buffer.
@@ -49,17 +94,34 @@ int main()
   device1.del();
 #endif
 
-  auto* link_buffer = new LinkBuffer(64);
-  auto& device2 = File<MyLinkInputDevice>::create(link_buffer, "blah.txt");
-  auto& device3 = File<LinkOutputDevice>::create(link_buffer, "blah2.txt");
+  DoutMark("Creating LinkBuffer(64)...",
+    auto* link_buffer = new LinkBuffer(64);
+  );
+
+  DoutMark("Opening File<MyLinkInputDevice> \"blah.txt\"...",
+    auto& device2 = File<MyLinkInputDevice>::create(link_buffer, "blah.txt");
+  );
+
+  DoutMark("Opening File<LinkOutputDevice> \"blah2.txt\"...",
+    auto& device3 = File<LinkOutputDevice>::create(link_buffer, "blah2.txt");
+  );
 
   // Only write to the file while device2 already has it open.
   Dout(dc::notice, "Sleeping 1 second...");
   std::this_thread::sleep_for(std::chrono::seconds(1));
-  for (int i = 1; i <= 200; ++i)
-    device1 << "Hello world " << i << '\n';
-  device1.flush();      // This is just ostream::flush().
-  device1.del();
+
+  DoutMark("Filling buffer of device1:",
+    for (int i = 1; i <= 200; ++i)
+      device1 << "Hello world " << i << '\n';
+  );
+
+  DoutMark("Starting device1...",
+    device1.flush();      // This is just ostream::flush().
+  );
+
+  DoutMark("Calling del() on device1...",
+    device1.del();
+  );
 
   // Start writing.
   //device3.flush();
