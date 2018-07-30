@@ -26,6 +26,14 @@ class MyINotify : public INotify
 
  public:
   MyINotify(MyLinkInputDevice* link_input_device) : m_link_input_device(link_input_device) { }
+#ifdef CWDEBUG
+  ~MyINotify()
+  {
+    Dout(dc::notice, "Calling ~MyINotify()");
+    // Make sure we don't use an uninitialized pointer without noticing it.
+    m_link_input_device = nullptr;
+  }
+#endif
 
  protected:
   void event_occurred(inotify_event const* event) override;
@@ -40,18 +48,40 @@ class MyLinkInputDevice : public LinkInputDevice
 
   // Do things when read returns zero.
   void read_returned_zero() override;
+  void closed() override;
   friend MyINotify;
   void in_modify() { start_input_device(); }
 };
 
 void MyLinkInputDevice::read_returned_zero()
 {
+  DoutEntering(dc::evio, "MyLinkInputDevice::read_returned_zero()");
   stop_input_device();
+  if (m_inotify.is_watched())   // Already watched?
+    return;
+  // Add an inotify watch for modification of the corresponding path.
   File<MyLinkInputDevice>* file_device = dynamic_cast<File<MyLinkInputDevice>*>(this);
   // This should always be the case because File<MyLinkInputDevice> is the only one that can use MyLinkInputDevice!
   ASSERT(file_device);
   if (file_device && !file_device->open_filename().empty())
-    m_inotify.add_watch(file_device->open_filename().c_str(), IN_MODIFY);
+  {
+    if (m_inotify.add_watch(file_device->open_filename().c_str(), IN_MODIFY))
+    {
+      Dout(dc::evio, "Incrementing ref count of this device [" << (void*)static_cast<IOBase*>(this) << ']');
+      intrusive_ptr_add_ref(this);      // Keep this object alive because the above call registered m_inotify as callback object.
+    }
+  }
+}
+
+void MyLinkInputDevice::closed()
+{
+  DoutEntering(dc::evio, "MyLinkInputDevice::closed()");
+  if (m_inotify.is_watched())
+  {
+    m_inotify.rm_watch();
+    Dout(dc::evio, "Decrementing ref count of this device [" << (void*)static_cast<IOBase*>(this) << ']');
+    intrusive_ptr_release(this);
+  }
 }
 
 void MyINotify::event_occurred(inotify_event const* event)
@@ -123,16 +153,23 @@ int main()
     device1.del();
   );
 
-  // Start writing.
-  //device3.flush();
-
   // Clean up when done.
-  //device2.del();
-  device3.del();
+  DoutMark("Calling del() on device2...",
+    device2.del();
+  );
+  DoutMark("Calling del() on device3...",
+    device3.del();
+  );
 
-  // Finish active watchers and then return from main loop and join the thread.
-  //EventLoopThread::terminate();
   Dout(dc::notice, "Sleeping 1 second...");
   std::this_thread::sleep_for(std::chrono::seconds(1));
+
+  DoutMark("Calling close() on device2...",
+    device2.close();
+  );
+
+  // Finish active watchers and then return from main loop and join the thread.
+  EventLoopThread::terminate();
+
   Dout(dc::notice, "Leaving main()...");
 }
