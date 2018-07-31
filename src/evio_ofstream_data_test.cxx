@@ -34,39 +34,47 @@ int main()
   AIQueueHandle handler = thread_pool.new_queue(32);
   EventLoopThread::instance().init(handler);
 
-  using device2_type = PersistentInputFile<LinkInputDevice>;
-  boost::intrusive_ptr<device2_type> device2;
   {
-    // Open a buffered output file that uses a buffer with a minimum block size of 64 bytes.
-    auto out_buffer = new OutputBuffer(64);
-    auto device1 = create<File<OutputDeviceStream>>(out_buffer, "blah.txt", std::ios_base::trunc);
+    using device2_type = PersistentInputFile<LinkInputDevice>;
+    boost::intrusive_ptr<device2_type> device2;
+    {
+      // Open a buffered output file that uses a buffer with a minimum block size of 64 bytes.
+      auto out_buffer = new OutputBuffer(64);
+      auto device1 = create<File<OutputDeviceStream>>(out_buffer, "blah.txt", std::ios_base::trunc);
 
-    auto* link_buffer = new LinkBuffer(64);
-    device2 = create<device2_type>(link_buffer, "blah.txt");
-    auto device3 = create<File<LinkOutputDevice>>(link_buffer, "blah2.txt");
+      // Open an input file that reads 'persistent' (see device2_type above) from blah.txt
+      // and link with an output file that writes to blah2.txt.
+      auto* link_buffer = new LinkBuffer(64);
+      device2 = create<device2_type>(link_buffer, "blah.txt");
+      auto device3 = create<File<LinkOutputDevice>>(link_buffer, "blah2.txt");
 
-    // Give device2 time to read till EOF.
+      // Give device2 time to read till EOF. This tests the persistent-ness. If it wasn't
+      // persistent it would close itself when reaching EOF and nothing would be written
+      // to blah2.txt.
+      Dout(dc::notice, "Sleeping 1 second...");
+      std::this_thread::sleep_for(std::chrono::seconds(1));
+
+      // Fill buffer of device1 with data.
+      Dout(dc::notice|continued_cf, "Fill buffer of device1 with data... ");
+      Debug(dc::evio.off());
+      for (int i = 1; i <= 200; ++i)
+        *device1 << "Hello world " << i << '\n';
+      Debug(dc::evio.on());
+      Dout(dc::finish, "done");
+      // Actually (start) writing data to device1.
+      device1->flush();      // This is just ostream::flush().
+
+      // Destruct device pointers device1 and device3 - that tests that they aren't deleted before they are finished.
+    }
+
+    // Wait with closing device2 so it has time to read whatever is written to blah.txt.
     Dout(dc::notice, "Sleeping 1 second...");
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
-    // Fill buffer of device1 with data.
-    Dout(dc::notice|continued_cf, "Fill buffer of device1 with data... ");
-    Debug(dc::evio.off());
-    for (int i = 1; i <= 200; ++i)
-      *device1 << "Hello world " << i << '\n';
-    Debug(dc::evio.on());
-    Dout(dc::finish, "done");
-    // Actually (start) writing data to device1.
-    device1->flush();      // This is just ostream::flush().
-
-    // Destruct device pointers device1 and device3 - that should cause a clean exit once everything finished.
+    // Actually get rid of device2 (it won't disappear otherwise, since it is persistent).
+    device2->close();             // This causes device2 to be closed and deleted (and therefore (soonish?) device3 to also be deleted).
+    // Destruct device pointer device2 too (everything has already completed here though).
   }
-
-  Dout(dc::notice, "Sleeping 1 second...");
-  std::this_thread::sleep_for(std::chrono::seconds(1));
-
-  // Actually get rid of device2 (it won't disappear otherwise, since it is persistent).
-  device2->close();             // This causes device2 to be closed and deleted (and therefore (soonish?) device3 to also be deleted).
 
   // Finish active watchers and then return from main loop and join the thread.
   EventLoopThread::terminate();
