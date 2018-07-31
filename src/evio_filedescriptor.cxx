@@ -66,7 +66,7 @@ void TestInputDevice::read_from_fd(int fd)
   if (strncmp(buf, "quit\n", 5) == 0)
   {
     ev_break(EV_A_ EVBREAK_ALL);        // Terminate EventLoopThread.
-    del();                              // Remove this object.
+    close();                            // Remove this object.
   }
 }
 
