@@ -2,7 +2,7 @@ AM_CPPFLAGS = -iquote $(top_srcdir) -iquote $(top_srcdir)/cwds
 
 bin_PROGRAMS = helloworld fibonacci fiboquick filelock runthread function objectqueue threadpool cv_wait \
 	       timer_test timer_thread signal_test benchmark mutex_benchmark test_frequency_counter AITimer_test \
-	       evio_test evio_buffer_test evio_threads evio_filedescriptor evio_socket evio_ofstream_data_test
+	       evio_test evio_buffer_test evio_threads evio_filedescriptor evio_socket evio_socket2 evio_ofstream_data_test
 
 helloworld_SOURCES = helloworld.cxx
 helloworld_CXXFLAGS = @LIBCWD_R_FLAGS@ -pthread
@@ -84,6 +84,10 @@ evio_filedescriptor_LDADD = ../evio/libevio.la ../statefultask/libstatefultask.l
 evio_socket_SOURCES = evio_socket.cxx
 evio_socket_CXXFLAGS = @LIBCWD_R_FLAGS@ -pthread
 evio_socket_LDADD = ../evio/libevio.la ../statefultask/libstatefultask.la ../threadsafe/libthreadsafe.la ../utils/libutils_r.la ../evio/libev-4.24/libev.la ../cwds/libcwds_r.la
+
+evio_socket2_SOURCES = evio_socket2.cxx
+evio_socket2_CXXFLAGS = @LIBCWD_R_FLAGS@ -pthread
+evio_socket2_LDADD = ../evio/libevio.la ../statefultask/libstatefultask.la ../threadsafe/libthreadsafe.la ../utils/libutils_r.la ../evio/libev-4.24/libev.la ../cwds/libcwds_r.la
 
 evio_ofstream_data_test_SOURCES = evio_ofstream_data_test.cxx
 evio_ofstream_data_test_CXXFLAGS = @LIBCWD_R_FLAGS@ -pthread

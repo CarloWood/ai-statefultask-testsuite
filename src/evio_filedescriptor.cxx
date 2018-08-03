@@ -10,7 +10,7 @@ using namespace evio;
 class TestInputDevice : public InputDevice
 {
  public:
-  TestInputDevice() : InputDevice(new evio::InputBuffer(default_blocksize_c)) { }
+  TestInputDevice() : InputDevice(new evio::InputBuffer) { }
 
  protected:
   void read_from_fd(int fd) override;
@@ -19,7 +19,7 @@ class TestInputDevice : public InputDevice
 class TestOutputDevice : public OutputDevice
 {
  public:
-  TestOutputDevice() : OutputDevice(new evio::OutputBuffer(default_blocksize_c)) { }
+  TestOutputDevice() : OutputDevice(new evio::OutputBuffer) { }
 
  protected:
   void write_to_fd(int fd) override;

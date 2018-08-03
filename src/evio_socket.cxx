@@ -5,9 +5,10 @@
 #include "statefultask/AIThreadPool.h"
 #include "evio/EventLoopThread.h"
 #include "evio/Device.h"
+#include "evio/inet_support.h"
 #include "libcwd/buf2str.h"
 
-#include <cstdio>       // Needed for sprintf.
+#include <sstream>
 #include <cstring>	// Needed for memset.
 #include <cerrno>
 
@@ -16,9 +17,6 @@
 #include <sys/types.h>  // Needed for socket, send etc.
 #include <sys/socket.h> // Needed for socket, send etc.
 #include <netinet/in.h> // Needed for htons.
-#include <arpa/inet.h>  // Needed for inet_ntoa.
-#include <unistd.h>     // Needed for close.
-#include <fcntl.h>      // Needed for fcntl.
 
 int connect_to_server(char const* remote_host, int remote_port);
 
@@ -28,9 +26,7 @@ class Socket : public evio::InputDevice, public evio::OutputDevice
   int m_request;
 
  public:
-  Socket() : evio::InputDevice(new evio::InputBuffer(evio::InputDevice::default_blocksize_c)),
-             evio::OutputDevice(new evio::OutputBuffer(evio::OutputDevice::default_blocksize_c)),
-             m_request(0) { }
+  Socket() : evio::InputDevice(new evio::InputBuffer), evio::OutputDevice(new evio::OutputBuffer), m_request(0) { }
 
  protected:
   void read_from_fd(int fd) override;
@@ -62,30 +58,6 @@ int main()
   EventLoopThread::instance().terminate();
 }
 
-int print_hostent(struct hostent* h)
-{
-  Dout(dc::notice, "The official name of the host: \"" << h->h_name << "\".");
-  if (h->h_aliases[0])
-    Dout(dc::notice, "Aliases:");
-  else
-    Dout(dc::notice, "No aliases.");
-  for (int c = 0; h->h_aliases[c]; ++c)
-    Dout(dc::notice, "\"" << h->h_aliases[c] << "\".");
-  if (h->h_addrtype != AF_INET)
-  {
-    std::cerr << "Returned address type is not AF_INET !?\n";
-    return -1;
-  }
-  Dout(dc::notice, "Address length in bytes: " << h->h_length << '.');
-  if (h->h_addr_list[0])
-    Dout(dc::notice, "Network addresses:");
-  else
-    Dout(dc::notice, "No network addresses.");
-  for (int c = 0; h->h_addr_list[c]; ++c)
-    Dout(dc::notice, "\"" << inet_ntoa(*(struct in_addr *)h->h_addr_list[c]) << "\".");
-  return 0;
-}
-
 int connect_to_server(char const* remote_host, int remote_port)
 {
   // Get host by name.
@@ -96,7 +68,7 @@ int connect_to_server(char const* remote_host, int remote_port)
     return -1;
   }
   // Dump the info we got.
-  if (print_hostent(hp))
+  if (evio::print_hostent_on(hp, std::cout))
     exit(-1);
 
   struct sockaddr_in remote_addr;
@@ -137,26 +109,35 @@ int connect_to_server(char const* remote_host, int remote_port)
     perror("connect");
     if (err != EINPROGRESS)
       exit(-1);
+    Dout(dc::notice, "\"Connect in progress\".");
   }
-
-  Dout(dc::notice, "\"Connected\".");
+  else
+    Dout(dc::notice, "\"Connected\".");
   return fd_remote;
 }
 
 void Socket::read_from_fd(int fd)
 {
   DoutEntering(dc::notice, "Socket::read_from_fd(" << fd << ")");
+  RefCountReleaser releaser;
   char buf[256];
   ssize_t len;
   do
   {
+    Dout(dc::system|continued_cf, "read(" << fd << ", char[256], 256) = ");
     len = read(fd, buf, 256);
+    Dout(dc::finish|cond_error_cf(len == -1), len);
+    if (len == -1)
+    {
+      releaser = evio::InputDevice::close();
+      return;
+    }
     Dout(dc::notice, "Read: \"" << libcwd::buf2str(buf, len) << "\".");
   }
   while (len == 256);
   if (strncmp(buf + len - 17, "#5</body></html>\n", 17) == 0)
   {
-    stop_input_device();
+    releaser += std::move(stop_input_device());
     ev_break(EV_A_ EVBREAK_ALL);
   }
 }

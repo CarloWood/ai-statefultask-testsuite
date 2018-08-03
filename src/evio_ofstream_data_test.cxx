@@ -12,17 +12,10 @@
 #include "sys.h"
 #include "debug.h"
 #include "evio/EventLoopThread.h"
-#include "evio/File.h"
-#include "evio/INotify.h"
+#include "evio/PersistentInputFile.h"
 #include <fstream>
 
 using namespace evio;
-
-template<typename DeviceType, typename... ARGS>
-boost::intrusive_ptr<DeviceType> create(ARGS&&... args)
-{
-  return new DeviceType(std::forward<ARGS>(args)...);
-}
 
 int main()
 {
