@@ -2,20 +2,11 @@
 
 #include "sys.h"
 #include "debug.h"
+#include "libcwd/buf2str.h"
 #include "statefultask/AIThreadPool.h"
 #include "evio/EventLoopThread.h"
 #include "evio/Socket.h"
-#include "evio/inet_support.h"
-#include "libcwd/buf2str.h"
-
-#include <sstream>
 #include <cstring>	// Needed for memset.
-#include <cerrno>
-
-#include <netdb.h>      // Needed for gethostbyname() */
-#include <sys/time.h>
-#include <sys/types.h>  // Needed for socket, send etc.
-#include <sys/socket.h> // Needed for socket, send etc.
 #include <netinet/in.h> // Needed for htons.
 
 using evio::text;
