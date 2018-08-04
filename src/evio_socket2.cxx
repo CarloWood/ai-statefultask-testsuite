@@ -18,23 +18,21 @@
 #include <sys/socket.h> // Needed for socket, send etc.
 #include <netinet/in.h> // Needed for htons.
 
-class ReadSocket : public evio::ReadInputDevice
+using evio::text;
+using evio::ReadInputDevice;
+using evio::InputBuffer;
+using evio::OutputBuffer;
+using evio::MsgBlock;
+using evio::OStreamDevice;
+using evio::Socket;
+
+class Decoder : public ReadInputDevice<text>
 {
  public:
-  ReadSocket(evio::InputBuffer* ibuffer) : evio::ReadInputDevice(ibuffer) { }
+  Decoder(InputBuffer* ibuffer) : ReadInputDevice<text>(ibuffer) { }
 
  protected:
-  size_t end_of_msg_finder(char const*, size_t) override;
-  RefCountReleaser decode(evio::MsgBlock msg) override;
-};
-
-class WriteSocket : public evio::WriteOutputDeviceStream
-{
- private:
-  int m_request;
-
- public:
-  WriteSocket(evio::OutputBuffer* obuffer) : evio::WriteOutputDeviceStream(obuffer), m_request(0) { }
+  RefCountReleaser decode(MsgBlock msg) override;
 };
 
 int main()
@@ -50,9 +48,10 @@ int main()
   EventLoopThread::instance().init(low_priority_handler);
 
   {
-    auto sockstream = evio::create<evio::Socket<ReadSocket, WriteSocket>>();
+    auto sockstream = evio::create<Socket<Decoder, OStreamDevice>>();
     sockstream->connect("localhost", (unsigned short)9001);
 
+    // Write 6 requests to the socket.
     for (int request = 0; request < 6; ++request)
       *sockstream << "GET / HTTP/1.1\r\n"
                      "Host: localhost:9001\r\n"
@@ -66,16 +65,12 @@ int main()
   EventLoopThread::instance().terminate();
 }
 
-size_t ReadSocket::end_of_msg_finder(char const* start, size_t count)
+evio::IOBase::RefCountReleaser Decoder::decode(MsgBlock msg)
 {
-  char const* newline = static_cast<char const*>(std::memchr(start, '\n', count));
-  return newline ? newline - start + 1 : 0;
-}
-
-evio::IOBase::RefCountReleaser ReadSocket::decode(evio::MsgBlock msg)
-{
-  evio::IOBase::RefCountReleaser releaser;
-  DoutEntering(dc::notice, "ReadSocket::decode(\"" << buf2str(msg.get_start(), msg.get_size()) << "\")");
+  RefCountReleaser releaser;
+  // Just print what was received.
+  DoutEntering(dc::notice, "Decoder::decode(\"" << buf2str(msg.get_start(), msg.get_size()) << "\")");
+  // Stop when the last message was received.
   if (msg.get_size() >= 17 && strncmp(msg.get_start() + msg.get_size() - 17, "#5</body></html>\n", 17) == 0)
     releaser = stop_input_device();
   return releaser;
