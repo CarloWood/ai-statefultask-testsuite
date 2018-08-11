@@ -409,10 +409,11 @@ class RunningTimersImpl<INTERVALS, 2> : public statefultask::RunningTimers
     int number = 0; // interval
     for (auto&& queue : this->m_queues)
     {
-      if (!queue.empty())
+      timer_queue_t::rat queue_r(queue);
+      if (!queue_r->debug_empty())
       {
         std::cout << "  " << number << " :";
-        queue.print();
+        print(*queue_r);
         std::cout << '\n';
       }
       ++number;

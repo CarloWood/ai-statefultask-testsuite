@@ -69,7 +69,7 @@ int main()
   // Add stdin watcher.
   ev_io stdin_watcher;
   ev_io_init(&stdin_watcher, stdin_cb, /*STDIN_FILENO*/ 0, EV_READ);
-  EventLoopThread::instance().start(stdin_watcher);
+  EventLoopThread::instance().start_if_not_active(stdin_watcher);
 
   // Wait until all watchers have finished.
   EventLoopThread::terminate();

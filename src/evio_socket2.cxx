@@ -39,17 +39,21 @@ int main()
   EventLoopThread::instance().init(low_priority_handler);
 
   {
-    auto sockstream = evio::create<Socket<Decoder, OStreamDevice>>();
-    sockstream->connect("localhost", (unsigned short)9001);
+    boost::intrusive_ptr<Socket<Decoder, OStreamDevice>> sockstream[4];
+    for (int i = 0; i < 4; ++i)
+      sockstream[i] = evio::create<Socket<Decoder, OStreamDevice>>();
+    for (int i = 0; i < 4; ++i)
+      sockstream[i]->connect("localhost", (unsigned short)9001);
 
-    // Write 6 requests to the socket.
+    // Write 6 requests to each socket.
     for (int request = 0; request < 6; ++request)
-      *sockstream << "GET / HTTP/1.1\r\n"
-                     "Host: localhost:9001\r\n"
-                     "Accept: */*\r\n"
-                     "X-Request: " << request << "\r\n"
-                     "X-Sleep: " << (200 * request) << "\r\n"
-                     "\r\n" << std::flush;
+      for (int i = 0; i < 4; ++i)
+        *sockstream[i] << "GET / HTTP/1.1\r\n"
+                          "Host: localhost:9001\r\n"
+                          "Accept: */*\r\n"
+                          "X-Request: " << request << "\r\n"
+                          "X-Sleep: " << (200 * request) << "\r\n"
+                          "\r\n" << std::flush;
   }
 
   // Wait until all watchers have finished.
@@ -60,7 +64,7 @@ evio::IOBase::RefCountReleaser Decoder::decode(MsgBlock msg)
 {
   RefCountReleaser releaser;
   // Just print what was received.
-  DoutEntering(dc::notice, "Decoder::decode(\"" << buf2str(msg.get_start(), msg.get_size()) << "\")");
+  DoutEntering(dc::notice, "Decoder::decode(\"" << buf2str(msg.get_start(), msg.get_size()) << "\") [" << this << ']');
   // Stop when the last message was received.
   if (msg.get_size() >= 17 && strncmp(msg.get_start() + msg.get_size() - 17, "#5</body></html>\n", 17) == 0)
     releaser = stop_input_device();

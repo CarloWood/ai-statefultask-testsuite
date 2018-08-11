@@ -13,7 +13,7 @@ class TestInputDevice : public InputDevice
   TestInputDevice() : InputDevice(new evio::InputBuffer) { }
 
  protected:
-  void read_from_fd(int fd) override;
+  void read_from_fd(int fd) override;   // Read thread.
 };
 
 class TestOutputDevice : public OutputDevice
@@ -22,7 +22,7 @@ class TestOutputDevice : public OutputDevice
   TestOutputDevice() : OutputDevice(new evio::OutputBuffer) { }
 
  protected:
-  void write_to_fd(int fd) override;
+  void write_to_fd(int fd) override;    // Write thread.
 };
 
 int main()
@@ -50,6 +50,7 @@ int main()
   EventLoopThread::terminate();
 }
 
+// Read thread.
 void TestInputDevice::read_from_fd(int fd)
 {
   DoutEntering(dc::notice, "TestInputDevice::read_from_fd(" << fd << ")");
@@ -70,6 +71,7 @@ void TestInputDevice::read_from_fd(int fd)
   }
 }
 
+// Write thread.
 void TestOutputDevice::write_to_fd(int fd)
 {
   DoutEntering(dc::notice, "TestOutputDevice::write_to_fd(" << fd << ")");

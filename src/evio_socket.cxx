@@ -29,8 +29,8 @@ class Socket : public evio::InputDevice, public evio::OutputDevice
   Socket() : evio::InputDevice(new evio::InputBuffer), evio::OutputDevice(new evio::OutputBuffer), m_request(0) { }
 
  protected:
-  void read_from_fd(int fd) override;
-  void write_to_fd(int fd) override;
+  void read_from_fd(int fd) override;   // Read thread.
+  void write_to_fd(int fd) override;    // Write thread.
 };
 
 int main()
@@ -116,6 +116,7 @@ int connect_to_server(char const* remote_host, int remote_port)
   return fd_remote;
 }
 
+// Read thread.
 void Socket::read_from_fd(int fd)
 {
   DoutEntering(dc::notice, "Socket::read_from_fd(" << fd << ")");
@@ -142,6 +143,7 @@ void Socket::read_from_fd(int fd)
   }
 }
 
+// Write thread.
 void Socket::write_to_fd(int fd)
 {
   DoutEntering(dc::notice, "Socket::write_to_fd(" << fd << ")");
