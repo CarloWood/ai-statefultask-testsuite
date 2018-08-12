@@ -41,12 +41,12 @@ void sighandler(int nr)
   sem_post(&tasks);
   // Find out which thread we are.
   pthread_t tid = pthread_self();
-  for (int i = 0; i < ids.size(); ++i)
+  for (unsigned int i = 0; i < ids.size(); ++i)
     if (ids[i] == tid)
       lines[i][where[i]]++;     // Keep track of on which line the thread was interrupted.
 }
 
-void sighandler_finish(int nr)
+void sighandler_finish(int UNUSED_ARG(nr))
 {
 }
 

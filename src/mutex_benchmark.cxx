@@ -57,7 +57,7 @@ void thread_main(int cpu, Result& result)
 
   stopwatch.start();
 
-  volatile int v;
+  volatile int v __attribute__ ((unused));
   for (int i = 0; i < 240000 / number_of_threads; ++i)
   {
     m.lock();
@@ -89,7 +89,6 @@ int main()
   eda::FrequencyCounter<uint64_t, 8> fc;
   bool done = false;
 
-  uint64_t fastest = std::numeric_limits<uint64_t>::max();
   for (int run = 0; run < 100; ++run)
   {
     start = false;
@@ -133,23 +132,6 @@ int main()
     }
     if (done)
       break;
-
-#if 0
-    // Print the results.
-    std::sort(results.begin(), results.end(), SortResultByStartCycles());
-    uint64_t time_offset = results[0].m_start_cycles;
-    //uint64_t duration = results[number_of_threads - 1].m_start_cycles - time_offset;
-    //if (number_of_threads == 1)
-    //if (number_of_threads == 1)
-    //  duration += results[0].m_diff_cycles;
-    uint64_t duration = results[number_of_threads - 1].m_diff_cycles;
-    if (duration < fastest)
-    {
-      fastest = duration;
-      for (auto&& result : results)
-        result.print(time_offset);
-    }
-#endif
   }
   fc.print_on(std::cout);
   if (done)

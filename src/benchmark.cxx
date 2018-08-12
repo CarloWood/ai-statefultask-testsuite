@@ -223,8 +223,8 @@ void Benchmark::calibrate_delta(bool show)
       while (data.size() < number_of_data_points)
       {
         MinAvgMax<double> mma;
-        uint64_t delta1;
-        uint64_t delta2;
+        uint64_t delta1 = 0;
+        uint64_t delta2 = 0;
 
         for (int i = 0; i < mma_count; ++i)
         {
@@ -274,7 +274,7 @@ void Benchmark::calibrate_delta(bool show)
     Dout(dc::notice, "Minimum values range " << mma);
 
     Plot plot1("Histogram delta1", "delta1", "count");
-    int best_delta1;
+    int best_delta1 = 0;
     {
       std::vector<int> count(mma_delta1.max() + 1 ,0);
       int max_count = 0;
@@ -309,7 +309,7 @@ void Benchmark::calibrate_delta(bool show)
     }
 
     Plot plot2("Histogram delta2", "delta2", "count");
-    int best_delta2;
+    int best_delta2 = 0;
     {
       std::vector<int> count(mma_delta2.max() + 1 ,0);
       int max_count = 0;
@@ -375,10 +375,11 @@ void Benchmark::calibrate_cycles_per_ns()
   while (1)
   {
     MinAvgMax<double> mma;
-    uint64_t clocks;
-    uint64_t delta1;
-    uint64_t delta2;
-    uint64_t delta3;
+    // These four are set to zero just to avoid a compiler warning about being used uninitialized.
+    uint64_t clocks = 0;
+    uint64_t delta1 = 0;
+    uint64_t delta2 = 0;
+    uint64_t delta3 = 0;
 
     for (int i = 0; i < mma_count; ++i)
     {
