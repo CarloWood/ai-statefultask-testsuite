@@ -44,5 +44,14 @@ int main()
   evio::SocketAddress addr10("10.0.100.255:65535");
   ASSERT(addr10.to_string() == "10.0.100.255:65535");
 
+  evio::SocketAddress addr11("[0010.000.0100.0255]:065535");
+  ASSERT(addr11.to_string() == "10.0.100.255:65535");
+
+  evio::SocketAddress addr12(AF_INET6, "192.168.10.1", 42);
+  ASSERT(addr12.to_string() == "[::ffff:192.168.10.1]:42");
+
+  evio::SocketAddress addr13(AF_UNIX, "192.168.10.1");
+  ASSERT(addr13.to_string() == "192.168.10.1");
+
   std::cout << "Success!\n";
 }
