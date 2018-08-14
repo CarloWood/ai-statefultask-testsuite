@@ -29,3 +29,6 @@
 	path = evio
 	url = https://github.com/CarloWood/evio.git
 	branch = master
+[submodule "resolver-task"]
+	path = resolver-task
+	url = https://github.com/CarloWood/resolver-task.git
