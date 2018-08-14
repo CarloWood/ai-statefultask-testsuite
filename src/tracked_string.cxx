@@ -24,10 +24,12 @@ class string : public tracked::Tracked<&name_string>
 struct Foo
 {
   string s;
-  Foo(string&& s_) : s(std::forward<string>(s_)) { }
+  template<typename S>
+  Foo(S&& s_) : s(std::forward<string>(s_)) { }
 };
 
-Foo* f(string&& s)
+template<typename S>
+Foo* f(S&& s)
 {
   return new Foo(std::forward<string>(s));
 }
@@ -55,15 +57,13 @@ int main()
   Dout(dc::finish, "done");
   delete foo;
 
-#if 0
   Dout(dc::notice|continued_cf, "Constructing s2(\"test\")... ");
   string s2("test");
   Dout(dc::finish, "done");
-  Dout(dc::notice|continued_cf, "Calling f(std::move(s))... ");
+  Dout(dc::notice|continued_cf, "Calling f(s2)... ");
   foo = f(s2); // This MUST cause one copy.
   Dout(dc::finish, "done");
   delete foo;
-#endif
 
   Dout(dc::notice, "Leaving main()...");
 }
