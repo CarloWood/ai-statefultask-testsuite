@@ -24,12 +24,12 @@ class string : public tracked::Tracked<&name_string>
 struct Foo
 {
   string s;
-  Foo(string s_) : s(s_) { }
+  Foo(string s_) : s(std::move(s_)) { }
 };
 
 Foo* f(string s)
 {
-  return new Foo(s);
+  return new Foo(std::move(s));
 }
 
 int main()
