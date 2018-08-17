@@ -32,3 +32,4 @@
 [submodule "resolver-task"]
 	path = resolver-task
 	url = https://github.com/CarloWood/resolver-task.git
+	branch = master
