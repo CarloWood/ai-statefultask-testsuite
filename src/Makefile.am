@@ -112,7 +112,7 @@ AILookupTask_test_LDADD = ../resolver-task/libresolvertask.la ../evio/libevio.la
 
 AIResolver_test_SOURCES = AIResolver_test.cxx
 AIResolver_test_CXXFLAGS = @LIBCWD_R_FLAGS@ -pthread
-AIResolver_test_LDADD = ../resolver-task/libresolvertask.la ../evio/libevio.la ../statefultask/libstatefultask.la ../threadsafe/libthreadsafe.la ../utils/libutils_r.la ../cwds/libcwds_r.la
+AIResolver_test_LDADD = ../resolver-task/libresolvertask.la ../resolver-task/dns/src/libdns.la ../evio/libevio.la ../statefultask/libstatefultask.la ../threadsafe/libthreadsafe.la ../utils/libutils_r.la ../evio/libev-4.24/libev.la ../cwds/libcwds_r.la
 
 tracked_string_SOURCES = tracked_string.cxx
 tracked_string_CXXFLAGS = @LIBCWD_R_FLAGS@ -pthread
