@@ -16,14 +16,15 @@ int main()
   // Initialize the IO event loop thread.
   EventLoopThread::instance().init(handler);
 
-  auto handle = AIResolver::instance().request("www.google.com", "www");
-  auto handle2 = AIResolver::instance().request("www.google.com", "www");
+  auto handle = AIResolver::instance().request("irc.undernet.org", "ircd");
+  //auto handle2 = AIResolver::instance().request("www.google.com", "www");
 
   // Wait till the request is handled.
-  while (!handle->is_ready())
+  int c = 0;
+  while (!handle->is_ready() && ++c < 1000)
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
 
-  std::cout << "Result: " << handle->get_result() << std::endl;
+  std::cout << "*Result: " << handle->get_result() << std::endl;
   handle.reset();
 
   // Terminate application.
