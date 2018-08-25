@@ -16,6 +16,7 @@ class string : public tracked::Tracked<&name_string>
   void operator=(string&& orig) { tracked::Tracked<&name_string>::operator=(std::move(orig)); m_string = std::move(orig.m_string); }
 
   string(char const* s) : m_string(s) { }
+  ~string() { }
 
  private:
   std::string m_string;

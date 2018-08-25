@@ -15,16 +15,20 @@ int main()
 
   // Initialize the IO event loop thread.
   EventLoopThread::instance().init(handler);
+  // Initialize the async hostname resolver.
+  AIResolver::instance().init(true);
 
-  auto handle = AIResolver::instance().request("irc.undernet.org", "ircd");
+  auto handle = AIResolver::instance().getaddrinfo("irc.undernet.org", "6669", evio::AddressInfoHints(AI_CANONNAME));
   //auto handle2 = AIResolver::instance().request("www.google.com", "www");
 
   // Wait till the request is handled.
-  int c = 0;
-  while (!handle->is_ready() && ++c < 1000)
+  while (!handle->is_ready())
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
 
-  std::cout << "*Result: " << handle->get_result() << std::endl;
+  if (handle->success())
+    std::cout << "Result: " << handle->get_result() << std::endl;
+  else
+    std::cerr << "Failure: " << handle->get_error() << '.' << std::endl;
   handle.reset();
 
   // Terminate application.
