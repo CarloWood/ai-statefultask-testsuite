@@ -8,18 +8,18 @@
 int constexpr queue_capacity = 32;
 bool test_finished = false;
 
-boost::intrusive_ptr<AILookupTask> resolver;
+boost::intrusive_ptr<AILookupTask> lookup_task;
 
 void callback(bool success)
 {
   if (success)
   {
     std::cout << "Call back is called.\n";
-    std::cout << resolver->get_result() << std::endl;
+    std::cout << lookup_task->get_result() << std::endl;
   }
   else
   {
-    Dout(dc::notice, "The resolver was aborted!");
+    Dout(dc::notice, "The lookup_task was aborted!");
   }
   test_finished = true;
 }
@@ -33,10 +33,10 @@ int main()
   AIQueueHandle handler __attribute__ ((unused)) = thread_pool.new_queue(queue_capacity);
 
   AIEngine engine("main engine", 2.0);
-  resolver = new AILookupTask(DEBUG_ONLY(true));
+  lookup_task = new AILookupTask(DEBUG_ONLY(true));
 
-  resolver->set_end_point("www.google.com", "www");
-  resolver->run(&callback);
+  lookup_task->set_end_point("www.google.com", "www");
+  lookup_task->run(&callback);
 
   // Mainloop.
   Dout(dc::notice, "Starting main loop...");
