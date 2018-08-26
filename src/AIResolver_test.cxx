@@ -18,7 +18,7 @@ int main()
   // Initialize the async hostname resolver.
   AIResolver::instance().init(true);
 
-  auto handle = AIResolver::instance().getaddrinfo("irc.undernet.org", "6669", evio::AddressInfoHints(AI_CANONNAME));
+  auto handle = AIResolver::instance().getaddrinfo("irc.undernet.org", "ircd", AddressInfoHints(AI_CANONNAME));
   //auto handle2 = AIResolver::instance().request("www.google.com", "www");
 
   // Wait till the request is handled.
