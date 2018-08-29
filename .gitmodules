@@ -33,3 +33,7 @@
 	path = resolver-task
 	url = https://github.com/CarloWood/resolver-task.git
 	branch = master
+[submodule "farmhash"]
+	path = farmhash
+	url = https://github.com/CarloWood/farmhash.git
+	branch = master
