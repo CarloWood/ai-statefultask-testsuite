@@ -2,7 +2,6 @@
 #include "debug.h"
 #include "statefultask/AIThreadPool.h"
 #include "resolver-task/Resolver.h"
-#include "resolver-task/dns/src/dns.h"
 
 int constexpr queue_capacity = 32;
 
@@ -19,15 +18,21 @@ int main()
   resolver::Resolver& resolver{resolver::Resolver::instance()};
   resolver.init(true);
 
-  auto handle = resolver.getaddrinfo("irc.undernet.org", "ircd", resolver::AddressInfoHints(AI_CANONNAME));
-  //auto handle2 = Resolver::instance().request("www.google.com", "www");
+  resolver::Service service("ircd");
+  auto handle = resolver.getaddrinfo("irc.undernet.org", service, resolver::AddressInfoHints(AI_CANONNAME));
+  auto handle2 = resolver.getaddrinfo("irc.undernet.org", service, resolver::AddressInfoHints(AI_CANONNAME));
 
   // Wait till the request is handled.
   while (!handle->is_ready())
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
 
   if (handle->success())
+  {
+    pthread_mutex_lock(&cout_mutex);
     std::cout << "Result: " << handle->get_result() << std::endl;
+    std::cout << "Result2: " << handle2->get_result() << std::endl;
+    pthread_mutex_unlock(&cout_mutex);
+  }
   else
     std::cerr << "Failure: " << handle->get_error() << '.' << std::endl;
   handle.reset();

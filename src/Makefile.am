@@ -3,7 +3,7 @@ AM_CPPFLAGS = -iquote $(top_srcdir) -iquote $(top_srcdir)/cwds
 bin_PROGRAMS = helloworld fibonacci fiboquick filelock runthread function objectqueue threadpool cv_wait \
 	       timer_test timer_thread signal_test benchmark mutex_benchmark test_frequency_counter AITimer_test \
 	       evio_test evio_buffer_test evio_threads evio_filedescriptor evio_socket evio_socket2 evio_ofstream_data_test \
-	       evio_listen_socket evio_address AILookupTask_test AIResolver_test tracked_string
+	       evio_listen_socket evio_address AILookupTask_test AIResolver_test hash_test
 
 helloworld_SOURCES = helloworld.cxx
 helloworld_CXXFLAGS = @LIBCWD_R_FLAGS@ -pthread
@@ -112,11 +112,11 @@ AILookupTask_test_LDADD = ../resolver-task/libresolvertask.la ../evio/libevio.la
 
 AIResolver_test_SOURCES = AIResolver_test.cxx
 AIResolver_test_CXXFLAGS = @LIBCWD_R_FLAGS@ -pthread
-AIResolver_test_LDADD = ../resolver-task/libresolvertask.la ../resolver-task/dns/src/libdns.la ../evio/libevio.la ../statefultask/libstatefultask.la ../threadsafe/libthreadsafe.la ../utils/libutils_r.la ../evio/libev-4.24/libev.la ../cwds/libcwds_r.la
+AIResolver_test_LDADD = ../resolver-task/libresolvertask.la ../farmhash/src/libfarmhash.la ../resolver-task/dns/src/libdns.la ../evio/libevio.la ../statefultask/libstatefultask.la ../threadsafe/libthreadsafe.la ../utils/libutils_r.la ../evio/libev-4.24/libev.la ../cwds/libcwds_r.la
 
-tracked_string_SOURCES = tracked_string.cxx
-tracked_string_CXXFLAGS = @LIBCWD_R_FLAGS@ -pthread
-tracked_string_LDADD = ../cwds/libcwds_r.la
+hash_test_SOURCES = hash_test.cxx
+hash_test_CXXFLAGS = -O2 @LIBCWD_R_FLAGS@ -pthread
+hash_test_LDADD = ../farmhash/src/libfarmhash.la ../cwds/libcwds_r.la
 
 # --------------- Maintainer's Section
 
