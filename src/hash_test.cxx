@@ -3,7 +3,6 @@
 #include "cwds/benchmark.h"
 #include "farmhash/src/farmhash.h"
 #include "resolver-task/AddressInfo.h"
-#include "resolver-task/Service.h"
 #include <vector>
 
 struct Result
@@ -22,7 +21,7 @@ int main()
 {
   Debug(NAMESPACE_DEBUG::init());
   int const cpu = 0;
-  int const loopsize = 50000000;
+  int const loopsize = 5000000;
 
   {
     benchmark::Stopwatch stopwatch(cpu);
@@ -38,13 +37,12 @@ int main()
     stopwatch.start();
 
     std::string s("texture123.secondlife.com");
-    resolver::Service service("www");
     resolver::AddressInfoHints hints(AI_CANONNAME, AF_INET6, SOCK_STREAM);
 
     uint64_t hash;
     for (int i = 0; i < loopsize; ++i)
     {
-      hash = util::Hash64WithSeeds(s.data(), s.length(), service.hash_seed(), hints.hash_seed());
+      hash = util::Hash64WithSeeds(s.data(), s.length(), 0x9ae16a3b2f90404fULL, hints.hash_seed());
     }
 
     stopwatch.stop();

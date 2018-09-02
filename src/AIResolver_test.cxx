@@ -4,6 +4,7 @@
 #include "resolver-task/Resolver.h"
 
 int constexpr queue_capacity = 32;
+using namespace resolver;
 
 int main()
 {
@@ -11,16 +12,13 @@ int main()
 
   AIThreadPool thread_pool;
   AIQueueHandle handler = thread_pool.new_queue(queue_capacity);
-
   // Initialize the IO event loop thread.
   EventLoopThread::instance().init(handler);
   // Initialize the async hostname resolver.
-  resolver::Resolver& resolver{resolver::Resolver::instance()};
-  resolver.init(true);
+  Resolver::instance().init(true);
 
-  resolver::Service service("ircd");
-  auto handle = resolver.getaddrinfo("irc.undernet.org", service, resolver::AddressInfoHints(AI_CANONNAME));
-  auto handle2 = resolver.getaddrinfo("irc.undernet.org", service, resolver::AddressInfoHints(AI_CANONNAME));
+  auto handle = Resolver::instance().getaddrinfo("irc.undernet.org", "ircd", AddressInfoHints(AI_CANONNAME, AF_UNSPEC, 0 /*, IPPROTO_TCP*/));
+  auto handle2 = Resolver::instance().getaddrinfo("irc.undernet.org", 6668, AddressInfoHints(AI_CANONNAME));
 
   // Wait till the request is handled.
   while (!handle->is_ready())
@@ -38,7 +36,7 @@ int main()
   handle.reset();
 
   // Terminate application.
-  resolver.close();
+  Resolver::instance().close();
   EventLoopThread::instance().terminate();
   Dout(dc::notice, "Leaving main()...");
 }
