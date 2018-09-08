@@ -30,12 +30,27 @@ int main()
   {
     pthread_mutex_lock(&cout_mutex);
     std::cout << "Result: port = " << handle->get_port() << "; IP#'s = " << handle->get_result() << std::endl;
-    std::cout << "Result2: port = " << handle2->get_port() << "; IP#'s = " << handle2->get_result() << std::endl;
-    std::cout << "Result3: port = " << handle3->get_port() << "; IP#'s = " << handle3->get_result() << std::endl;
     pthread_mutex_unlock(&cout_mutex);
   }
   else
     std::cerr << "Failure: " << handle->get_error() << '.' << std::endl;
+  if (handle2->success())
+  {
+    pthread_mutex_lock(&cout_mutex);
+    std::cout << "Result2: port = " << handle2->get_port() << "; IP#'s = " << handle2->get_result() << std::endl;
+    pthread_mutex_unlock(&cout_mutex);
+  }
+  else
+    std::cerr << "Failure2: " << handle2->get_error() << '.' << std::endl;
+  if (handle3->success())
+  {
+    pthread_mutex_lock(&cout_mutex);
+    std::cout << "Result3: port = " << handle3->get_port() << "; IP#'s = " << handle3->get_result() << std::endl;
+    pthread_mutex_unlock(&cout_mutex);
+  }
+  else
+    std::cerr << "Failure3: " << handle3->get_error() << '.' << std::endl;
+
   handle.reset();
   handle2.reset();
   handle3.reset();
