@@ -37,3 +37,7 @@
 	path = farmhash
 	url = https://github.com/CarloWood/farmhash.git
 	branch = master
+[submodule "events"]
+	path = events
+	url = https://github.com/CarloWood/events.git
+	branch = master

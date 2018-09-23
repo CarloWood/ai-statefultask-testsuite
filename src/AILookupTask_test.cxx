@@ -31,11 +31,13 @@ int main()
 
   AIThreadPool thread_pool;
   AIQueueHandle handler __attribute__ ((unused)) = thread_pool.new_queue(queue_capacity);
+  EventLoopThread::instance().init(handler);
+  resolver::Resolver::instance().init(false);
 
   AIEngine engine("main engine", 2.0);
   lookup_task = new AILookupTask(DEBUG_ONLY(true));
 
-  lookup_task->set_end_point("www.google.com", "www");
+  lookup_task->getaddrinfo("www.google.com", "www");
   lookup_task->run(&callback);
 
   // Mainloop.
