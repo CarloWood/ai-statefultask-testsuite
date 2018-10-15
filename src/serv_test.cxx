@@ -28,23 +28,23 @@ int main()
     stopwatch.start();
 
     Service echo_udp("echo", IPPROTO_UDP);
-    in_port_t echo_udp_port = Resolver::instance().port(echo_udp);
+    [[maybe_unused]] in_port_t echo_udp_port = Resolver::instance().port(echo_udp);
     ASSERT(echo_udp_port == 7);
 
     Service echo_ddp("echo", IPPROTO_DDP);
-    in_port_t echo_ddp_port = Resolver::instance().port(echo_ddp);
+    [[maybe_unused]] in_port_t echo_ddp_port = Resolver::instance().port(echo_ddp);
     ASSERT(echo_ddp_port == 4);
 
     Service echo_any("echo");
-    in_port_t echo_any_port = Resolver::instance().port(echo_any);
+    [[maybe_unused]] in_port_t echo_any_port = Resolver::instance().port(echo_any);
     ASSERT(echo_any_port == 7);
 
     Service www_any("www");
-    in_port_t www_any_port = Resolver::instance().port(www_any);
+    [[maybe_unused]] in_port_t www_any_port = Resolver::instance().port(www_any);
     ASSERT(www_any_port == 80);
 
     Service www_udp("www", IPPROTO_UDP);
-    in_port_t www_udp_port = Resolver::instance().port(www_udp);
+    [[maybe_unused]] in_port_t www_udp_port = Resolver::instance().port(www_udp);
     ASSERT(www_udp_port == 0);
 
     stopwatch.stop();

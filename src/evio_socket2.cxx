@@ -2,12 +2,14 @@
 
 #include "sys.h"
 #include "debug.h"
-#include "libcwd/buf2str.h"
 #include "statefultask/AIThreadPool.h"
 #include "evio/EventLoopThread.h"
 #include "evio/Socket.h"
 #include <cstring>	// Needed for memset.
 #include <netinet/in.h> // Needed for htons.
+#ifdef CWDEBUG
+#include <libcwd/buf2str.h>
+#endif
 
 using evio::text;
 using evio::ReadInputDevice;

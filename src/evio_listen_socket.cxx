@@ -1,11 +1,13 @@
 #include "sys.h"
 #include "debug.h"
-#include "libcwd/buf2str.h"
 #include "statefultask/AIThreadPool.h"
 #include "evio/EventLoopThread.h"
 #include "evio/ListenSocket.h"
 #include "evio/Socket.h"
 #include "statefultask/Timer.h"
+#ifdef CWDEBUG
+#include <libcwd/buf2str.h>
+#endif
 
 using evio::text;
 using evio::ReadInputDevice;

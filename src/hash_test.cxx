@@ -11,7 +11,7 @@ struct Result
   uint64_t m_start_cycles;
   uint64_t m_diff_cycles;
 
-  void print(uint64_t time_offset) const
+  void print(uint64_t DEBUG_ONLY(time_offset)) const
   {
     Dout(dc::notice, "Thread on CPU #" << m_cpu << " started running at t = " << (m_start_cycles - time_offset) << " and ran for " << m_diff_cycles / 3612059050.0 << " seconds.");
   }
@@ -39,7 +39,7 @@ int main()
     std::string s("texture123.secondlife.com");
     resolver::AddressInfoHints hints(AI_CANONNAME, AF_INET6, SOCK_STREAM);
 
-    uint64_t hash;
+    [[maybe_unused]] uint64_t hash;
     for (int i = 0; i < loopsize; ++i)
     {
       hash = util::Hash64WithSeeds(s.data(), s.length(), 0x9ae16a3b2f90404fULL, hints.hash_seed());

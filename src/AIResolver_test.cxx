@@ -6,6 +6,10 @@
 int constexpr queue_capacity = 32;
 using namespace resolver;
 
+#ifndef CWDEBUG
+pthread_mutex_t cout_mutex = PTHREAD_MUTEX_INITIALIZER;
+#endif
+
 int main()
 {
   Debug(NAMESPACE_DEBUG::init());

@@ -1,7 +1,10 @@
 #include "sys.h"
 #include "debug.h"
-#include <libcwd/buf2str.h>
 #include "evio/StreamBuf.h"
+#include <cstring>
+#ifdef CWDEBUG
+#include <libcwd/buf2str.h>
+#endif
 
 size_t constexpr minimum_blocksize = 64;
 size_t constexpr max_alloc = 1024 * minimum_blocksize;
@@ -129,7 +132,7 @@ int main()
       // Write 25 chars at a time.
       size_t wlen = std::min(len, (size_t)25);
       sb->write(device, wlen);
-      sb->printOn(std::cout);
+      Debug(sb->printOn(std::cout));
       device += wlen;
       len -= wlen;
       size += wlen;
@@ -154,7 +157,7 @@ int main()
       // Write 25 chars at a time.
       size_t wlen = std::min(len, (size_t)25);
       sb->write(device, wlen);
-      sb->printOn(std::cout);
+      Debug(sb->printOn(std::cout));
       device += wlen;
       len -= wlen;
       size += wlen;
@@ -196,7 +199,7 @@ int main()
 
     Dout(dc::notice, "Empty buffer:");
     ASSERT(sb->buffer_empty());
-    sb->printOn(std::cout);
+    Debug(sb->printOn(std::cout));
 
     ASSERT(!sb->buffer_full());
     ASSERT(len == sb->unused_in_last_block());
@@ -218,7 +221,7 @@ int main()
       // Write 25 chars at a time.
       size_t wlen = std::min(len, (size_t)25);
       sb->write(buf, wlen);
-      sb->printOn(std::cout);
+      Debug(sb->printOn(std::cout));
       buf += wlen;
       len -= wlen;
       size += wlen;
@@ -243,7 +246,7 @@ int main()
       // Write 25 chars at a time.
       size_t wlen = std::min(len, (size_t)25);
       sb->raw_sputn(buf, wlen);
-      sb->printOn(std::cout);
+      Debug(sb->printOn(std::cout));
       buf += wlen;
       len -= wlen;
       size += wlen;

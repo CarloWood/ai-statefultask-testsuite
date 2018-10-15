@@ -3,7 +3,9 @@
 #include "debug.h"
 #include "statefultask/AIThreadPool.h"
 #include "evio/EventLoopThread.h"
-#include "libcwd/buf2str.h"
+#ifdef CWDEBUG
+#include <libcwd/buf2str.h>
+#endif
 
 using namespace evio;
 
@@ -75,6 +77,6 @@ void TestInputDevice::read_from_fd(int fd)
 void TestOutputDevice::write_to_fd(int fd)
 {
   DoutEntering(dc::notice, "TestOutputDevice::write_to_fd(" << fd << ")");
-  write(fd, "Hello World\n", 12);
+  [[maybe_unused]] int unused = write(fd, "Hello World\n", 12);
   stop_output_device();
 }

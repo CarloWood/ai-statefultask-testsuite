@@ -6,7 +6,6 @@
 #include "evio/EventLoopThread.h"
 #include "evio/Device.h"
 #include "evio/inet_support.h"
-#include "libcwd/buf2str.h"
 
 #include <sstream>
 #include <cstring>	// Needed for memset.
@@ -17,6 +16,10 @@
 #include <sys/types.h>  // Needed for socket, send etc.
 #include <sys/socket.h> // Needed for socket, send etc.
 #include <netinet/in.h> // Needed for htons.
+
+#ifdef CWDEBUG
+#include <libcwd/buf2str.h>
+#endif
 
 int connect_to_server(char const* remote_host, int remote_port);
 
@@ -152,7 +155,7 @@ void Socket::write_to_fd(int fd)
     std::stringstream ss;
     ss << "GET / HTTP/1.1\r\nHost: localhost:9001\r\nAccept: */*\r\nX-Request: " << m_request << "\r\nX-Sleep: " << (200 * m_request) << "\r\n\r\n";
     ++m_request;
-    write(fd, ss.str().data(), ss.str().length());
+    [[maybe_unused]] int unused = write(fd, ss.str().data(), ss.str().length());
     Dout(dc::notice, "Wrote \"" << libcwd::buf2str(ss.str().data(), ss.str().length()) << "\".");
   }
   else

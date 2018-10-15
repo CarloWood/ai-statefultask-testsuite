@@ -1,5 +1,5 @@
-#ifdef CWDEBUG
 #include "sys.h"
+#ifdef CWDEBUG
 #include "debug.h"
 #else
 #define Debug(x) do { } while(0)

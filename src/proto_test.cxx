@@ -40,7 +40,7 @@ int main()
   stopwatch.start();
   for (int proto_nr = 0; proto_nr < 256; ++proto_nr)
   {
-    char const* str = Resolver::instance().protocol_str(proto_nr);
+    [[maybe_unused]] char const* str = Resolver::instance().protocol_str(proto_nr);
     // Everything is cached.
     ASSERT(str == strings[proto_nr]);
   }
