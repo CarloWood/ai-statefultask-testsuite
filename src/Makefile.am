@@ -108,7 +108,7 @@ evio_address_LDADD = ../cwds/libcwds_r.la -lboost_system ../evio/libevio.la
 
 AILookupTask_test_SOURCES = AILookupTask_test.cxx
 AILookupTask_test_CXXFLAGS = @LIBCWD_R_FLAGS@
-AILookupTask_test_LDADD = ../resolver-task/libresolvertask.la ../farmhash/src/libfarmhash.la ../evio/libevio.la ../evio/libev-4.24/libev.la ../statefultask/libstatefultask.la ../threadsafe/libthreadsafe.la ../utils/libutils_r.la ../cwds/libcwds_r.la
+AILookupTask_test_LDADD = ../events/libevents.la ../resolver-task/libresolvertask.la ../farmhash/src/libfarmhash.la ../evio/libevio.la ../evio/libev-4.24/libev.la ../statefultask/libstatefultask.la ../threadsafe/libthreadsafe.la ../utils/libutils_r.la ../cwds/libcwds_r.la
 
 AIResolver_test_SOURCES = AIResolver_test.cxx
 AIResolver_test_CXXFLAGS = @LIBCWD_R_FLAGS@

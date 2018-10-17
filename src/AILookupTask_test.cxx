@@ -4,9 +4,10 @@
 #include "statefultask/AIEngine.h"
 #include "statefultask/AIThreadPool.h"
 #include <thread>
+#include <atomic>
 
 int constexpr queue_capacity = 32;
-bool test_finished = false;
+std::atomic_bool test_finished = false;
 
 boost::intrusive_ptr<AILookupTask> lookup_task;
 
@@ -47,6 +48,8 @@ int main()
     engine.mainloop();
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
+
+  EventLoopThread::instance().terminate();
 
   Dout(dc::notice, "Leaving main()...");
 }
