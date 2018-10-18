@@ -84,7 +84,7 @@ int connect_to_server(char const* remote_host, int remote_port)
 
   // Create socket to remote host.
   int fd_remote;
-  if ((fd_remote = socket(AF_INET, SOCK_STREAM, 0)) == -1)
+  if ((fd_remote = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, 0)) == -1)
   {
     perror("socket");
     exit(-1);
@@ -102,8 +102,6 @@ int connect_to_server(char const* remote_host, int remote_port)
     perror("setsockopt");
     exit(-1);
   }
-
-  evio::set_nonblocking(fd_remote);
 
   // Connect the socket.
   if (connect(fd_remote, (struct sockaddr *)&remote_addr, sizeof(remote_addr)) < 0)

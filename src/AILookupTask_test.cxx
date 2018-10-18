@@ -17,6 +17,8 @@ void callback(bool success)
   {
     std::cout << "Call back is called.\n";
     std::cout << lookup_task->get_result() << std::endl;
+    lookup_task->getaddrinfo("undernet.org", 6667);
+    lookup_task->run();
   }
   else
   {

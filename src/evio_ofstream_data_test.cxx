@@ -13,7 +13,6 @@
 #include "debug.h"
 #include "evio/EventLoopThread.h"
 #include "evio/PersistentInputFile.h"
-#include <fstream>
 
 using namespace evio;
 
