@@ -7,7 +7,7 @@
 #include <atomic>
 
 int constexpr queue_capacity = 32;
-std::atomic_bool test_finished = false;
+std::atomic_int test_finished = 0;
 
 boost::intrusive_ptr<AILookupTask> lookup_task;
 
@@ -16,15 +16,21 @@ void callback(bool success)
   if (success)
   {
     std::cout << "Call back is called.\n";
-    std::cout << lookup_task->get_result() << std::endl;
-    lookup_task->getaddrinfo("undernet.org", 6667);
-    lookup_task->run();
+    if (lookup_task->success())
+      std::cout << lookup_task->get_result() << std::endl;
+    else
+      std::cout << "There was an error: " << lookup_task->get_error() << std::endl;
+    if (!test_finished)
+    {
+      lookup_task->getaddrinfo("irc.undernet.org", 6667);
+      lookup_task->run();
+    }
   }
   else
   {
     Dout(dc::notice, "The lookup_task was aborted!");
   }
-  test_finished = true;
+  ++test_finished;
 }
 
 int main()
@@ -41,11 +47,11 @@ int main()
   lookup_task = new AILookupTask(DEBUG_ONLY(true));
 
   lookup_task->getaddrinfo("www.google.com", "www");
-  lookup_task->run(&callback);
+  lookup_task->run(&engine, &callback);
 
   // Mainloop.
   Dout(dc::notice, "Starting main loop...");
-  while (!test_finished)
+  while (test_finished < 2)
   {
     engine.mainloop();
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
