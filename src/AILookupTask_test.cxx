@@ -3,6 +3,8 @@
 #include "resolver-task/AILookupTask.h"
 #include "statefultask/AIEngine.h"
 #include "statefultask/AIThreadPool.h"
+#include "utils/AIAlert.h"
+#include "utils/debug_ostream_operators.h"
 #include <thread>
 #include <atomic>
 
@@ -41,20 +43,28 @@ int main()
   AIThreadPool thread_pool;
   AIQueueHandle handler __attribute__ ((unused)) = thread_pool.new_queue(queue_capacity);
   EventLoopThread::instance().init(handler);
-  resolver::Resolver::instance().init(false);
 
-  AIEngine engine("main engine", 2.0);
-  lookup_task = new AILookupTask(DEBUG_ONLY(true));
-
-  lookup_task->getaddrinfo("www.google.com", "www");
-  lookup_task->run(&engine, &callback);
-
-  // Mainloop.
-  Dout(dc::notice, "Starting main loop...");
-  while (test_finished < 2)
+  try
   {
-    engine.mainloop();
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    resolver::Resolver::instance().init(false);
+
+    AIEngine engine("main engine", 2.0);
+    lookup_task = new AILookupTask(DEBUG_ONLY(true));
+
+    lookup_task->getaddrinfo("www.google.com", "www");
+    lookup_task->run(&engine, &callback);
+
+    // Mainloop.
+    Dout(dc::notice, "Starting main loop...");
+    while (test_finished < 2)
+    {
+      engine.mainloop();
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+  }
+  catch (AIAlert::Error const& error)
+  {
+    Dout(dc::warning, error);
   }
 
   EventLoopThread::instance().terminate();
