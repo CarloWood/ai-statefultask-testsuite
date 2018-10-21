@@ -32,8 +32,8 @@ int main()
   Debug(NAMESPACE_DEBUG::init());
 
   AIThreadPool thread_pool;
-  AIQueueHandle high_priority_handler = thread_pool.new_queue(32);
-  AIQueueHandle medium_priority_handler = thread_pool.new_queue(32);
+  [[maybe_unused]] AIQueueHandle high_priority_handler = thread_pool.new_queue(32);
+  [[maybe_unused]] AIQueueHandle medium_priority_handler = thread_pool.new_queue(32);
   AIQueueHandle low_priority_handler = thread_pool.new_queue(16);
 
   // Create the IO event loop thread.
