@@ -3,7 +3,8 @@ AM_CPPFLAGS = -iquote $(top_srcdir) -iquote $(top_srcdir)/cwds
 bin_PROGRAMS = helloworld fibonacci fiboquick filelock runthread function objectqueue threadpool cv_wait \
 	       timer_test timer_thread signal_test benchmark mutex_benchmark test_frequency_counter AITimer_test \
 	       evio_test evio_buffer_test evio_threads evio_filedescriptor evio_socket evio_socket2 evio_ofstream_data_test \
-	       evio_listen_socket evio_address AILookupTask_test AIResolver_test hash_test serv_test proto_test
+	       evio_listen_socket evio_address AILookupTask_test AIResolver_test hash_test serv_test proto_test \
+	       arpa
 
 helloworld_SOURCES = helloworld.cxx
 helloworld_CXXFLAGS = @LIBCWD_R_FLAGS@
@@ -125,6 +126,10 @@ serv_test_LDADD = ../resolver-task/libresolvertask.la ../farmhash/src/libfarmhas
 proto_test_SOURCES = proto_test.cxx
 proto_test_CXXFLAGS = -O2 @LIBCWD_R_FLAGS@
 proto_test_LDADD = ../resolver-task/libresolvertask.la ../farmhash/src/libfarmhash.la ../evio/libevio.la ../evio/libev-4.24/libev.la ../threadsafe/libthreadsafe.la ../cwds/libcwds_r.la
+
+arpa_SOURCES = arpa.cxx
+arpa_CXXFLAGS = @LIBCWD_R_FLAGS@
+arpa_LDADD = ../evio/libevio.la ../cwds/libcwds_r.la
 
 # --------------- Maintainer's Section
 
