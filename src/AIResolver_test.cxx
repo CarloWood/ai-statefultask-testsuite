@@ -1,7 +1,7 @@
 #include "sys.h"
 #include "debug.h"
 #include "statefultask/AIThreadPool.h"
-#include "resolver-task/Lookup.h"
+#include "resolver-task/AddrInfoLookup.h"
 
 int constexpr queue_capacity = 32;
 using namespace resolver;

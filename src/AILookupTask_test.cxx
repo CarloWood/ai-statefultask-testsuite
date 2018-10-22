@@ -1,6 +1,6 @@
 #include "sys.h"
 #include "debug.h"
-#include "resolver-task/AILookupTask.h"
+#include "resolver-task/GetAddrInfo.h"
 #include "statefultask/AIEngine.h"
 #include "statefultask/AIThreadPool.h"
 #include "utils/AIAlert.h"
@@ -11,26 +11,26 @@
 int constexpr queue_capacity = 32;
 std::atomic_int test_finished = 0;
 
-boost::intrusive_ptr<AILookupTask> lookup_task;
+boost::intrusive_ptr<task::GetAddrInfo> getaddrinfo_task;
 
 void callback(bool success)
 {
   if (success)
   {
     std::cout << "Call back is called.\n";
-    if (lookup_task->success())
-      std::cout << lookup_task->get_result() << std::endl;
+    if (getaddrinfo_task->success())
+      std::cout << getaddrinfo_task->get_result() << std::endl;
     else
-      std::cout << "There was an error: " << lookup_task->get_error() << std::endl;
+      std::cout << "There was an error: " << getaddrinfo_task->get_error() << std::endl;
     if (!test_finished)
     {
-      lookup_task->getaddrinfo("irc.undernet.org", 6667);
-      lookup_task->run();
+      getaddrinfo_task->init("irc.undernet.org", 6667);
+      getaddrinfo_task->run();
     }
   }
   else
   {
-    Dout(dc::notice, "The lookup_task was aborted!");
+    Dout(dc::notice, "The getaddrinfo_task was aborted!");
   }
   ++test_finished;
 }
@@ -49,10 +49,10 @@ int main()
     resolver::Resolver::instance().init(false);
 
     AIEngine engine("main engine", 2.0);
-    lookup_task = new AILookupTask(DEBUG_ONLY(true));
+    getaddrinfo_task = new task::GetAddrInfo(DEBUG_ONLY(true));
 
-    lookup_task->getaddrinfo("www.google.com", "www");
-    lookup_task->run(&engine, &callback);
+    getaddrinfo_task->init("www.google.com", "www");
+    getaddrinfo_task->run(&engine, &callback);
 
     // Mainloop.
     Dout(dc::notice, "Starting main loop...");
