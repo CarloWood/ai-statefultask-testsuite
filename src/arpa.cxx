@@ -4,7 +4,7 @@
 
 int main(int, char* argv[])
 {
-  Debug(debug::init());
+  Debug(NAMESPACE_DEBUG::init());
 
   evio::SocketAddress sa(argv[1]);
 

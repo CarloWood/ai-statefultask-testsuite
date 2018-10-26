@@ -4,7 +4,7 @@ bin_PROGRAMS = helloworld fibonacci fiboquick filelock runthread function object
 	       timer_test timer_thread signal_test benchmark mutex_benchmark test_frequency_counter AITimer_test \
 	       evio_test evio_buffer_test evio_threads evio_filedescriptor evio_socket evio_socket2 evio_ofstream_data_test \
 	       evio_listen_socket evio_address AILookupTask_test AIResolver_test hash_test serv_test proto_test \
-	       arpa
+	       arpa resolver_getnameinfo
 
 helloworld_SOURCES = helloworld.cxx
 helloworld_CXXFLAGS = @LIBCWD_R_FLAGS@
@@ -130,6 +130,10 @@ proto_test_LDADD = ../resolver-task/libresolvertask.la ../farmhash/src/libfarmha
 arpa_SOURCES = arpa.cxx
 arpa_CXXFLAGS = @LIBCWD_R_FLAGS@
 arpa_LDADD = ../evio/libevio.la ../cwds/libcwds_r.la
+
+resolver_getnameinfo_SOURCES = resolver_getnameinfo.cxx
+resolver_getnameinfo_CXXFLAGS = @LIBCWD_R_FLAGS@
+resolver_getnameinfo_LDADD = ../resolver-task/libresolvertask.la ../events/libevents.la ../farmhash/src/libfarmhash.la ../evio/libevio.la ../evio/libev-4.24/libev.la ../threadsafe/libthreadsafe.la ../cwds/libcwds_r.la
 
 # --------------- Maintainer's Section
 

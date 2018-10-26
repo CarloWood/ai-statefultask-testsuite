@@ -41,7 +41,7 @@ int main()
   //Debug(if (!dc::statefultask.is_on()) dc::statefultask.on());
 
   AIThreadPool thread_pool;
-  AIQueueHandle handler __attribute__ ((unused)) = thread_pool.new_queue(queue_capacity);
+  AIQueueHandle handler = thread_pool.new_queue(queue_capacity);
   EventLoopThread::instance().init(handler);
 
   try
@@ -67,6 +67,8 @@ int main()
     Dout(dc::warning, error);
   }
 
+  // Terminate application.
+  resolver::Resolver::instance().close();
   EventLoopThread::instance().terminate();
 
   Dout(dc::notice, "Leaving main()...");
