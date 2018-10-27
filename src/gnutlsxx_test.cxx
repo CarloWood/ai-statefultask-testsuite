@@ -34,6 +34,7 @@ struct error_codes
 {
   int mCode;
 
+  error_codes() DEBUG_ONLY(: mCode(GNUTLS_E_APPLICATION_ERROR_MIN)) { }
   error_codes(int code) : mCode(code) { }
   operator int() const { return mCode; }
 };
@@ -73,6 +74,16 @@ int tcp_connect()
 class Credentials : public gnutls::certificate_credentials
 {
  public:
+  int set_x509_system_trust()
+  {
+    DoutEntering(dc::notice, "Credentials::set_x509_system_trust()");
+    int ret = gnutls_certificate_set_x509_system_trust(cred);
+    if (ret < 0)
+      THROW_ALERTC(static_cast<gnutls::error_codes>(-ret), "gnutls_certificate_set_x509_system_trust");
+    Dout(dc::notice, "Number of credentials processed: " << ret);
+    return ret;
+  }
+
   void set_x509_trust_dir(char const* ca_dir, gnutls_x509_crt_fmt_t type)
   {
     gnutls::error_codes ret = gnutls_certificate_set_x509_trust_dir(cred, ca_dir, type);
@@ -164,6 +175,7 @@ int main()
 
     // Sets the trusted cas dir.
 //    credentials.set_x509_trust_dir(CADIR, GNUTLS_X509_FMT_PEM);
+    credentials.set_x509_system_trust();
 
     // Put the x509 credentials to the current session.
     Dout(dc::notice, "Calling session.set_credentials");
@@ -178,13 +190,14 @@ int main()
     session.set_transport_ptr((gnutls_transport_ptr_t) (ptrdiff_t)sd);
 
     // Perform the TLS handshake.
-    gnutls::error_codes ret = GNUTLS_E_AGAIN;
-    while (ret == GNUTLS_E_AGAIN)
+    gnutls::error_codes ret;
+    do
     {
       ret = session.handshake();
       if (ret == GNUTLS_E_AGAIN)
         Dout(dc::warning, "Received EGAIN.");
     }
+    while (ret == GNUTLS_E_AGAIN);
     if (ret < 0)
       THROW_ALERTC(-ret, "ClientSession::handshake");
 
