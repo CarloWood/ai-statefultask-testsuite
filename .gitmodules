@@ -41,3 +41,7 @@
 	path = events
 	url = https://github.com/CarloWood/events.git
 	branch = master
+[submodule "socket-task"]
+	path = socket-task
+	url = https://github.com/CarloWood/socket-task.git
+	branch = master

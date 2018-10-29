@@ -46,7 +46,7 @@ int main()
 
   try
   {
-    resolver::Resolver::instance().init(false);
+    resolver::Resolver::instance().init(handler, false);
 
     AIEngine engine("main engine", 2.0);
     getaddrinfo_task = new task::GetAddrInfo(DEBUG_ONLY(true));

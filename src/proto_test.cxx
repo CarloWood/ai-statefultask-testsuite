@@ -21,7 +21,7 @@ int main()
   // Initialize the IO event loop thread.
   EventLoopThread::instance().init(handler);
   // Initialize the async hostname resolver.
-  Resolver::instance().init(false);
+  Resolver::instance().init(handler, false);
 
   Debug(dc::warning.off());
 

@@ -19,7 +19,7 @@ int main()
   // Initialize the IO event loop thread.
   EventLoopThread::instance().init(handler);
   // Initialize the async hostname resolver.
-  Resolver::instance().init(true);
+  Resolver::instance().init(handler, true);
 
   auto handle2 = Resolver::instance().getaddrinfo("irc.undernet.org", 6668, AddressInfoHints(AI_CANONNAME));
   auto handle3 = Resolver::instance().getaddrinfo("www.google.com", "www", AddressInfoHints(AI_CANONNAME));

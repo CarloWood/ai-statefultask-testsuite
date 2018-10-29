@@ -56,7 +56,7 @@ int main(int argc, char* argv[])
 
   try
   {
-    Resolver::instance().init(false);
+    Resolver::instance().init(handler, false);
 
     evio::SocketAddress socket_address(argv[1]);
     std::cout << "socket_address = " << socket_address << std::endl;
