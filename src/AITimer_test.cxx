@@ -2,13 +2,13 @@
 #include "debug.h"
 #include "statefultask/AITimer.h"
 #include "statefultask/AIEngine.h"
-#include "statefultask/AIThreadPool.h"
+#include "threadpool/AIThreadPool.h"
 #include <thread>
 
 int constexpr queue_capacity = 32;
 bool test_finished = false;
 
-template<statefultask::Timer::time_point::rep count, typename Unit> using Interval = statefultask::Interval<count, Unit>;
+template<threadpool::Timer::time_point::rep count, typename Unit> using Interval = threadpool::Interval<count, Unit>;
 
 std::chrono::time_point<std::chrono::system_clock> start_time;
 

@@ -2,17 +2,16 @@ AM_CPPFLAGS = -iquote $(top_srcdir) -iquote $(top_srcdir)/cwds
 
 bin_PROGRAMS = helloworld fibonacci fiboquick filelock runthread function objectqueue threadpool cv_wait \
 	       timer_test timer_thread signal_test benchmark mutex_benchmark test_frequency_counter AITimer_test \
-	       evio_test evio_buffer_test evio_threads evio_filedescriptor evio_socket evio_socket2 evio_ofstream_data_test \
-	       evio_listen_socket evio_address AILookupTask_test AIResolver_test hash_test serv_test proto_test \
-	       arpa resolver_getnameinfo gnutlsxx_test socket_task_test
+	       AILookupTask_test AIResolver_test hash_test serv_test proto_test \
+	       resolver_getnameinfo gnutlsxx_test socket_task_test
 
 helloworld_SOURCES = helloworld.cxx
 helloworld_CXXFLAGS = @LIBCWD_R_FLAGS@
-helloworld_LDADD = ../statefultask/libstatefultask.la ../threadsafe/libthreadsafe.la ../utils/libutils_r.la ../cwds/libcwds_r.la
+helloworld_LDADD = ../statefultask/libstatefultask.la ../threadpool/libthreadpool.la ../threadsafe/libthreadsafe.la ../utils/libutils_r.la ../cwds/libcwds_r.la
 
 fibonacci_SOURCES = fibonacci.cxx
 fibonacci_CXXFLAGS = @LIBCWD_R_FLAGS@
-fibonacci_LDADD = ../statefultask/libstatefultask.la ../threadsafe/libthreadsafe.la ../utils/libutils_r.la ../cwds/libcwds_r.la
+fibonacci_LDADD = ../statefultask/libstatefultask.la ../threadpool/libthreadpool.la ../threadsafe/libthreadsafe.la ../utils/libutils_r.la ../cwds/libcwds_r.la
 
 fiboquick_SOURCES = fiboquick.cxx
 fiboquick_CXXFLAGS =
@@ -24,7 +23,7 @@ filelock_LDADD = ../cwds/libcwds_r.la
 
 runthread_SOURCES = runthread.cxx
 runthread_CXXFLAGS = @LIBCWD_R_FLAGS@
-runthread_LDADD = ../statefultask/libstatefultask.la ../threadsafe/libthreadsafe.la ../utils/libutils_r.la ../cwds/libcwds_r.la
+runthread_LDADD = ../statefultask/libstatefultask.la ../threadpool/libthreadpool.la ../threadsafe/libthreadsafe.la ../utils/libutils_r.la ../cwds/libcwds_r.la
 
 function_SOURCES = function.cxx
 function_CXXFLAGS = @LIBCWD_R_FLAGS@
@@ -36,7 +35,7 @@ objectqueue_LDADD = ../cwds/libcwds_r.la
 
 threadpool_SOURCES = threadpool.cxx
 threadpool_CXXFLAGS = @LIBCWD_R_FLAGS@
-threadpool_LDADD = ../statefultask/libstatefultask.la ../threadsafe/libthreadsafe.la ../utils/libutils_r.la ../cwds/libcwds_r.la
+threadpool_LDADD = ../statefultask/libstatefultask.la ../threadpool/libthreadpool.la ../threadsafe/libthreadsafe.la ../utils/libutils_r.la ../cwds/libcwds_r.la
 
 cv_wait_SOURCES = cv_wait.cxx
 cv_wait_CXXFLAGS = -O3
@@ -44,12 +43,12 @@ cv_wait_LDFLAGS = -pthread
 
 timer_test_SOURCES = timer_test.cxx
 timer_test_CXXFLAGS = @LIBCWD_R_FLAGS@
-timer_test_LDADD = ../statefultask/libstatefultask.la ../threadsafe/libthreadsafe.la ../utils/libutils_r.la ../cwds/libcwds_r.la
+timer_test_LDADD = ../statefultask/libstatefultask.la ../threadpool/libthreadpool.la ../threadsafe/libthreadsafe.la ../utils/libutils_r.la ../cwds/libcwds_r.la
 timer_test_LDFLAGS = -pthread
 
 timer_thread_SOURCES = timer_thread.cxx
 timer_thread_CXXFLAGS = @LIBCWD_R_FLAGS@
-timer_thread_LDADD = ../statefultask/libstatefultask.la ../threadsafe/libthreadsafe.la ../utils/libutils_r.la ../cwds/libcwds_r.la
+timer_thread_LDADD = ../statefultask/libstatefultask.la ../threadpool/libthreadpool.la ../threadsafe/libthreadsafe.la ../utils/libutils_r.la ../cwds/libcwds_r.la
 
 signal_test_SOURCES = signal_test.cxx
 signal_test_CXXFLAGS = -O3 @LIBCWD_R_FLAGS@
@@ -69,51 +68,15 @@ test_frequency_counter_LDADD = ../cwds/libcwds_r.la -lboost_iostreams -lboost_sy
 
 AITimer_test_SOURCES = AITimer_test.cxx
 AITimer_test_CXXFLAGS = @LIBCWD_R_FLAGS@
-AITimer_test_LDADD = ../statefultask/libstatefultask.la ../threadsafe/libthreadsafe.la ../utils/libutils_r.la ../cwds/libcwds_r.la
-
-evio_test_SOURCES = evio_test.cxx
-evio_test_CXXFLAGS =
-evio_test_LDADD = ../evio/libev-4.24/libev.la
-
-evio_threads_SOURCES = evio_threads.cxx
-evio_threads_CXXFLAGS = @LIBCWD_R_FLAGS@
-evio_threads_LDADD = ../evio/libevio.la ../statefultask/libstatefultask.la ../threadsafe/libthreadsafe.la ../utils/libutils_r.la ../evio/libev-4.24/libev.la ../cwds/libcwds_r.la
-
-evio_filedescriptor_SOURCES = evio_filedescriptor.cxx
-evio_filedescriptor_CXXFLAGS = @LIBCWD_R_FLAGS@
-evio_filedescriptor_LDADD = ../evio/libevio.la ../statefultask/libstatefultask.la ../threadsafe/libthreadsafe.la ../utils/libutils_r.la ../evio/libev-4.24/libev.la ../cwds/libcwds_r.la
-
-evio_socket_SOURCES = evio_socket.cxx
-evio_socket_CXXFLAGS = @LIBCWD_R_FLAGS@
-evio_socket_LDADD = ../evio/libevio.la ../statefultask/libstatefultask.la ../threadsafe/libthreadsafe.la ../utils/libutils_r.la ../evio/libev-4.24/libev.la ../cwds/libcwds_r.la
-
-evio_socket2_SOURCES = evio_socket2.cxx
-evio_socket2_CXXFLAGS = @LIBCWD_R_FLAGS@
-evio_socket2_LDADD = ../evio/libevio.la ../statefultask/libstatefultask.la ../threadsafe/libthreadsafe.la ../utils/libutils_r.la ../evio/libev-4.24/libev.la ../cwds/libcwds_r.la
-
-evio_ofstream_data_test_SOURCES = evio_ofstream_data_test.cxx
-evio_ofstream_data_test_CXXFLAGS = @LIBCWD_R_FLAGS@
-evio_ofstream_data_test_LDADD = ../evio/libevio.la ../statefultask/libstatefultask.la ../threadsafe/libthreadsafe.la ../utils/libutils_r.la ../evio/libev-4.24/libev.la ../cwds/libcwds_r.la
-
-evio_buffer_test_SOURCES = evio_buffer_test.cxx
-evio_buffer_test_CXXFLAGS = @LIBCWD_R_FLAGS@
-evio_buffer_test_LDADD = ../evio/libevio.la ../statefultask/libstatefultask.la ../threadsafe/libthreadsafe.la ../utils/libutils_r.la ../evio/libev-4.24/libev.la ../cwds/libcwds_r.la
-
-evio_listen_socket_SOURCES = evio_listen_socket.cxx
-evio_listen_socket_CXXFLAGS = @LIBCWD_R_FLAGS@
-evio_listen_socket_LDADD = ../evio/libevio.la ../statefultask/libstatefultask.la ../threadsafe/libthreadsafe.la ../utils/libutils_r.la ../evio/libev-4.24/libev.la ../cwds/libcwds_r.la
-
-evio_address_SOURCES = evio_address.cxx
-evio_address_CXXFLAGS = @LIBCWD_R_FLAGS@
-evio_address_LDADD = ../cwds/libcwds_r.la -lboost_system ../evio/libevio.la
+AITimer_test_LDADD = ../statefultask/libstatefultask.la ../threadpool/libthreadpool.la ../threadsafe/libthreadsafe.la ../utils/libutils_r.la ../cwds/libcwds_r.la
 
 AILookupTask_test_SOURCES = AILookupTask_test.cxx
 AILookupTask_test_CXXFLAGS = @LIBCWD_R_FLAGS@
-AILookupTask_test_LDADD = ../events/libevents.la ../resolver-task/libresolvertask.la ../farmhash/src/libfarmhash.la ../evio/libevio.la ../evio/libev-4.24/libev.la ../statefultask/libstatefultask.la ../threadsafe/libthreadsafe.la ../utils/libutils_r.la ../cwds/libcwds_r.la
+AILookupTask_test_LDADD = ../events/libevents.la ../resolver-task/libresolvertask.la ../farmhash/src/libfarmhash.la ../evio/libevio.la ../evio/libev-4.24/libev.la ../statefultask/libstatefultask.la ../threadpool/libthreadpool.la ../threadsafe/libthreadsafe.la ../utils/libutils_r.la ../cwds/libcwds_r.la
 
 AIResolver_test_SOURCES = AIResolver_test.cxx
 AIResolver_test_CXXFLAGS = @LIBCWD_R_FLAGS@
-AIResolver_test_LDADD = ../resolver-task/libresolvertask.la ../farmhash/src/libfarmhash.la ../resolver-task/dns/src/libdns.la ../evio/libevio.la ../statefultask/libstatefultask.la ../threadsafe/libthreadsafe.la ../utils/libutils_r.la ../evio/libev-4.24/libev.la ../cwds/libcwds_r.la
+AIResolver_test_LDADD = ../resolver-task/libresolvertask.la ../farmhash/src/libfarmhash.la ../resolver-task/dns/src/libdns.la ../evio/libevio.la ../statefultask/libstatefultask.la ../threadpool/libthreadpool.la ../threadsafe/libthreadsafe.la ../utils/libutils_r.la ../evio/libev-4.24/libev.la ../cwds/libcwds_r.la
 
 hash_test_SOURCES = hash_test.cxx
 hash_test_CXXFLAGS = -O2 @LIBCWD_R_FLAGS@
@@ -126,10 +89,6 @@ serv_test_LDADD = ../resolver-task/libresolvertask.la ../farmhash/src/libfarmhas
 proto_test_SOURCES = proto_test.cxx
 proto_test_CXXFLAGS = -O2 @LIBCWD_R_FLAGS@
 proto_test_LDADD = ../resolver-task/libresolvertask.la ../farmhash/src/libfarmhash.la ../evio/libevio.la ../evio/libev-4.24/libev.la ../threadsafe/libthreadsafe.la ../cwds/libcwds_r.la
-
-arpa_SOURCES = arpa.cxx
-arpa_CXXFLAGS = @LIBCWD_R_FLAGS@
-arpa_LDADD = ../evio/libevio.la ../cwds/libcwds_r.la
 
 resolver_getnameinfo_SOURCES = resolver_getnameinfo.cxx
 resolver_getnameinfo_CXXFLAGS = @LIBCWD_R_FLAGS@

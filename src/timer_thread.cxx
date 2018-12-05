@@ -1,6 +1,6 @@
 #include "sys.h"
-#include "statefultask/AIThreadPool.h"
-#include "statefultask/Timer.h"
+#include "threadpool/AIThreadPool.h"
+#include "threadpool/Timer.h"
 #include "debug.h"
 
 int const queue_size = 32;
@@ -87,21 +87,21 @@ int main()
     std::bind(&Callback::callback, &callbacks[9]),
   };
 
-  std::array<statefultask::Timer, 10> timers = {
+  std::array<threadpool::Timer, 10> timers = {
     pf[0], pf[1], pf[2], pf[3], pf[4], pf[5], pf[6], pf[7], pf[8], pf[9]
   };
 
-  timers[0].start(statefultask::Interval<1, std::chrono::microseconds>());
+  timers[0].start(threadpool::Interval<1, std::chrono::microseconds>());
 #if !SIMPLE
-  timers[1].start(statefultask::Interval<2, std::chrono::microseconds>());
-  timers[2].start(statefultask::Interval<3, std::chrono::microseconds>());
-  timers[3].start(statefultask::Interval<4, std::chrono::microseconds>());
-  timers[4].start(statefultask::Interval<5, std::chrono::microseconds>());
-  timers[5].start(statefultask::Interval<6, std::chrono::microseconds>());
-  timers[6].start(statefultask::Interval<7, std::chrono::microseconds>());
-  timers[7].start(statefultask::Interval<8, std::chrono::microseconds>());
-  timers[8].start(statefultask::Interval<9, std::chrono::microseconds>());
-  timers[9].start(statefultask::Interval<10, std::chrono::microseconds>());
+  timers[1].start(threadpool::Interval<2, std::chrono::microseconds>());
+  timers[2].start(threadpool::Interval<3, std::chrono::microseconds>());
+  timers[3].start(threadpool::Interval<4, std::chrono::microseconds>());
+  timers[4].start(threadpool::Interval<5, std::chrono::microseconds>());
+  timers[5].start(threadpool::Interval<6, std::chrono::microseconds>());
+  timers[6].start(threadpool::Interval<7, std::chrono::microseconds>());
+  timers[7].start(threadpool::Interval<8, std::chrono::microseconds>());
+  timers[8].start(threadpool::Interval<9, std::chrono::microseconds>());
+  timers[9].start(threadpool::Interval<10, std::chrono::microseconds>());
 #endif
 
   std::this_thread::sleep_for(std::chrono::milliseconds(200));

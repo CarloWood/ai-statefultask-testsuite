@@ -14,7 +14,8 @@
 #include <queue>
 #include "utils/is_power_of_two.h"
 #include "utils/nearest_power_of_two.h"
-#include "statefultask/RunningTimers.h"
+#include "threadpool/AIThreadPool.h"
+#include "threadpool/RunningTimers.h"
 #include "debug.h"
 
 #define TEST_ALL_THREE
@@ -23,7 +24,7 @@
 // 1: priority_queue
 // 2: My own design
 
-using Timer = statefultask::Timer;
+using Timer = threadpool::Timer;
 using time_point = Timer::time_point;
 using duration = time_point::duration;
 using ticks = time_point::rep;
@@ -45,7 +46,7 @@ struct Intervals
   static int constexpr number = max_interval_index + 1;
 };
 
-template<Timer::time_point::rep count, typename Unit> using Interval = statefultask::Interval<count, Unit>;
+template<Timer::time_point::rep count, typename Unit> using Interval = threadpool::Interval<count, Unit>;
 
 template<int implementation>
 struct TimerImpl;
@@ -107,7 +108,7 @@ template<>
 struct TimerHandleImpl<2> : public Timer::Handle
 {
   TimerHandleImpl() : Timer::Handle() { }
-  constexpr TimerHandleImpl(statefultask::TimerQueueIndex interval, uint64_t sequence) : Timer::Handle(interval, sequence) { }
+  constexpr TimerHandleImpl(threadpool::TimerQueueIndex interval, uint64_t sequence) : Timer::Handle(interval, sequence) { }
   TimerHandleImpl(Timer::Handle handle) : Timer::Handle(handle) { }
 };
 
@@ -228,7 +229,7 @@ int TimerImpl<1>::s_sequence_number = 0;
 //static
 int TimerImpl<2>::s_sequence_number = 0;
 
-void print(statefultask::TimerQueue const& queue)
+void print(threadpool::TimerQueue const& queue)
 {
   std::cout << "[offset:" << queue.debug_get_sequence_offset() << "] ";
   for (auto timer = queue.debug_begin(); timer != queue.debug_end(); ++timer)
@@ -382,7 +383,7 @@ class RunningTimersImpl<INTERVALS, 1>
 static Timer::time_point constexpr none{Timer::time_point::duration(std::numeric_limits<Timer::time_point::rep>::max())};
 
 template<class INTERVALS>
-class RunningTimersImpl<INTERVALS, 2> : public statefultask::RunningTimers
+class RunningTimersImpl<INTERVALS, 2> : public threadpool::RunningTimers
 {
  public:
   bool cancel(Timer::Handle const handle)
@@ -393,7 +394,7 @@ class RunningTimersImpl<INTERVALS, 2> : public statefultask::RunningTimers
     //print();
     //sanity_check();
 
-    bool res = statefultask::RunningTimers::cancel(handle);
+    bool res = threadpool::RunningTimers::cancel(handle);
 
     //std::cout << "After:\n";
     //print();
@@ -433,7 +434,7 @@ class RunningTimersImpl<INTERVALS, 2> : public statefultask::RunningTimers
     int dist = 128;
     int in = dist / 2;
     std::cout << std::setfill(' ');
-    for (int j = 1; j < statefultask::RunningTimers::tree_size; ++j)
+    for (int j = 1; j < threadpool::RunningTimers::tree_size; ++j)
     {
       uint8_t d = this->m_tree[j];
       std::cout << std::right << std::setw(in) << (int)d;
@@ -464,19 +465,19 @@ class RunningTimersImpl<INTERVALS, 2> : public statefultask::RunningTimers
   void expire_next()
   {
     //sanity_check();
-    statefultask::TimerQueueIndex const interval(this->m_tree[1]);              // The interval of the timer that will expire next.
+    threadpool::TimerQueueIndex const interval(this->m_tree[1]);              // The interval of the timer that will expire next.
     //std::cout << "  m_tree[1] = " << interval << '\n';
-    statefultask::RunningTimers::timer_queue_t::wat queue_w(this->m_queues[interval]);
+    threadpool::RunningTimers::timer_queue_t::wat queue_w(this->m_queues[interval]);
     // During this test there will always be more timers.
     assert(!queue_w->debug_empty());
     last_timer_2 = *queue_w->debug_begin();
 
     Timer::time_point now = queue_w->next_expiration_point();                   // Pretend it is already that time.
-    auto current_w = statefultask::RunningTimers::instance().access_current();
+    auto current_w = threadpool::RunningTimers::instance().access_current();
     while (true)
     {
       current_w->timer = nullptr;
-      Timer* timer = statefultask::RunningTimers::update_current_timer(current_w, now);
+      Timer* timer = threadpool::RunningTimers::update_current_timer(current_w, now);
       if (!timer)
         break;
       timer->expire();
@@ -503,25 +504,25 @@ void RunningTimersImpl<INTERVALS, 2>::sanity_check() const
   assert(this->m_queues.size() == INTERVALS::number - 2);       // 5000ms and 7000ms are duplicates of 5s and 7s.
 
   // Every cache entry needs to have either no_timer in it when the corresponding queue is empty, or the first entry of that queue.
-  for (int interval = 0; interval < statefultask::RunningTimers::tree_size; ++interval)
+  for (int interval = 0; interval < threadpool::RunningTimers::tree_size; ++interval)
   {
     if ((size_t)interval >= this->m_queues.size())
       assert(this->m_cache[interval] == none);
     else
     {
-      statefultask::TimerQueueIndex tqi{to_queues_index(interval)};
+      threadpool::TimerQueueIndex tqi{to_queues_index(interval)};
       timer_queue_t::crat queue_r(this->m_queues[tqi]);
       assert(queue_r->debug_empty() || *queue_r->debug_begin() != nullptr);
       assert(this->m_cache[interval] == queue_r->next_expiration_point());
     }
   }
-  for (int interval = 0; interval < statefultask::RunningTimers::tree_size; interval += 2)
+  for (int interval = 0; interval < threadpool::RunningTimers::tree_size; interval += 2)
   {
     int ti = this->interval_to_parent_index(interval);
     assert((this->m_tree[ti] & ~1) == interval);
     assert(this->m_cache[this->m_tree[ti] ^ 1] >= this->m_cache[this->m_tree[ti]]);
   }
-  for (int ti = statefultask::RunningTimers::tree_size - 1; ti > 1; --ti)
+  for (int ti = threadpool::RunningTimers::tree_size - 1; ti > 1; --ti)
   {
     int pi = this->parent_of(ti);
     int si = this->sibling_of(ti);
@@ -714,7 +715,7 @@ void generate()
       running_timers0.expire_next();
       running_timers1.expire_next();
 #endif
-      static_cast<RunningTimersImpl<Intervals, 2>&>(statefultask::RunningTimers::instance()).expire_next();
+      static_cast<RunningTimersImpl<Intervals, 2>&>(threadpool::RunningTimers::instance()).expire_next();
     }
   }
   // For the remainder we wish to keep the number of running timers at around 100,000.
@@ -758,14 +759,14 @@ void generate()
     running_timers0.expire_next();
     running_timers1.expire_next();
 #endif
-    static_cast<RunningTimersImpl<Intervals, 2>&>(statefultask::RunningTimers::instance()).expire_next();
+    static_cast<RunningTimersImpl<Intervals, 2>&>(threadpool::RunningTimers::instance()).expire_next();
     if (m < n * fraction)
     {
 #ifdef TEST_ALL_THREE
       running_timers0.expire_next();
       running_timers1.expire_next();
 #endif
-      static_cast<RunningTimersImpl<Intervals, 2>&>(statefultask::RunningTimers::instance()).expire_next();
+      static_cast<RunningTimersImpl<Intervals, 2>&>(threadpool::RunningTimers::instance()).expire_next();
       ++m;
     }
   }
@@ -781,8 +782,9 @@ void generate()
 int main()
 {
   Debug(NAMESPACE_DEBUG::init());
+  [[maybe_unused]] AIThreadPool thread_pool;
 
-  static_cast<RunningTimersImpl<Intervals, 2>&>(statefultask::RunningTimers::instance()).sanity_check();
+  static_cast<RunningTimersImpl<Intervals, 2>&>(threadpool::RunningTimers::instance()).sanity_check();
 
   std::thread generator(&generate);
 

@@ -2,7 +2,7 @@
 #include "debug.h"
 #include "resolver-task/GetAddrInfo.h"
 #include "statefultask/AIEngine.h"
-#include "statefultask/AIThreadPool.h"
+#include "threadpool/AIThreadPool.h"
 #include "utils/AIAlert.h"
 #include "utils/debug_ostream_operators.h"
 #include <thread>

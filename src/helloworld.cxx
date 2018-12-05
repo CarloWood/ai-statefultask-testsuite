@@ -1,7 +1,7 @@
 #include "sys.h"
 #include "debug.h"
 #include "statefultask/AIEngine.h"
-#include "statefultask/AIThreadPool.h"
+#include "threadpool/AIThreadPool.h"
 #include <iostream>
 #include <chrono>
 #include <atomic>

@@ -3,7 +3,7 @@
 #include "statefultask/AIStatefulTask.h"
 #include "statefultask/AIEngine.h"
 #include "statefultask/AIPackagedTask.h"
-#include "statefultask/AIThreadPool.h"
+#include "threadpool/AIThreadPool.h"
 
 // Suppose we need to run this from a task (and wait until it finished).
 static int factorial(int n)

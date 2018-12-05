@@ -45,3 +45,7 @@
 	path = socket-task
 	url = https://github.com/CarloWood/socket-task.git
 	branch = master
+[submodule "threadpool"]
+	path = threadpool
+	url = https://github.com/CarloWood/threadpool.git
+	branch = master

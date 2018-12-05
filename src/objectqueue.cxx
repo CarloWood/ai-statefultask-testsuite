@@ -3,7 +3,7 @@
 #ifdef CWDEBUG
 #include "tracked.h"
 #endif
-#include "statefultask/AIObjectQueue.h"
+#include "threadpool/AIObjectQueue.h"
 #include <mutex>
 #include <atomic>
 #include <functional>
