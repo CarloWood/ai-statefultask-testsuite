@@ -92,7 +92,7 @@ proto_test_LDADD = ../resolver-task/libresolvertask.la ../farmhash/src/libfarmha
 
 resolver_getnameinfo_SOURCES = resolver_getnameinfo.cxx
 resolver_getnameinfo_CXXFLAGS = @LIBCWD_R_FLAGS@
-resolver_getnameinfo_LDADD = ../resolver-task/libresolvertask.la ../events/libevents.la ../farmhash/src/libfarmhash.la ../evio/libevio.la ../evio/libev-4.24/libev.la ../threadsafe/libthreadsafe.la ../cwds/libcwds_r.la
+resolver_getnameinfo_LDADD = ../resolver-task/libresolvertask.la ../statefultask/libstatefultask.la ../threadpool/libthreadpool.la ../events/libevents.la ../farmhash/src/libfarmhash.la ../evio/libevio.la ../evio/libev-4.24/libev.la ../threadsafe/libthreadsafe.la ../cwds/libcwds_r.la
 
 gnutlsxx_test_SOURCES = gnutlsxx_test.cxx
 gnutlsxx_test_CXXFLAGS = @LIBCWD_R_FLAGS@
@@ -100,7 +100,7 @@ gnutlsxx_test_LDADD = ../utils/libutils_r.la ../cwds/libcwds_r.la -lgnutlsxx -lg
 
 socket_task_test_SOURCES = socket_task_test.cxx
 socket_task_test_CXXFLAGS = @LIBCWD_R_FLAGS@
-socket_task_test_LDADD = ../socket-task/libsockettask.la ../resolver-task/libresolvertask.la ../events/libevents.la ../farmhash/src/libfarmhash.la ../evio/libevio.la ../evio/libev-4.24/libev.la ../threadsafe/libthreadsafe.la ../cwds/libcwds_r.la
+socket_task_test_LDADD = ../socket-task/libsockettask.la ../resolver-task/libresolvertask.la ../statefultask/libstatefultask.la ../threadpool/libthreadpool.la ../events/libevents.la ../farmhash/src/libfarmhash.la ../evio/libevio.la ../evio/libev-4.24/libev.la ../threadsafe/libthreadsafe.la ../cwds/libcwds_r.la
 
 # --------------- Maintainer's Section
 
