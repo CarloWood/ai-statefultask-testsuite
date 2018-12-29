@@ -11,10 +11,10 @@
 class InputPrinter : public evio::InputDecoder
 {
  protected:
-   evio::RefCountReleaser decode(evio::MsgBlock msg) override;
+   evio::RefCountReleaser decode(evio::MsgBlock&& msg) override;
 };
 
-evio::RefCountReleaser InputPrinter::decode(evio::MsgBlock msg)
+evio::RefCountReleaser InputPrinter::decode(evio::MsgBlock&& msg)
 {
   evio::RefCountReleaser releaser;
   // Just print what was received.
@@ -29,9 +29,16 @@ class MySocket : public evio::Socket
 {
  private:
   InputPrinter m_input_printer;
+  evio::OutputStream m_output_stream;
 
  public:
-  MySocket() { input(m_input_printer); }
+  MySocket()
+  {
+    input(m_input_printer);
+    output(m_output_stream);
+  }
+
+  evio::OutputStream& output_stream() { return m_output_stream; }
 };
 
 int constexpr queue_capacity = 32;
@@ -51,8 +58,9 @@ int main()
     // Allow the main thread to wait until the test finished.
     aithreadsafe::Condition test_finished;
 
-    task::ConnectToEndPoint* task = new task::ConnectToEndPoint(DEBUG_ONLY(true));
-    task->set_socket(evio::create<MySocket>());
+    boost::intrusive_ptr<task::ConnectToEndPoint> task = new task::ConnectToEndPoint(DEBUG_ONLY(true));
+    auto socket = evio::create<MySocket>();
+    task->set_socket(socket);
     task->set_end_point(AIEndPoint("www.google.com", 80));
     task->run([task, &test_finished](bool success){
           if (!success)
@@ -63,6 +71,14 @@ int main()
           }
           test_finished.signal();
         });
+    // Must do a flush or else the buffer won't be written to to the socket at all; this flush
+    // does not block though, it only starts watching the fd for readability and then writes
+    // the buffer to the fd when possible.
+    // If the socket was closed in the meantime because it permanently failed to connect
+    // or connected but then the connection was terminated for whatever reason; then the
+    // flush will print a debug output (WARNING: The device is not writable!) and the contents
+    // of the buffer are discarded.
+    socket->output_stream() << "GET / HTTP/1.0\r\n\r\n"; // << std::flush;
 
     // Wait until the test is finished.
     std::lock_guard<AIMutex> lock(test_finished);
