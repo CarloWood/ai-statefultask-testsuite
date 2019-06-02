@@ -107,9 +107,7 @@ struct TimerHandleImpl<1>
 template<>
 struct TimerHandleImpl<2> : public Timer::Handle
 {
-  TimerHandleImpl() : Timer::Handle() { }
-  constexpr TimerHandleImpl(threadpool::TimerQueueIndex interval, uint64_t sequence) : Timer::Handle(interval, sequence) { }
-  TimerHandleImpl(Timer::Handle handle) : Timer::Handle(handle) { }
+  using Timer::Handle::Handle;
 };
 
 static Timer* last_timer_2;
@@ -782,8 +780,8 @@ void generate()
 int main()
 {
   Debug(NAMESPACE_DEBUG::init());
-  [[maybe_unused]] AIThreadPool thread_pool;
-  [[maybe_unused]] AIQueueHandle handler = thread_pool.new_queue(16);
+//  [[maybe_unused]] AIThreadPool thread_pool;
+//  [[maybe_unused]] AIQueueHandle handler = thread_pool.new_queue(16);
 
   static_cast<RunningTimersImpl<Intervals, 2>&>(threadpool::RunningTimers::instance()).sanity_check();
 
