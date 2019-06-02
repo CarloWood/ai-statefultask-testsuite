@@ -71,7 +71,7 @@ class Benchmark
     calibrate_now_offset(!(hide_graphs & hide_calibration_graph));
     calibrate_delta(!(hide_graphs & hide_delta_graphs));
     calibrate_cycles_per_ns();
-    m_stopwatch1->calibrate_overhead();
+    m_stopwatch1->calibrate_overhead(1000, 3);
   }
 
   Benchmark(unsigned int cpu_nr, double now_offset = 0.0, int delta = 0, double cycles_per_ns = 0.0, int stopwatch_overhead = 0, int hide_graphs = 0) :
@@ -97,7 +97,7 @@ class Benchmark
     }
     if (stopwatch_overhead == 0)
     {
-      m_stopwatch1->calibrate_overhead();
+      m_stopwatch1->calibrate_overhead(1000, 3);
       calibrated = true;
     }
     else
@@ -118,7 +118,7 @@ class Benchmark
   template<class T>
   Measurement measure(T const functor)
   {
-    return m_stopwatch1->measure(functor);
+    return m_stopwatch1->measure(1000, functor);
   }
 };
 

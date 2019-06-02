@@ -42,11 +42,11 @@ int main()
 
   AIThreadPool thread_pool;
   AIQueueHandle handler = thread_pool.new_queue(queue_capacity);
-  EventLoopThread::instance().init(handler);
 
   try
   {
     resolver::Resolver::instance().init(handler, false);
+    evio::EventLoop event_loop(handler);
 
     AIEngine engine("main engine", 2.0);
     getaddrinfo_task = new task::GetAddrInfo(DEBUG_ONLY(true));
@@ -61,6 +61,8 @@ int main()
       engine.mainloop();
       std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
+
+    event_loop.join();
   }
   catch (AIAlert::Error const& error)
   {
@@ -69,7 +71,6 @@ int main()
 
   // Terminate application.
   resolver::Resolver::instance().close();
-  EventLoopThread::instance().terminate();
 
   Dout(dc::notice, "Leaving main()...");
 }

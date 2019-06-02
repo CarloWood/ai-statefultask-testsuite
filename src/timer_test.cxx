@@ -783,6 +783,7 @@ int main()
 {
   Debug(NAMESPACE_DEBUG::init());
   [[maybe_unused]] AIThreadPool thread_pool;
+  [[maybe_unused]] AIQueueHandle handler = thread_pool.new_queue(16);
 
   static_cast<RunningTimersImpl<Intervals, 2>&>(threadpool::RunningTimers::instance()).sanity_check();
 

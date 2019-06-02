@@ -11,10 +11,10 @@
 class InputPrinter : public evio::InputDecoder
 {
  protected:
-   evio::RefCountReleaser decode(evio::MsgBlock&& msg) override;
+   evio::RefCountReleaser decode(evio::MsgBlock&& msg, evio::GetThread type) override;
 };
 
-evio::RefCountReleaser InputPrinter::decode(evio::MsgBlock&& msg)
+evio::RefCountReleaser InputPrinter::decode(evio::MsgBlock&& msg, evio::GetThread)
 {
   evio::RefCountReleaser releaser;
   // Just print what was received.
@@ -49,11 +49,11 @@ int main()
 
   AIThreadPool thread_pool;
   AIQueueHandle handler = thread_pool.new_queue(queue_capacity);
-  EventLoopThread::instance().init(handler);
 
   try
   {
     resolver::Resolver::instance().init(handler, false);
+    evio::EventLoop event_loop(handler);
 
     // Allow the main thread to wait until the test finished.
     aithreadsafe::Condition test_finished;
@@ -83,6 +83,7 @@ int main()
     // Wait until the test is finished.
     std::lock_guard<AIMutex> lock(test_finished);
     test_finished.wait();
+    event_loop.join();
   }
   catch (AIAlert::Error const& error)
   {
@@ -91,7 +92,6 @@ int main()
 
   // Terminate application.
   resolver::Resolver::instance().close();
-  EventLoopThread::instance().terminate();
 
   Dout(dc::notice, "Leaving main()...");
 }

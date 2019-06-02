@@ -12,14 +12,14 @@ int main()
 
   {
     benchmark::Stopwatch stopwatch(cpu);
-    stopwatch.calibrate_overhead();
+    stopwatch.calibrate_overhead(1000, 3);
   }
   benchmark::Stopwatch stopwatch(cpu);
 
   AIThreadPool thread_pool;
   AIQueueHandle handler = thread_pool.new_queue(32);
   // Initialize the IO event loop thread.
-  EventLoopThread::instance().init(handler);
+  evio::EventLoop event_loop(handler);
   // Initialize the async hostname resolver.
   Resolver::instance().init(handler, false);
 
@@ -57,5 +57,5 @@ int main()
 
   // Terminate application.
   Resolver::instance().close();
-  EventLoopThread::instance().terminate();
+  event_loop.join();
 }

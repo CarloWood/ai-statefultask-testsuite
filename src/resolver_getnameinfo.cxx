@@ -52,10 +52,10 @@ int main(int argc, char* argv[])
 
   AIThreadPool thread_pool;
   AIQueueHandle handler = thread_pool.new_queue(queue_capacity);
-  EventLoopThread::instance().init(handler);
 
   try
   {
+    evio::EventLoop event_loop(handler);
     Resolver::instance().init(handler, false);
 
     evio::SocketAddress socket_address(argv[1]);
@@ -73,6 +73,8 @@ int main(int argc, char* argv[])
       engine.mainloop();
       std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
+
+    event_loop.join();
   }
   catch (AIAlert::Error const& error)
   {
@@ -81,7 +83,6 @@ int main(int argc, char* argv[])
 
   // Terminate application.
   Resolver::instance().close();
-  EventLoopThread::instance().terminate();
 
   Dout(dc::notice, "Leaving main()...");
 }

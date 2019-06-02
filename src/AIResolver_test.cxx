@@ -17,7 +17,7 @@ int main()
   AIThreadPool thread_pool;
   AIQueueHandle handler = thread_pool.new_queue(queue_capacity);
   // Initialize the IO event loop thread.
-  EventLoopThread::instance().init(handler);
+  evio::EventLoop event_loop(handler);
   // Initialize the async hostname resolver.
   Resolver::instance().init(handler, true);
 
@@ -61,6 +61,6 @@ int main()
 
   // Terminate application.
   Resolver::instance().close();
-  EventLoopThread::instance().terminate();
+  event_loop.join();
   Dout(dc::notice, "Leaving main()...");
 }

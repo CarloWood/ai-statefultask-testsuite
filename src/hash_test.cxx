@@ -25,7 +25,7 @@ int main()
 
   {
     benchmark::Stopwatch stopwatch(cpu);
-    stopwatch.calibrate_overhead();
+    stopwatch.calibrate_overhead(1000, 3);
   }
 
   eda::FrequencyCounter<uint64_t, 8> fc;
