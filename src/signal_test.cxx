@@ -148,12 +148,12 @@ int main()
   std::memcpy(&blocked_signr, &blocked_signals, sizeof(sigset_t));
   sigaddset(&blocked_signr, signr);
 
-  std::thread thr1([](){ NAMESPACE_DEBUG::init_thread(); thrx_run(1); });
-  std::thread thr2([](){ NAMESPACE_DEBUG::init_thread(); thrx_run(2); });
-  std::thread thr3([](){ NAMESPACE_DEBUG::init_thread(); thrx_run(3); });
-  std::thread thr4([](){ NAMESPACE_DEBUG::init_thread(); thrx_run(4); });
-  std::thread thr5([](){ NAMESPACE_DEBUG::init_thread(); thrx_run(5); });
-  std::thread thr6([](){ NAMESPACE_DEBUG::init_thread(); thrx_run(6); });
+  std::thread thr1([](){ Debug(NAMESPACE_DEBUG::init_thread()); thrx_run(1); });
+  std::thread thr2([](){ Debug(NAMESPACE_DEBUG::init_thread()); thrx_run(2); });
+  std::thread thr3([](){ Debug(NAMESPACE_DEBUG::init_thread()); thrx_run(3); });
+  std::thread thr4([](){ Debug(NAMESPACE_DEBUG::init_thread()); thrx_run(4); });
+  std::thread thr5([](){ Debug(NAMESPACE_DEBUG::init_thread()); thrx_run(5); });
+  std::thread thr6([](){ Debug(NAMESPACE_DEBUG::init_thread()); thrx_run(6); });
 
   // Store the thread ids in an array.
   ids[0] = pthread_self();

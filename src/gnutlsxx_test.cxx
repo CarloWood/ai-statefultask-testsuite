@@ -13,7 +13,6 @@ int const   PORT = 443;
 #include "sys.h"
 #include "debug.h"
 #include "utils/AIAlert.h"
-#include <libcwd/buf2str.h>
 #include <gnutls/gnutls.h>
 #include <gnutls/gnutlsxx.h>
 #include <iostream>
@@ -21,6 +20,7 @@ int const   PORT = 443;
 #include <cstring>
 #ifdef CWDEBUG
 #include "utils/debug_ostream_operators.h"
+#include <libcwd/buf2str.h>
 #endif
 
 // Use Berkeley sockets.

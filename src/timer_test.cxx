@@ -9,6 +9,7 @@
 #include <map>
 #include <mutex>
 #include <cassert>
+#include <cstring>
 #include <functional>
 #include <array>
 #include <queue>
@@ -18,7 +19,10 @@
 #include "threadpool/RunningTimers.h"
 #include "debug.h"
 
-#define TEST_ALL_THREE
+#define VERBOSE 0
+#define VERBOSE_LIBRARY 0
+#define DEBUG_SANITY 0
+//#define TEST_ALL_THREE
 
 // 0: multimap
 // 1: priority_queue
@@ -139,8 +143,10 @@ struct TimerImpl<0>
     m_handle.set_not_running();
     last_time_point = m_expiration_point;
     last_sequence_0 = m_sequence_number;
-    //std::cout << "0. Expiring timer " << m_sequence_number << " @" << m_expiration_point.time_since_epoch().count() << '\n';
-    //std::cout << /*m_sequence_number <<*/ " : call_back()\t\t\t" << m_expiration_point.time_since_epoch().count() << "\n";
+#if VERBOSE
+    std::cout << "0. Expiring timer " << m_sequence_number << " @" << m_expiration_point.time_since_epoch().count() << '\n';
+    std::cout << /*m_sequence_number <<*/ " : call_back()\t\t\t" << m_expiration_point.time_since_epoch().count() << "\n";
+#endif
     m_call_back();
     ++expired_timers_0;
   }
@@ -170,13 +176,17 @@ struct TimerImpl<1>
     assert(m_handle.is_running());
     assert(!m_cancelled_1);
     m_handle.set_not_running();
-    //std::cout << "1. Expiring timer " << m_sequence_number << " @" << m_expiration_point.time_since_epoch().count() << '\n';
+#if VERBOSE
+    std::cout << "1. Expiring timer " << m_sequence_number << " @" << m_expiration_point.time_since_epoch().count() << '\n';
+#endif
     if (last_time_point != m_expiration_point)
     {
       std::cout << "1. ERROR: Expiring a timer with m_expiration_point = " << m_expiration_point.time_since_epoch().count() << "; should be: " << last_time_point.time_since_epoch().count() << std::endl;
       assert(last_time_point == m_expiration_point);
     }
-    //std::cout << /*m_sequence_number <<*/ " : call_back()\t\t\t" << m_expiration_point.time_since_epoch().count() << "\n";
+#if VERBOSE
+    std::cout << /*m_sequence_number <<*/ " : call_back()\t\t\t" << m_expiration_point.time_since_epoch().count() << "\n";
+#endif
     m_call_back();
   }
 
@@ -208,7 +218,9 @@ void expire2()
 {
   output = 1;
 #ifdef TEST_ALL_THREE
+#if VERBOSE
   std::cout << "2. Expiring timer " << static_cast<TimerImpl<2>*>(last_timer_2)->m_sequence_number << " @" << last_timer_2->get_expiration_point().time_since_epoch().count() << std::endl;
+#endif
   if (last_time_point != last_timer_2->get_expiration_point())
   {
     std::cout << "2. ERROR: Expiring a timer with m_expiration_point = " << last_timer_2->get_expiration_point().time_since_epoch().count() <<
@@ -387,16 +399,24 @@ class RunningTimersImpl<INTERVALS, 2> : public threadpool::RunningTimers
   bool cancel(Timer::Handle const handle)
   {
     assert(handle.is_running());
-    //std::cout << "Calling RunningTimers::cancel({[" << handle.m_sequence << "], in=" << handle. m_interval << "})\n";
-    //std::cout << "Before:\n";
-    //print();
-    //sanity_check();
+#if VERBOSE
+    std::cout << "Calling RunningTimers::cancel({[" << handle.m_sequence << "], in=" << handle. m_interval << "})\n";
+    std::cout << "Before:\n";
+    print();
+#endif
+#if DEBUG_SANITY
+    sanity_check();
+#endif
 
     bool res = threadpool::RunningTimers::cancel(handle);
 
-    //std::cout << "After:\n";
-    //print();
-    //sanity_check();
+#if VERBOSE
+    std::cout << "After:\n";
+    print();
+#endif
+#if DEBUG_SANITY
+    sanity_check();
+#endif
 
     // Return true if the cancelled timer is the currently running timer.
     return res;
@@ -462,15 +482,22 @@ class RunningTimersImpl<INTERVALS, 2> : public threadpool::RunningTimers
 
   void expire_next()
   {
-    //sanity_check();
-    threadpool::TimerQueueIndex const interval(this->m_tree[1]);              // The interval of the timer that will expire next.
-    //std::cout << "  m_tree[1] = " << interval << '\n';
-    threadpool::RunningTimers::timer_queue_t::wat queue_w(this->m_queues[interval]);
-    // During this test there will always be more timers.
-    assert(!queue_w->debug_empty());
-    last_timer_2 = *queue_w->debug_begin();
+#if DEBUG_SANITY
+    sanity_check();
+#endif
+    threadpool::TimerQueueIndex const interval(this->m_tree[1]);        // The interval of the timer that will expire next.
+#if VERBOSE
+    std::cout << "  m_tree[1] = " << interval << '\n';
+#endif
+    Timer::time_point now;
+    {
+      threadpool::RunningTimers::timer_queue_t::wat queue_w(this->m_queues[interval]);
+      // During this test there will always be more timers.
+      assert(!queue_w->debug_empty());
+      last_timer_2 = *queue_w->debug_begin();
 
-    Timer::time_point now = queue_w->next_expiration_point();                   // Pretend it is already that time.
+      now = queue_w->next_expiration_point();                           // Pretend it is already that time.
+    }
     auto current_w = threadpool::RunningTimers::instance().access_current();
     while (true)
     {
@@ -480,7 +507,21 @@ class RunningTimersImpl<INTERVALS, 2> : public threadpool::RunningTimers
         break;
       timer->expire();
     }
-    //sanity_check();
+#if DEBUG_SANITY
+    sanity_check();
+#endif
+  }
+
+  void ignore_timer_signal()
+  {
+    struct sigaction action;
+    std::memset(&action, 0, sizeof(struct sigaction));
+    action.sa_handler = SIG_IGN;
+    if (sigaction(m_timer_signum, &action, NULL) == -1)
+    {
+      perror("sigaction");
+      assert(false);
+    }
   }
 
   void sanity_check() const;
@@ -495,8 +536,10 @@ RunningTimersImpl<Intervals, 1> running_timers1;
 template<class INTERVALS>
 void RunningTimersImpl<INTERVALS, 2>::sanity_check() const
 {
-  //static int count;
-  //std::cout << "sanity check #" << ++count << std::endl;
+#if VERBOSE
+  static int count;
+  std::cout << "sanity check #" << ++count << std::endl;
+#endif
 
   // Initialize RunningTimers correctly.
   assert(this->m_queues.size() == INTERVALS::number - 2);       // 5000ms and 7000ms are duplicates of 5s and 7s.
@@ -542,13 +585,17 @@ std::multimap<time_point, TimerImpl<0>*>::iterator const TimerHandleImpl<0>::end
 void update_running_timer()
 {
   // This is really only called 2 to 10 times in the very beginning.
-  //std::cout << "Calling update_running_timer()\n";
+#if VERBOSE
+  std::cout << "Calling update_running_timer()\n";
+#endif
 }
 
 #ifdef TEST_ALL_THREE
 void TimerImpl<0>::start(Timer::Interval interval, std::function<void()> call_back, time_point now_)
 {
-  //std::cout << "Calling Timer::start(interval = " << interval.index << ", ..., now_ = " << now_ << ") with this = [" << m_sequence_number << "]" << std::endl;
+#if VERBOSE
+  std::cout << "Calling Timer::start(interval = " << interval.index << ", ..., now_ = " << now_ << ") with this = [" << m_sequence_number << "]" << std::endl;
+#endif
   // Call stop() first.
   assert(!m_handle.is_running());
   m_expiration_point = now_ + interval.duration();
@@ -556,14 +603,18 @@ void TimerImpl<0>::start(Timer::Interval interval, std::function<void()> call_ba
   std::lock_guard<std::mutex> lk(running_timers_mutex);
   m_handle = running_timers0.push(0, this);
 
-  //std::cout << "  expires at " << m_expiration_point.time_since_epoch().count() << std::endl;
+#if VERBOSE
+  std::cout << "  expires at " << m_expiration_point.time_since_epoch().count() << std::endl;
+#endif
   if (running_timers0.is_current(m_handle))
     update_running_timer();
 }
 
 void TimerImpl<1>::start(Timer::Interval interval, std::function<void()> call_back, time_point now_)
 {
-  //std::cout << "Calling Timer::start(interval = " << interval.index << ", ..., now_ = " << now_ << ") with this = [" << m_sequence_number << "]" << std::endl;
+#if VERBOSE
+  std::cout << "Calling Timer::start(interval = " << interval.index << ", ..., now_ = " << now_ << ") with this = [" << m_sequence_number << "]" << std::endl;
+#endif
   // Call stop() first.
   assert(!m_handle.is_running());
   m_expiration_point = now_ + interval.duration();
@@ -572,14 +623,18 @@ void TimerImpl<1>::start(Timer::Interval interval, std::function<void()> call_ba
   m_handle = running_timers1.push(0, this);
 
   m_cancelled_1 = false;
-  //std::cout << "  expires at " << m_expiration_point.time_since_epoch().count() << std::endl;
+#if VERBOSE
+  std::cout << "  expires at " << m_expiration_point.time_since_epoch().count() << std::endl;
+#endif
   if (running_timers1.is_current(m_handle))
     update_running_timer();
 }
 
 void TimerImpl<0>::stop()
 {
-  //std::cout << "Calling Timer::stop() with this = [" << m_sequence_number << "]" << std::endl;
+#if VERBOSE
+  std::cout << "Calling Timer::stop() with this = [" << m_sequence_number << "]" << std::endl;
+#endif
   if (m_handle.is_running())
   {
     bool update = running_timers0.is_current(m_handle);
@@ -587,13 +642,17 @@ void TimerImpl<0>::stop()
     if (update)
       update_running_timer();
   }
-  //else
-  //  std::cout << "NOT running!\n";
+#if VERBOSE
+  else
+    std::cout << "NOT running!\n";
+#endif
 }
 
 void TimerImpl<1>::stop()
 {
-  //std::cout << "Calling Timer::stop() with this = [" << m_sequence_number << "]" << std::endl;
+#if VERBOSE
+  std::cout << "Calling Timer::stop() with this = [" << m_sequence_number << "]" << std::endl;
+#endif
   if (m_handle.is_running())
   {
     bool update;
@@ -605,8 +664,10 @@ void TimerImpl<1>::stop()
     if (update)
       update_running_timer();
   }
-  //else
-  //  std::cout << "NOT running!\n";
+#if VERBOSE
+  else
+    std::cout << "NOT running!\n";
+#endif
 }
 #endif
 
@@ -624,6 +685,10 @@ std::vector<TimerImpl<2>> timers<2>;
 
 void generate()
 {
+#if VERBOSE_LIBRARY
+  Debug(NAMESPACE_DEBUG::init_thread());
+#endif
+
   std::array<Timer::Interval, max_interval_index + 1> durations = {
     Interval<100, microseconds>(), Interval<150, microseconds>(), Interval<200, microseconds>(), Interval<250, microseconds>(), Interval<500, microseconds>(),
 
@@ -780,6 +845,12 @@ void generate()
 int main()
 {
   Debug(NAMESPACE_DEBUG::init());
+
+  // Ignore signal used for the timer because the functions we call will
+  // cause that signal to be generated, but we don't want the normal callback
+  // to be called during this test.
+  static_cast<RunningTimersImpl<Intervals, 2>&>(threadpool::RunningTimers::instance()).ignore_timer_signal();
+
 //  [[maybe_unused]] AIThreadPool thread_pool;
 //  [[maybe_unused]] AIQueueHandle handler = thread_pool.new_queue(16);
 

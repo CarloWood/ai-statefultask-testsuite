@@ -6,7 +6,9 @@
 #include "utils/AIAlert.h"
 #include "utils/debug_ostream_operators.h"
 #include "threadsafe/Condition.h"
+#ifdef CWDEBUG
 #include <libcwd/buf2str.h>
+#endif
 
 class InputPrinter : public evio::InputDecoder
 {
