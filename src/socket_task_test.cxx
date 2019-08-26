@@ -1,11 +1,11 @@
 #include "sys.h"
-#include "debug.h"
 #include "socket-task/ConnectToEndPoint.h"
-#include "threadpool/AIThreadPool.h"
 #include "statefultask/AIEngine.h"
+#include "evio/EventLoop.h"
+#include "threadsafe/Condition.h"
 #include "utils/AIAlert.h"
 #include "utils/debug_ostream_operators.h"
-#include "threadsafe/Condition.h"
+#include "debug.h"
 #ifdef CWDEBUG
 #include <libcwd/buf2str.h>
 #endif
@@ -13,18 +13,16 @@
 class InputPrinter : public evio::InputDecoder
 {
  protected:
-   evio::RefCountReleaser decode(evio::MsgBlock&& msg, evio::GetThread type) override;
+   void decode(int& allow_deletion_count, evio::MsgBlock&& msg) override;
 };
 
-evio::RefCountReleaser InputPrinter::decode(evio::MsgBlock&& msg, evio::GetThread)
+void InputPrinter::decode(int& CWDEBUG_ONLY(allow_deletion_count), evio::MsgBlock&& msg)
 {
-  evio::RefCountReleaser releaser;
   // Just print what was received.
-  DoutEntering(dc::notice, "InputPrinter::decode(\"" << buf2str(msg.get_start(), msg.get_size()) << "\") [" << this << ']');
+  DoutEntering(dc::notice, "InputPrinter::decode({" << allow_deletion_count << "}, \"" << buf2str(msg.get_start(), msg.get_size()) << "\") [" << this << ']');
   // Stop when ...
   if (msg.get_size() >= 17 && strncmp(msg.get_start() + msg.get_size() - 17, "#5</body></html>\n", 17) == 0)
-    releaser = stop_input_device();
-  return releaser;
+    stop_input_device();
 }
 
 class MySocket : public evio::Socket
@@ -36,8 +34,8 @@ class MySocket : public evio::Socket
  public:
   MySocket()
   {
-    input(m_input_printer);
-    output(m_output_stream);
+    set_sink(m_input_printer);
+    set_source(m_output_stream);
   }
 
   evio::OutputStream& output_stream() { return m_output_stream; }

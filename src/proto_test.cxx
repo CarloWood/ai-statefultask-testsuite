@@ -1,7 +1,8 @@
 #include "sys.h"
-#include "debug.h"
-#include "cwds/benchmark.h"
 #include "resolver-task/Resolver.h"
+#include "evio/EventLoop.h"
+#include "cwds/benchmark.h"
+#include "debug.h"
 
 using resolver::Resolver;
 

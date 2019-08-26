@@ -1,10 +1,11 @@
 #include "sys.h"
-#include "debug.h"
-#include "evio/SocketAddress.h"
 #include "resolver-task/GetNameInfo.h"
+#include "statefultask/AIEngine.h"
+#include "evio/SocketAddress.h"
+#include "evio/EventLoop.h"
 #include "utils/AIAlert.h"
 #include "utils/debug_ostream_operators.h"
-#include "statefultask/AIEngine.h"
+#include "debug.h"
 #include <iostream>
 #include <thread>
 #include <atomic>
