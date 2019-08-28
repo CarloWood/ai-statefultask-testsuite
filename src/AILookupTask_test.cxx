@@ -45,8 +45,8 @@ int main()
 
   try
   {
-    resolver::Resolver::instance().init(handler, false);
     evio::EventLoop event_loop(handler);
+    resolver::Scope resolver_scope(handler, false);
 
     AIEngine engine("main engine", 2.0);
     getaddrinfo_task = new task::GetAddrInfo(DEBUG_ONLY(true));
@@ -62,15 +62,13 @@ int main()
       std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
 
+    // Terminate application.
     event_loop.join();
   }
   catch (AIAlert::Error const& error)
   {
     Dout(dc::warning, error);
   }
-
-  // Terminate application.
-  resolver::Resolver::instance().close();
 
   Dout(dc::notice, "Leaving main()...");
 }

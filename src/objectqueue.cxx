@@ -127,7 +127,12 @@ int main()
               ASSERT(ca.length() == 2);
               Dout(dc::notice|continued_cf, "Moving " << name_F << " from AIObjectQueue to bf2... ");
               {
+                // It is not allowed to take an element from a full buffer while holding the producer access lock...
+                // Therefore release and retake the producer access around the move_out here.
+                pa.~ProducerAccess();                                           // HACK
                 F bf2(ca.move_out());
+                new (&pa) AIObjectQueue<F>::ProducerAccess(&object_queue);      // HACK
+
                 Dout(dc::finish, "Done.");
                 ASSERT(pa.length() == 1);
                 ASSERT(ca.length() == 1);

@@ -2,6 +2,7 @@
 #include "socket-task/ConnectToEndPoint.h"
 #include "statefultask/AIEngine.h"
 #include "evio/EventLoop.h"
+#include "evio/TLSSocket.h"
 #include "threadsafe/Condition.h"
 #include "utils/AIAlert.h"
 #include "utils/debug_ostream_operators.h"
@@ -25,7 +26,7 @@ void InputPrinter::decode(int& CWDEBUG_ONLY(allow_deletion_count), evio::MsgBloc
     stop_input_device();
 }
 
-class MySocket : public evio::Socket
+class MySocket : public evio::TLSSocket
 {
  private:
   InputPrinter m_input_printer;
@@ -52,8 +53,8 @@ int main()
 
   try
   {
-    resolver::Resolver::instance().init(handler, false);
     evio::EventLoop event_loop(handler);
+    resolver::Scope resolver_scope(handler, false);
 
     // Allow the main thread to wait until the test finished.
     aithreadsafe::Condition test_finished;
@@ -61,7 +62,7 @@ int main()
     boost::intrusive_ptr<task::ConnectToEndPoint> task = new task::ConnectToEndPoint(DEBUG_ONLY(true));
     auto socket = evio::create<MySocket>();
     task->set_socket(socket);
-    task->set_end_point(AIEndPoint("www.google.com", 80));
+    task->set_end_point(AIEndPoint("www.google.com", 443));
     task->run([task, &test_finished](bool success){
           if (!success)
             Dout(dc::warning, "task::ConnectToEndPoint was aborted");
@@ -71,7 +72,7 @@ int main()
           }
           test_finished.signal();
         });
-    // Must do a flush or else the buffer won't be written to to the socket at all; this flush
+    // Must do a flush or else the buffer won't be written to the socket at all; this flush
     // does not block though, it only starts watching the fd for readability and then writes
     // the buffer to the fd when possible.
     // If the socket was closed in the meantime because it permanently failed to connect
@@ -83,15 +84,14 @@ int main()
     // Wait until the test is finished.
     std::lock_guard<AIMutex> lock(test_finished);
     test_finished.wait();
+
+    // Terminate application.
     event_loop.join();
   }
   catch (AIAlert::Error const& error)
   {
     Dout(dc::warning, error);
   }
-
-  // Terminate application.
-  resolver::Resolver::instance().close();
 
   Dout(dc::notice, "Leaving main()...");
 }

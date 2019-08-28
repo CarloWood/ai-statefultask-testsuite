@@ -1,10 +1,10 @@
 #include "sys.h"
-#include "resolver-task/Resolver.h"
+#include "resolver-task/DnsResolver.h"
 #include "evio/EventLoop.h"
 #include "cwds/benchmark.h"
 #include "debug.h"
 
-using resolver::Resolver;
+using resolver::DnsResolver;
 
 int main()
 {
@@ -19,10 +19,10 @@ int main()
 
   AIThreadPool thread_pool;
   AIQueueHandle handler = thread_pool.new_queue(32);
-  // Initialize the IO event loop thread.
+
+  // Initialize the IO event loop thread and the async hostname resolver.
   evio::EventLoop event_loop(handler);
-  // Initialize the async hostname resolver.
-  Resolver::instance().init(handler, false);
+  resolver::Scope resolver_scope(handler, false);
 
   Debug(dc::warning.off());
 
@@ -30,7 +30,7 @@ int main()
 
   stopwatch.start();
   for (int proto_nr = 0; proto_nr < 256; ++proto_nr)
-    strings[proto_nr] = Resolver::instance().protocol_str(proto_nr);
+    strings[proto_nr] = DnsResolver::instance().protocol_str(proto_nr);
   stopwatch.stop();
 
   uint64_t diff_cycles = stopwatch.diff_cycles();
@@ -41,7 +41,7 @@ int main()
   stopwatch.start();
   for (int proto_nr = 0; proto_nr < 256; ++proto_nr)
   {
-    [[maybe_unused]] char const* str = Resolver::instance().protocol_str(proto_nr);
+    [[maybe_unused]] char const* str = DnsResolver::instance().protocol_str(proto_nr);
     // Everything is cached.
     ASSERT(str == strings[proto_nr]);
   }
@@ -54,8 +54,8 @@ int main()
 
   for (int proto_nr = 0; proto_nr < 256; ++proto_nr)
   {
-    char const* str = Resolver::instance().protocol_str(proto_nr);
-    int protocol = Resolver::instance().protocol(str);
+    char const* str = DnsResolver::instance().protocol_str(proto_nr);
+    int protocol = DnsResolver::instance().protocol(str);
     if (protocol != 0)
     {
       std::cout << "Protocol " << protocol << " = " << str << std::endl;
@@ -66,6 +66,5 @@ int main()
   Debug(dc::warning.on());
 
   // Terminate application.
-  Resolver::instance().close();
   event_loop.join();
 }

@@ -3,7 +3,7 @@ AM_CPPFLAGS = -iquote $(top_srcdir) -iquote $(top_srcdir)/cwds
 bin_PROGRAMS = helloworld fibonacci fiboquick filelock runthread function objectqueue threadpool cv_wait \
 	       timer_test timer_thread signal_test benchmark mutex_benchmark test_frequency_counter AITimer_test \
 	       AILookupTask_test AIResolver_test hash_test serv_test proto_test \
-	       resolver_getnameinfo gnutlsxx_test socket_task_test
+	       resolver_getnameinfo socket_task_test
 
 helloworld_SOURCES = helloworld.cxx
 helloworld_CXXFLAGS = @LIBCWD_R_FLAGS@
@@ -93,10 +93,6 @@ proto_test_LDADD = ../resolver-task/libresolvertask.la ../farmhash/src/libfarmha
 resolver_getnameinfo_SOURCES = resolver_getnameinfo.cxx
 resolver_getnameinfo_CXXFLAGS = @LIBCWD_R_FLAGS@
 resolver_getnameinfo_LDADD = ../resolver-task/libresolvertask.la ../statefultask/libstatefultask.la ../threadpool/libthreadpool.la ../events/libevents.la ../farmhash/src/libfarmhash.la ../evio/libevio.la ../evio/libev-4.24/libev.la ../threadsafe/libthreadsafe.la ../cwds/libcwds_r.la
-
-gnutlsxx_test_SOURCES = gnutlsxx_test.cxx
-gnutlsxx_test_CXXFLAGS = @LIBCWD_R_FLAGS@
-gnutlsxx_test_LDADD = ../utils/libutils_r.la ../cwds/libcwds_r.la -lgnutlsxx -lgnutls
 
 socket_task_test_SOURCES = socket_task_test.cxx
 socket_task_test_CXXFLAGS = @LIBCWD_R_FLAGS@

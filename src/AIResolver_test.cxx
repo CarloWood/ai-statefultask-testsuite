@@ -16,14 +16,13 @@ int main()
 
   AIThreadPool thread_pool;
   AIQueueHandle handler = thread_pool.new_queue(queue_capacity);
-  // Initialize the IO event loop thread.
+  // Initialize the IO event loop thread and the async hostname resolver.
   evio::EventLoop event_loop(handler);
-  // Initialize the async hostname resolver.
-  Resolver::instance().init(handler, true);
+  resolver::Scope resolver_scope(handler, true);
 
-  auto handle2 = Resolver::instance().getaddrinfo("irc.undernet.org", 6668, AddressInfoHints(AI_CANONNAME));
-  auto handle3 = Resolver::instance().getaddrinfo("www.google.com", "www", AddressInfoHints(AI_CANONNAME));
-  auto handle = Resolver::instance().getaddrinfo("irc.undernet.org", "ircd", AddressInfoHints(AI_CANONNAME, AF_UNSPEC, 0 /*, IPPROTO_TCP*/));
+  auto handle2 = DnsResolver::instance().getaddrinfo("irc.undernet.org", 6668, AddressInfoHints(AI_CANONNAME));
+  auto handle3 = DnsResolver::instance().getaddrinfo("www.google.com", "www", AddressInfoHints(AI_CANONNAME));
+  auto handle = DnsResolver::instance().getaddrinfo("irc.undernet.org", "ircd", AddressInfoHints(AI_CANONNAME, AF_UNSPEC, 0 /*, IPPROTO_TCP*/));
 
   // Wait till the requests are handled.
   while (!handle3->is_ready())
@@ -60,7 +59,6 @@ int main()
   handle3.reset();
 
   // Terminate application.
-  Resolver::instance().close();
   event_loop.join();
   Dout(dc::notice, "Leaving main()...");
 }

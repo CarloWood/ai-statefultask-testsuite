@@ -13,8 +13,6 @@
 int constexpr queue_capacity = 32;
 std::atomic_int test_finished = 0;
 
-using resolver::Resolver;
-
 boost::intrusive_ptr<task::GetNameInfo> getnameinfo_task;
 
 void callback(bool success)
@@ -57,7 +55,7 @@ int main(int argc, char* argv[])
   try
   {
     evio::EventLoop event_loop(handler);
-    Resolver::instance().init(handler, false);
+    resolver::Scope resolver_scope(handler, false);
 
     evio::SocketAddress socket_address(argv[1]);
     std::cout << "socket_address = " << socket_address << std::endl;
@@ -75,15 +73,14 @@ int main(int argc, char* argv[])
       std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
 
+    // Terminate application.
+    getnameinfo_task.reset();
     event_loop.join();
   }
   catch (AIAlert::Error const& error)
   {
     Dout(dc::warning, error);
   }
-
-  // Terminate application.
-  Resolver::instance().close();
 
   Dout(dc::notice, "Leaving main()...");
 }
