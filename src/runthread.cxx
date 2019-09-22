@@ -46,7 +46,7 @@ class Task : public AIStatefulTask {
 
   public:
     static state_type constexpr max_state = Task_done + 1;  // One beyond the largest state.
-    Task() : AIStatefulTask(DEBUG_ONLY(true)),
+    Task() : AIStatefulTask(CWDEBUG_ONLY(true)),
         m_calculate_factorial(this, 1, &factorial, s_task_queue),
         m_say_hello(this, 2, &sayhello, s_task_queue) { }
 

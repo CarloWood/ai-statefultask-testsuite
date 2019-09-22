@@ -29,7 +29,7 @@ class Fibonacci : public AIStatefulTask {
 
   public:
     static state_type constexpr max_state = Fibonacci_done + 1;
-    Fibonacci() : DEBUG_ONLY(AIStatefulTask(true),) m_index(0), m_value(0) { }
+    Fibonacci() : CWDEBUG_ONLY(AIStatefulTask(true),) m_index(0), m_value(0) { }
 
     void set_number(int n) { m_index = n; }
     int value() const { return m_value; }

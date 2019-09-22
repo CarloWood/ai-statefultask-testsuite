@@ -61,7 +61,7 @@ int main(int argc, char* argv[])
     std::cout << "socket_address = " << socket_address << std::endl;
 
     AIEngine engine("main engine", 2.0);
-    getnameinfo_task = new task::GetNameInfo(DEBUG_ONLY(true));
+    getnameinfo_task = new task::GetNameInfo(CWDEBUG_ONLY(true));
     getnameinfo_task->init(socket_address);
     getnameinfo_task->run(&engine, &callback);
 

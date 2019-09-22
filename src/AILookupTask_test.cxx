@@ -49,7 +49,7 @@ int main()
     resolver::Scope resolver_scope(handler, false);
 
     AIEngine engine("main engine", 2.0);
-    getaddrinfo_task = new task::GetAddrInfo(DEBUG_ONLY(true));
+    getaddrinfo_task = new task::GetAddrInfo(CWDEBUG_ONLY(true));
 
     getaddrinfo_task->init("www.google.com", "www");
     getaddrinfo_task->run(&engine, &callback);

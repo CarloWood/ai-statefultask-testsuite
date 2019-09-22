@@ -59,7 +59,7 @@ int main()
     // Allow the main thread to wait until the test finished.
     aithreadsafe::Condition test_finished;
 
-    boost::intrusive_ptr<task::ConnectToEndPoint> task = new task::ConnectToEndPoint(DEBUG_ONLY(true));
+    boost::intrusive_ptr<task::ConnectToEndPoint> task = new task::ConnectToEndPoint(CWDEBUG_ONLY(true));
     auto socket = evio::create<MySocket>();
     task->set_socket(socket);
     task->set_end_point(AIEndPoint("www.google.com", 443));

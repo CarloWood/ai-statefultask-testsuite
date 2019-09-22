@@ -35,7 +35,7 @@ int main()
   AIQueueHandle handler __attribute__ ((unused)) = thread_pool.new_queue(queue_capacity);
 
   AIEngine engine("main engine", 2.0);
-  AITimer* timer = new AITimer(DEBUG_ONLY(true));
+  AITimer* timer = new AITimer(CWDEBUG_ONLY(true));
 
   timer->set_interval(Interval<2, std::chrono::milliseconds>());
 

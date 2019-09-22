@@ -75,7 +75,7 @@ class Bumper : public AIStatefulTask
 };
 
 // Pass true to the base class to turn on debug output for this task.
-HelloWorld::HelloWorld() : DEBUG_ONLY(AIStatefulTask(true),) m_bumped(false)
+HelloWorld::HelloWorld() : CWDEBUG_ONLY(AIStatefulTask(true),) m_bumped(false)
 {
   DoutEntering(dc::statefultask, "HelloWorld::HelloWorld()");
   ++number_of_tasks;
@@ -102,7 +102,7 @@ char const* HelloWorld::state_str_impl(state_type run_state) const
 };
 
 // Pass true to the base class to turn on debug output for this task.
-Bumper::Bumper() : DEBUG_ONLY(AIStatefulTask(true),) m_bumped(false)
+Bumper::Bumper() : CWDEBUG_ONLY(AIStatefulTask(true),) m_bumped(false)
 {
   DoutEntering(dc::statefultask, "Bumper::Bumper()");
   ++number_of_tasks;
