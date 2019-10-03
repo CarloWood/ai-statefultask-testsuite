@@ -11,7 +11,7 @@ struct Result
   uint64_t m_start_cycles;
   uint64_t m_diff_cycles;
 
-  void print(uint64_t DEBUG_ONLY(time_offset)) const
+  void print(uint64_t CWDEBUG_ONLY(time_offset)) const
   {
     Dout(dc::notice, "Thread on CPU #" << m_cpu << " started running at t = " << (m_start_cycles - time_offset) << " and ran for " << m_diff_cycles / 3612059050.0 << " seconds.");
   }

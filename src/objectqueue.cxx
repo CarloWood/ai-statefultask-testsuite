@@ -43,7 +43,7 @@ struct Big {
 #endif
 };
 
-void f(Big const& DEBUG_ONLY(b))
+void f(Big const& CWDEBUG_ONLY(b))
 {
   Dout(dc::notice, "Calling f(\"" << b.m_data << "\")!");
 }
