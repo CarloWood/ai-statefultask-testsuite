@@ -3,11 +3,16 @@ AM_CPPFLAGS = -iquote $(top_srcdir) -iquote $(top_srcdir)/cwds
 bin_PROGRAMS = helloworld fibonacci fiboquick filelock runthread function objectqueue threadpool cv_wait \
 	       timer_test timer_thread signal_test benchmark mutex_benchmark test_frequency_counter AITimer_test \
 	       AILookupTask_test AIResolver_test hash_test serv_test proto_test \
-	       resolver_getnameinfo socket_task_test FileLock_test AIStatefulTaskMutex_test semaphore_test
+	       resolver_getnameinfo socket_task_test FileLock_test AIStatefulTaskMutex_test semaphore_test \
+	       spin_wakeup_test
+
+spin_wakeup_test_SOURCES = spin_wakeup_test.cxx
+spin_wakeup_test_CXXFLAGS = @LIBCWD_R_FLAGS@
+spin_wakeup_test_LDADD = ../threadsafe/libthreadsafe.la ../cwds/libcwds_r.la -lboost_iostreams -lboost_system
 
 semaphore_test_SOURCES = semaphore_test.cxx
 semaphore_test_CXXFLAGS = @LIBCWD_R_FLAGS@
-semaphore_test_LDADD = ../cwds/libcwds_r.la
+semaphore_test_LDADD = ../threadsafe/libthreadsafe.la ../cwds/libcwds_r.la
 
 AIStatefulTaskMutex_test_SOURCES = AIStatefulTaskMutex_test.cxx
 AIStatefulTaskMutex_test_CXXFLAGS = -O2 @LIBCWD_R_FLAGS@
