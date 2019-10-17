@@ -3,7 +3,6 @@
 #include "threadsafe/SpinSemaphore.h"
 #include "utils/DelayLoopCalibration.h"
 #include "utils/cpu_relax.h"
-#include "cwds/benchmark.h"
 #include <atomic>
 #include <algorithm>
 #include <cmath>
@@ -113,7 +112,10 @@ void SpinSemaphoreCalibration::calibrate()
   Dout(dc::notice, longer_than_one_ms[0]);
 }
 
-constexpr double goal = 1.0;
+constexpr double goal = 1.0;                    // Total time of delay loop in ms.
+constexpr double time_per_loop = 1e-4;          // Shortest time between reads of atomic in loop, in ms (i.e. 100 ns).
+constexpr int max_ols = goal / time_per_loop;
+constexpr int min_ols = max_ols / 4;
 std::atomic<uint64_t> m_word;
 constexpr uint64_t tokens_mask = 0xffffffff;
 
@@ -122,7 +124,7 @@ int main()
   Debug(NAMESPACE_DEBUG::init());
 
   auto delay_loop = [](unsigned int outer_loop_size, unsigned int inner_loop_size) {
-    unsigned int i = 2 * outer_loop_size;
+    unsigned int i = outer_loop_size;
     do
     {
       cpu_relax();
@@ -141,23 +143,23 @@ int main()
 
   constexpr unsigned int prefered_minimum_ils = 10;
   ils = prefered_minimum_ils;
-  ols = fixed_ils_delay_loop.ransac(goal);
+  ols = fixed_ils_delay_loop.peak_detect(goal, false);
   Dout(dc::notice, "ols (with ils = " << ils << ") = " << ols);
 
-  if (ols < 10000)
+  if (ols < min_ols)
   {
     // Fix ols at 10000.
-    ols = 10000;
+    ols = min_ols;
     // Find the smallest value of ils < prefered_minimum_ils that still gives a delay time of at least goal.
     for (ils = 0; ils < prefered_minimum_ils; ++ils)
       if (fixed_ols_delay_loop.avg_of(ils) > goal)
         break;
     Dout(dc::notice, "ils (with ols = " << ols << ") = " << ils);
   }
-  else if (ols > 100000)
+  else if (ols > max_ols)
   {
-    // Fix ols at 90000.
-    ols = 90000;
+    // Fix ols at 90% of the maximum value.
+    ols = 0.9 * max_ols;
     ils = fixed_ols_delay_loop.search_lowest_of(20, goal);
     Dout(dc::notice, "ils (with ols = " << ols << ") = " << ils);
   }
@@ -167,35 +169,35 @@ int main()
     //
     //   goal = alpha * ols * (beta + gamma * ils),
     //
-    // we know that multiplying ils with a factor ols / 100000 and setting ols
-    // to 100000 we'd get a delay of:
+    // we know that multiplying ils with a factor ols / max_ols and setting ols
+    // to max_ols we'd get a delay of:
     //
-    //   alpha * 100000 * (beta + gamma * ils * (ols / 100000)) = goal + alpha * beta * (100000 - ols)
+    //   alpha * max_ols * (beta + gamma * ils * (ols / max_ols)) = goal + alpha * beta * (max_ols - ols)
     //
     // So, the delay would become larger than goal and the ols corresponding
-    // to goal will thus be smaller than 100000.
+    // to goal will thus be smaller than max_ols.
     //
-    // To speed up the search for the smallest ils such that ols is still less than 100000,
+    // To speed up the search for the smallest ils such that ols is still less than max_ols,
     // do this for goal/10 and ols/10.
 
     unsigned int prev_ils = ils;
-    ils = 0.00001 * ils * ols;          // Multiply ils with ols/100000.
+    ils = (1.0 * ols / max_ols) * ils;
     while (ils < prev_ils)
     {
       // Find a corresponding ols.
-      ols = fixed_ils_delay_loop.ransac(goal / 10.0, false, "Delay with goal 0.1 ms and ils = " + std::to_string(ils));
-      Dout(dc::notice, "ols (with ils = " << ils << ") = " << ols);
-      if (ols > 10000)
+      ols = fixed_ils_delay_loop.peak_detect(goal / 10.0, false /*, "Delay with goal 0.1 ms and ils = " + std::to_string(ils)*/);
+      Dout(dc::notice, "ols (with ils = " << ils << ") = " << ols << " (for a delay of 0.1 * goal).");
+      if (ols > min_ols)
       {
         ++ils;
         break;
       }
       prev_ils = ils;
-      ils = 0.0001 * ils * ols;
+      ils = (10.0 * ols / max_ols) * ils;       // Because goal was devided by 10, ols is a factor of 10 too small.
     }
   }
   // Finally, find the best ols with this ils.
-  ols = fixed_ils_delay_loop.ransac(goal, true, "Delay with goal 1 ms and ils = " + std::to_string(ils));
+  ols = fixed_ils_delay_loop.peak_detect(goal, false, "Delay with goal 1 ms and ils = " + std::to_string(ils));
   Dout(dc::notice, "ols (with ils = " << ils << ") = " << ols);
 
   for (int i = 0; i < 10; ++i)

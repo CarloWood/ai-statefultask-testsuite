@@ -4,7 +4,11 @@ bin_PROGRAMS = helloworld fibonacci fiboquick filelock runthread function object
 	       timer_test timer_thread signal_test benchmark mutex_benchmark test_frequency_counter AITimer_test \
 	       AILookupTask_test AIResolver_test hash_test serv_test proto_test \
 	       resolver_getnameinfo socket_task_test FileLock_test AIStatefulTaskMutex_test semaphore_test \
-	       spin_wakeup_test
+	       spin_wakeup_test delay_loop_test
+
+delay_loop_test_SOURCES = delay_loop_test.cxx
+delay_loop_test_CXXFLAGS = @LIBCWD_R_FLAGS@
+delay_loop_test_LDADD = ../threadsafe/libthreadsafe.la ../utils/libutils_r.la ../cwds/libcwds_r.la -lboost_iostreams -lboost_system
 
 spin_wakeup_test_SOURCES = spin_wakeup_test.cxx
 spin_wakeup_test_CXXFLAGS = @LIBCWD_R_FLAGS@
