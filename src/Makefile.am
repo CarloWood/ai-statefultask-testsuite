@@ -122,10 +122,30 @@ socket_task_test_LDADD = ../socket-task/libsockettask.la ../resolver-task/libres
 # --------------- Maintainer's Section
 
 if MAINTAINER_MODE
+GENMC_H = genmc_spinsemaphore_post.h genmc_spinsemaphore_fast_try_wait.h genmc_spinsemaphore_wait.h
+GENMC_HC = genmc_spinsemaphore_slow_wait.hc
+
 distclean-local:
-	rm -f *.s *.ii
+	rm -f *.s *.ii ${srcdir}/genmc_all.c
 
 clean-local:
+	rm -f ${GENMC_H} ${GENMC_HC}
+
+genmc_%.h: ${srcdir}/genmc_%.awk ${srcdir}/genmc_prelude.awk ${srcdir}/genmc_body.awk ${top_srcdir}/threadsafe/SpinSemaphore.h
+	AWKPATH="${srcdir}" gawk -f $< ${top_srcdir}/threadsafe/SpinSemaphore.h > $@
+
+genmc_%.hc: ${srcdir}/genmc_%.awk ${srcdir}/genmc_prelude.awk ${srcdir}/genmc_body.awk ${top_srcdir}/threadsafe/SpinSemaphore.cxx
+	AWKPATH="${srcdir}" gawk -f $< ${top_srcdir}/threadsafe/SpinSemaphore.cxx > $@ 
+
+.PHONY: genmc
+
+genmc: genmc_spinsemaphore_test.c ${GENMC_H} ${GENMC_HC}
+	genmc -unroll=3 -- -std=c11 -I${builddir} ${srcdir}/genmc_spinsemaphore_test.c
+#	Use this to get everything in a single file for easier debugging.
+#	grep -B 1000 'INCLUDES_BEGIN' ${srcdir}/genmc_spinsemaphore_test.c > ${srcdir}/genmc_all.c
+#	cat ${GENMC_H} ${GENMC_HC} >> ${srcdir}/genmc_all.c
+#	grep -A 1000 'INCLUDES_END' ${srcdir}/genmc_spinsemaphore_test.c >> ${srcdir}/genmc_all.c
+#	genmc -unroll=3 -pretty-print-exec-graphs -print-error-trace -- -std=c11 -I${builddir} ${srcdir}/genmc_all.c
 endif
 
 MAINTAINERCLEANFILES = $(srcdir)/Makefile.in
