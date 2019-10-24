@@ -140,12 +140,14 @@ genmc_%.hc: ${srcdir}/genmc_%.awk ${srcdir}/genmc_prelude.awk ${srcdir}/genmc_bo
 .PHONY: genmc
 
 genmc: genmc_spinsemaphore_test.c ${GENMC_H} ${GENMC_HC}
-	genmc -unroll=3 -- -std=c11 -I${builddir} ${srcdir}/genmc_spinsemaphore_test.c
+	genmc -unroll=3 -print-error-trace -- -std=c11 -I${builddir} ${srcdir}/genmc_spinsemaphore_test.c
 #	Use this to get everything in a single file for easier debugging.
+#	test -e ${srcdir}/genmc_all.c && chmod +w ${srcdir}/genmc_all.c
 #	grep -B 1000 'INCLUDES_BEGIN' ${srcdir}/genmc_spinsemaphore_test.c > ${srcdir}/genmc_all.c
 #	cat ${GENMC_H} ${GENMC_HC} >> ${srcdir}/genmc_all.c
 #	grep -A 1000 'INCLUDES_END' ${srcdir}/genmc_spinsemaphore_test.c >> ${srcdir}/genmc_all.c
-#	genmc -unroll=3 -pretty-print-exec-graphs -print-error-trace -- -std=c11 -I${builddir} ${srcdir}/genmc_all.c
+#	chmod -w ${srcdir}/genmc_all.c
+#	genmc -unroll=3 -print-error-trace -- -std=c11 -I${builddir} ${srcdir}/genmc_all.c
 endif
 
 MAINTAINERCLEANFILES = $(srcdir)/Makefile.in
