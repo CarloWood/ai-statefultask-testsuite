@@ -94,9 +94,10 @@ void MyTask::multiplex_impl(state_type state)
       {
         while (m_locked < number_of_tasks)
         {
-          //std::cout << m_locked << std::endl;
+//          std::cout << m_locked << std::endl;
           std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
+        std::cout << m_locked << std::endl;
         first = false;
       }
 
@@ -145,8 +146,7 @@ int main()
     for (int n = 0; n < number_of_tasks; ++n)
       tasks.emplace_back(new MyTask(CWDEBUG_ONLY(true)));
 
-    Debug(libcw_do.off());
-    //sw.start();
+    sw.start();
 
     for (int i = 0; i < number_of_tasks; ++i)
     {
@@ -161,15 +161,12 @@ int main()
             }
           });
     }
-    Debug(libcw_do.on());
     Dout(dc::notice, "Done adding " << number_of_tasks << " to the thread pool queue.");
-    std::cout << "Done adding " << number_of_tasks << " to the thread pool queue." << std::endl;
-    return 0;
 
     // Wait until the test is finished.
     test_finished.wait();
 
-    //sw.stop();
+    sw.stop();
 
     ASSERT(m_inside_critical_area == 0);
     ASSERT(m_locked == 0);
