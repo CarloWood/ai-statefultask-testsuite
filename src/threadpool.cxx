@@ -1,5 +1,6 @@
 #include "sys.h"
 #include "threadpool/AIThreadPool.h"
+#include "threadsafe/Condition.h"
 #include "debug.h"
 #include <chrono>
 
@@ -50,11 +51,27 @@ int main()
         for (size_t i = 0; i < cnt; ++i)
           vv = 1;
       }
-      // Give a thread the time to read the queue.
-      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      // Wait for the queue to be entirely processed.
+      {
+        aithreadsafe::Condition finished;
+        auto queues_access = thread_pool.queues_read_access();
+        auto& queue = thread_pool.get_queue(queues_access, queue_handle1);
+        int length;
+        do
+        {
+          auto access = queue.producer_access();
+          length = access.length();
+          if (length < capacity) // Buffer not full?
+            access.move_in([&finished](){ finished.signal(); return false; });
+          std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
+        while (AI_UNLIKELY(length == capacity));
+        queue.notify_one();
+        finished.wait();
+      }
       Dout(dc::notice, "delay = " << delay << "; empty = " << empty);
     }
   }
-  std::cout << "Wrote " << count << " times 'hello pool!'" << std::endl;
+  std::cout << "Added " << count << " tasks to the queue." << std::endl;
   std::cout << "Expected: " << ((loop_size - full) * modulo / (modulo - 1)) << std::endl;
 }

@@ -49,3 +49,7 @@
 	path = threadpool
 	url = https://github.com/CarloWood/threadpool.git
 	branch = master
+[submodule "filelock-task"]
+	path = filelock-task
+	url = https://github.com/CarloWood/filelock-task.git
+	branch = master
