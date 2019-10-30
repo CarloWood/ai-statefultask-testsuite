@@ -6,7 +6,7 @@
 #include <chrono>
 #include <atomic>
 
-std::atomic_uint number_of_tasks;
+std::atomic_uint number_of_tasks = ATOMIC_VAR_INIT(0);
 
 class HelloWorld;
 class Bumper;

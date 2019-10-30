@@ -14,7 +14,7 @@ constexpr int number_of_trigger_threads = 4;
 constexpr int number_of_times_to_wait = 3000000;
 constexpr int number_of_times_to_wait_per_sleeper = number_of_times_to_wait / number_of_sleeper_threads;
 constexpr int number_of_times_to_post_per_trigger = number_of_times_to_wait / number_of_trigger_threads / post_amount;
-std::atomic<unsigned long> delay_loop{0};
+std::atomic<unsigned long> delay_loop = ATOMIC_VAR_INIT(0);
 
 class SpinSemaphore : public aithreadsafe::SpinSemaphore
 {
@@ -33,10 +33,10 @@ class SpinSemaphore : public aithreadsafe::SpinSemaphore
 SpinSemaphore sem;
 
 // Count the total number of times that a thread was woken up.
-std::atomic_int woken_up_count;
-std::atomic_bool go;
-std::atomic<unsigned long> slow, fast;
-std::atomic<unsigned int> finished_sleepers;
+std::atomic_int woken_up_count = ATOMIC_VAR_INIT(0);
+std::atomic_bool go = ATOMIC_VAR_INIT(false);
+std::atomic<unsigned long> slow, fast = ATOMIC_VAR_INIT(0UL);
+std::atomic<unsigned int> finished_sleepers = ATOMIC_VAR_INIT(0U);
 
 using clock_type = std::chrono::steady_clock;
 

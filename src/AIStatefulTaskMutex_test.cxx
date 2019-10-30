@@ -66,9 +66,9 @@ utils::MemoryPagePool mpp(0x8000);
 utils::NodeMemoryResource nmr(mpp, AIStatefulTaskMutex::node_size());
 AIStatefulTaskMutex mutex(nmr);
 
-std::atomic<int> m_inside_critical_area = 0;
-std::atomic<int> m_locked = 0;
-std::atomic<int> finished_counter = 0;
+std::atomic<int> m_inside_critical_area = ATOMIC_VAR_INIT(0);
+std::atomic<int> m_locked = ATOMIC_VAR_INIT(0);
+std::atomic<int> finished_counter = ATOMIC_VAR_INIT(0);
 bool first = true;
 
 void MyTask::multiplex_impl(state_type state)

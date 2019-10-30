@@ -14,7 +14,7 @@ int constexpr skip_cores = 2;
 
 std::mutex cv_mutex;
 std::condition_variable cv;
-std::atomic_bool start;
+std::atomic_flag block = ATOMIC_FLAG_INIT;
 
 // Pause instruction to prevent excess processor bus usage.
 #define cpu_relax() asm volatile("pause\n": : :"memory")
@@ -52,7 +52,7 @@ void thread_main(int cpu, Result& result)
   }
 
   // Spinlock until we REALLY can start.
-  while (!start.load(std::memory_order_relaxed))
+  while (block.test_and_set(std::memory_order_acquire))
     cpu_relax();
 
   stopwatch.start();
@@ -91,7 +91,7 @@ int main()
 
   for (int run = 0; run < 100; ++run)
   {
-    start = false;
+    block.test_and_set();
 
     // Start all threads.
     int core = 0;
@@ -114,7 +114,7 @@ int main()
     // Wait till all threads are spinning.
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
     // Really start.
-    start = true;
+    block.clear(std::memory_order_release);
 
     // Join all threads.
     for (auto&& thread : threads)

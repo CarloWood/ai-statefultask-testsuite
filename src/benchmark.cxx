@@ -457,7 +457,7 @@ void Benchmark::calibrate_cycles_per_ns()
 } // namespace benchmark
 
 char buf1[200];
-std::atomic_int s_atomic;
+std::atomic_int s_atomic = ATOMIC_VAR_INIT(0);
 char buf2[200];
 std::mutex m;
 

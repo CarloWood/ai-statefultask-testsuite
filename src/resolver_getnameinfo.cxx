@@ -11,7 +11,7 @@
 #include <atomic>
 
 int constexpr queue_capacity = 32;
-std::atomic_int test_finished = 0;
+std::atomic_int test_finished = ATOMIC_VAR_INIT(0);
 
 boost::intrusive_ptr<task::GetNameInfo> getnameinfo_task;
 

@@ -12,14 +12,15 @@
 int constexpr bufsize = 16;
 int const cpu_nr[2] = { 0, 2 };
 
-std::atomic<uint16_t> s_atomic;
+std::atomic<uint16_t> s_atomic = ATOMIC_VAR_INIT(uint16_t{0});
 std::array<std::array<std::atomic<uint64_t>, bufsize>, 2> m_ringbuffers;
 std::array<std::array<int64_t, bufsize>, 2> m_diff;
 
 void init()
 {
   s_atomic.store(10U);
-  std::memset(&m_ringbuffers, 0, sizeof(m_ringbuffers));
+  for (auto& a : m_ringbuffers)
+    a.fill(0);
   std::memset(&m_diff, 0, sizeof(m_diff));
   for (int cpu = 0; cpu <= 1; ++ cpu)
     for (auto&& e : m_diff[cpu]) e = std::numeric_limits<int64_t>::max();
@@ -121,6 +122,9 @@ void f(int cpu, eda::FrequencyCounter<int64_t>& fc)
 
 int main()
 {
+  for (auto& a : m_ringbuffers)
+    for (int i = 0; i < bufsize; ++i)
+      std::atomic_init(&a[i], 0);
   std::array<eda::FrequencyCounter<int64_t>, 2> fcs;
   for (int i = 0; i < 100; ++i)
   {

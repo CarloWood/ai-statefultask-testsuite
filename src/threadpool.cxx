@@ -14,9 +14,9 @@ int main()
 {
   Debug(NAMESPACE_DEBUG::init());
 
-  std::atomic_int count{0};
-  std::atomic_int empty{0};
-  std::atomic_int full{0};
+  std::atomic_int count(0);
+  std::atomic_int empty(0);
+  std::atomic_int full(0);
   {
     AIThreadPool thread_pool(6);
     AIQueueHandle queue_handle1 = thread_pool.new_queue(capacity);

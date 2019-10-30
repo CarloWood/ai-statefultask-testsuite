@@ -7,7 +7,7 @@
 
 std::mutex m;
 std::condition_variable cv;
-std::atomic_bool w{false};
+std::atomic_bool w = ATOMIC_VAR_INIT(false);
 std::chrono::time_point<std::chrono::high_resolution_clock> wait_start;
 std::chrono::time_point<std::chrono::high_resolution_clock> wait_end;
 

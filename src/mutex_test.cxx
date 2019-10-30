@@ -45,6 +45,7 @@ std::pair<double, double> stats(std::vector<double> const& data, double confiden
 struct alignas(cachelinesize) A {
   std::atomic_int a;
   char b[cachelinesize - sizeof(std::atomic_int)];
+  A() : a(0) { }
 };
 
 std::array<A, num_threads> g_count_0;
@@ -70,7 +71,7 @@ extern uint64_t do_Ndec(int thread, int loop_count);
 using clock_type = std::chrono::high_resolution_clock;
 using time_point = clock_type::time_point;
 
-std::atomic_int ready;
+std::atomic_int ready = ATOMIC_VAR_INIT(0);
 
 eda::Plot plot("Number of clocks it takes to lock/unlock a mutex as function of frequency (in ns).",
           "Interval between calls to the lock/unlock pair (in ns)",
@@ -97,8 +98,8 @@ void benchmark(int thread, int test_nr, int repeats, std::string desc, uint64_t 
   for (int j = 1; j <= 21; ++j)
   {
     // Synchronize all threads again...
-    static std::atomic_int benchmarking1;
-    static std::atomic_int benchmarking2;
+    static std::atomic_int benchmarking1 = ATOMIC_VAR_INIT(0);
+    static std::atomic_int benchmarking2 = ATOMIC_VAR_INIT(0);
     benchmarking1.fetch_add(1);
     while (benchmarking1.load() < num_threads)
       ;
@@ -204,7 +205,7 @@ void benchmark(int thread, int test_nr, int repeats, std::string desc, uint64_t 
   //plot.add_data_point((double)repeats, clocks_result.first, clocks_result.second, "CPU #" + std::to_string(thread) + "(clks)");
 }
 
-std::atomic_int count;
+std::atomic_int count = ATOMIC_VAR_INIT(0);
 int test_nr2 = 0;
 
 void run(int thread)

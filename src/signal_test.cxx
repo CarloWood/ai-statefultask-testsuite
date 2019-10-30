@@ -19,8 +19,8 @@ namespace debug { void init() {} void init_thread() {} }
 
 sem_t tasks;
 
-static std::atomic_int count34;
-static std::atomic_int count35;
+static std::atomic_int count34 = ATOMIC_VAR_INIT(0);
+static std::atomic_int count35 = ATOMIC_VAR_INIT(0);
 static_assert(ATOMIC_INT_LOCK_FREE == 2, "std::atomic_int isn't always lock free!");
 
 // Array that stores the line number where each thread currently is.
@@ -52,7 +52,7 @@ void sighandler_finish(int UNUSED_ARG(nr))
 
 }
 
-std::atomic_bool volatile running{true};
+std::atomic_bool volatile running = ATOMIC_VAR_INIT(true);
 
 void thr7_run(int signr)
 {
@@ -77,9 +77,9 @@ void thr7_run(int signr)
   }
 }
 
-std::atomic_int running_threads{0};
-std::atomic_int was_here34{0};
-std::atomic_int was_here35{0};
+std::atomic_int running_threads = ATOMIC_VAR_INIT(0);
+std::atomic_int was_here34 = ATOMIC_VAR_INIT(0);
+std::atomic_int was_here35 = ATOMIC_VAR_INIT(0);
 sigset_t blocked_signals;
 sigset_t blocked_signr;
 
@@ -125,6 +125,9 @@ int main()
 {
   Debug(NAMESPACE_DEBUG::init());
   Dout(dc::notice, "SEM_VALUE_MAX = " << SEM_VALUE_MAX);
+
+  for (int i = 0; i < where.size(); ++i)
+    std::atomic_init(&where[i], 0);
 
   sem_init(&tasks, 0, 0);
 
