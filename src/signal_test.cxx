@@ -126,7 +126,7 @@ int main()
   Debug(NAMESPACE_DEBUG::init());
   Dout(dc::notice, "SEM_VALUE_MAX = " << SEM_VALUE_MAX);
 
-  for (int i = 0; i < where.size(); ++i)
+  for (size_t i = 0; i < where.size(); ++i)
     std::atomic_init(&where[i], 0);
 
   sem_init(&tasks, 0, 0);

@@ -150,7 +150,7 @@ int main()
 
     for (int i = 0; i < number_of_tasks; ++i)
     {
-      tasks[i]->run(handler, [i, &test_finished](bool success){
+      tasks[i]->run(handler, [&test_finished COMMA_CWDEBUG_ONLY(i)](bool success){
             if (!success)
               Dout(dc::warning, "MyTask was aborted.");
             else

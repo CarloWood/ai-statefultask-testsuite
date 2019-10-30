@@ -12,8 +12,6 @@
 #include "cwds/gnuplot_tools.h"
 #include "utils/macros.h"
 
-int constexpr loopsize = 100;
-
 using clock_type = std::chrono::high_resolution_clock;
 using time_point = clock_type::time_point;
 using Measurement = eda::FrequencyCounterResult;
