@@ -4,12 +4,15 @@
 #include "statefultask/AIEngine.h"
 #include "statefultask/AIPackagedTask.h"
 #include "threadpool/AIThreadPool.h"
+#include "threadsafe/StartingBarrier.h"
+
+static aithreadsafe::Condition reached;
 
 // Suppose we need to run this from a task (and wait until it finished).
 static int factorial(int n)
 {
-  DoutEntering(dc::notice, "factorial()");
-  std::this_thread::sleep_for(std::chrono::seconds(1));
+  DoutEntering(dc::notice|flush_cf, "factorial()");
+  reached.signal();
   int r = 1;
   while (n > 1) r *= n--;
   Dout(dc::notice, "Leaving factorial()");
@@ -18,8 +21,8 @@ static int factorial(int n)
 
 static void sayhello()
 {
-  DoutEntering(dc::notice, "sayhello()");
-  std::this_thread::sleep_for(std::chrono::seconds(1));
+  DoutEntering(dc::notice|flush_cf, "sayhello()");
+  reached.wait();
   std::cout << "Hello!\n";
 }
 
