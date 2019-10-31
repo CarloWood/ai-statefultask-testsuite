@@ -23,9 +23,6 @@ static void sayhello()
   std::cout << "Hello!\n";
 }
 
-constexpr int capacity = 2;
-AIQueueHandle s_task_queue;
-
 class Task : public AIStatefulTask {
   protected:
     using direct_base_type = AIStatefulTask;            // The base class of this task.
@@ -47,10 +44,13 @@ class Task : public AIStatefulTask {
   public:
     static state_type constexpr max_state = Task_done + 1;  // One beyond the largest state.
     Task() : AIStatefulTask(CWDEBUG_ONLY(true)),
-        m_calculate_factorial(this, 1, &factorial, s_task_queue),
-        m_say_hello(this, 2, &sayhello, s_task_queue) { }
+        m_task_queue(AIThreadPool::instance().new_queue(capacity)),
+        m_calculate_factorial(this, 1, &factorial, m_task_queue),
+        m_say_hello(this, 2, &sayhello, m_task_queue) { }
 
   private:
+    static constexpr int capacity = 2;
+    AIQueueHandle m_task_queue;
     AIPackagedTask<int(int)> m_calculate_factorial;
     AIPackagedTask<void()> m_say_hello;
 };
@@ -77,7 +77,6 @@ void Task::multiplex_impl(state_type run_state)
   switch(run_state)
   {
     case Task_start:
-      s_task_queue = AIThreadPool::instance().new_queue(capacity);
       m_calculate_factorial(5);
       // Fall through.
     case Task_dispatch_factorial:
