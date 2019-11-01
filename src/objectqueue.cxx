@@ -9,8 +9,8 @@
 #include <functional>
 #include <cstdlib>
 
-namespace { constexpr char const* const name_F = "std::function<void()>"; }
 #ifdef CWDEBUG
+namespace { constexpr char const* const name_F = "std::function<void()>"; }
 struct F : tracked::Tracked<&name_F> {
   std::function<void()> m_f;
   F() {}
@@ -29,8 +29,8 @@ struct F : tracked::Tracked<&name_F> {
 using F = std::function<void()>;
 #endif
 
-namespace { constexpr char const* const name_B = "Big"; }
 #ifdef CWDEBUG
+namespace { constexpr char const* const name_B = "Big"; }
 struct B : tracked::Tracked<&name_B> {
   using tracked::Tracked<&name_B>::Tracked;
 };
