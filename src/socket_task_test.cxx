@@ -3,7 +3,7 @@
 #include "statefultask/AIEngine.h"
 #include "evio/EventLoop.h"
 #include "evio/TLSSocket.h"
-#include "threadsafe/Condition.h"
+#include "threadsafe/Gate.h"
 #include "utils/AIAlert.h"
 #include "utils/debug_ostream_operators.h"
 #include "debug.h"
@@ -57,7 +57,7 @@ int main()
     resolver::Scope resolver_scope(handler, false);
 
     // Allow the main thread to wait until the test finished.
-    aithreadsafe::Condition test_finished;
+    aithreadsafe::Gate test_finished;
 
     boost::intrusive_ptr<task::ConnectToEndPoint> task = new task::ConnectToEndPoint(CWDEBUG_ONLY(true));
     auto socket = evio::create<MySocket>();
@@ -70,7 +70,7 @@ int main()
           {
             Dout(dc::notice, "Task with endpoint " << task->get_end_point() << " finished.");
           }
-          test_finished.signal();
+          test_finished.open();
         });
     // Must do a flush or else the buffer won't be written to the socket at all; this flush
     // does not block though, it only starts watching the fd for readability and then writes
@@ -82,7 +82,6 @@ int main()
     socket->output_stream() << "GET / HTTP/1.0\r\n\r\n"; // << std::flush;
 
     // Wait until the test is finished.
-    std::lock_guard<AIMutex> lock(test_finished);
     test_finished.wait();
 
     // Terminate application.

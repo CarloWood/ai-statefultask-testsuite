@@ -1,6 +1,6 @@
 #include "sys.h"
 #include "threadpool/AIThreadPool.h"
-#include "threadsafe/Condition.h"
+#include "threadsafe/Gate.h"
 #include "debug.h"
 #include <chrono>
 
@@ -53,7 +53,7 @@ int main()
       }
       // Wait for the queue to be entirely processed.
       {
-        aithreadsafe::Condition finished;
+        aithreadsafe::Gate finished;
         auto queues_access = thread_pool.queues_read_access();
         auto& queue = thread_pool.get_queue(queues_access, queue_handle1);
         int length;
@@ -62,7 +62,7 @@ int main()
           auto access = queue.producer_access();
           length = access.length();
           if (length < capacity) // Buffer not full?
-            access.move_in([&finished](){ finished.signal(); return false; });
+            access.move_in([&finished](){ finished.open(); return false; });
           std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
         while (AI_UNLIKELY(length == capacity));

@@ -1,5 +1,5 @@
 #include "sys.h"
-#include "threadsafe/Condition.h"
+#include "threadsafe/Gate.h"
 #include "threadpool/AIThreadPool.h"
 #include "statefultask/AIStatefulTaskMutex.h"
 #include "utils/AIAlert.h"
@@ -139,7 +139,7 @@ int main()
 //    evio::EventLoop event_loop(handler);
 
     // Allow the main thread to wait until the test finished.
-    aithreadsafe::Condition test_finished;
+    aithreadsafe::Gate test_finished;
     AIQueueHandle handler = thread_pool.new_queue(queue_capacity);
 
     std::vector<boost::intrusive_ptr<MyTask>> tasks;
@@ -157,7 +157,7 @@ int main()
             {
               Dout(dc::notice, "MyTask " << i << " finished.");
               if (finished_counter++ == number_of_tasks - 1)
-                test_finished.signal();
+                test_finished.open();
             }
           });
     }
