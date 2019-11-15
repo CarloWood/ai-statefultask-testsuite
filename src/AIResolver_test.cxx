@@ -16,6 +16,7 @@ int main()
 
   AIThreadPool thread_pool;
   AIQueueHandle handler = thread_pool.new_queue(queue_capacity);
+
   // Initialize the IO event loop thread and the async hostname resolver.
   evio::EventLoop event_loop(handler);
   resolver::Scope resolver_scope(handler, true);

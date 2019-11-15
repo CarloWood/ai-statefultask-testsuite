@@ -2,6 +2,7 @@
 #include "debug.h"
 #include "statefultask/AITimer.h"
 #include "statefultask/AIEngine.h"
+#include "statefultask/DefaultMemoryPagePool.h"
 #include "threadpool/AIThreadPool.h"
 #include <thread>
 
@@ -33,6 +34,7 @@ int main()
 
   AIThreadPool thread_pool;
   AIQueueHandle handler __attribute__ ((unused)) = thread_pool.new_queue(queue_capacity);
+  AIMemoryPagePool mpp;
 
   AIEngine engine("main engine", 2.0);
   AITimer* timer = new AITimer(CWDEBUG_ONLY(true));

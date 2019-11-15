@@ -24,7 +24,7 @@ AIStatefulTaskMutex_test_LDADD = ../statefultask/libstatefultask.la ../threadpoo
 
 FileLock_test_SOURCES = FileLock_test.cxx
 FileLock_test_CXXFLAGS = @LIBCWD_R_FLAGS@
-FileLock_test_LDADD = ../filelock-task/libfilelocktask.la ../statefultask/libstatefultask.la ../threadpool/libthreadpool.la ../events/libevents.la ../farmhash/src/libfarmhash.la ../evio/libevio.la ../threadsafe/libthreadsafe.la ../utils/libutils_r.la ../cwds/libcwds_r.la -lboost_iostreams -lboost_filesystem -lboost_system
+FileLock_test_LDADD = ../socket-task/libsockettask.la ../resolver-task/libresolvertask.la ../filelock-task/libfilelocktask.la ../statefultask/libstatefultask.la ../threadpool/libthreadpool.la ../events/libevents.la ../farmhash/src/libfarmhash.la ../evio/libevio.la ../threadsafe/libthreadsafe.la ../utils/libutils_r.la ../cwds/libcwds_r.la -lboost_iostreams -lboost_filesystem -lboost_system
 
 helloworld_SOURCES = helloworld.cxx
 helloworld_CXXFLAGS = @LIBCWD_R_FLAGS@

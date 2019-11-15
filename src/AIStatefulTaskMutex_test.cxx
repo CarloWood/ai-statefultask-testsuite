@@ -2,6 +2,8 @@
 #include "threadsafe/Gate.h"
 #include "threadpool/AIThreadPool.h"
 #include "statefultask/AIStatefulTaskMutex.h"
+#include "statefultask/AIStatefulTask.h"
+#include "statefultask/DefaultMemoryPagePool.h"
 #include "utils/AIAlert.h"
 #include "utils/debug_ostream_operators.h"
 #include "debug.h"
@@ -62,9 +64,7 @@ char const* MyTask::state_str_impl(state_type run_state) const
   return "UNKNOWN STATE";
 }
 
-utils::MemoryPagePool mpp(0x8000);
-utils::NodeMemoryResource nmr(mpp, AIStatefulTaskMutex::node_size());
-AIStatefulTaskMutex mutex(nmr);
+AIStatefulTaskMutex mutex;
 
 std::atomic<int> m_inside_critical_area = ATOMIC_VAR_INIT(0);
 std::atomic<int> m_locked = ATOMIC_VAR_INIT(0);
@@ -118,16 +118,18 @@ int main()
   Debug(NAMESPACE_DEBUG::init());
   Dout(dc::notice, "Entering main()...");
 
+  AIMemoryPagePool mpp;
+
   benchmark::Stopwatch sw;
   sw.start();
 
   // Pre-allocate memory in the memory pools.
   std::vector<void*> blocks;
-  utils::MemoryPagePool::blocks_t const required_pool_blocks = 21000000 / mpp.block_size();
-  while (mpp.pool_blocks() < required_pool_blocks)
-    blocks.push_back(nmr.allocate(0));
+  utils::MemoryPagePool::blocks_t const required_pool_blocks = 21000000 / mpp.instance().block_size();
+  while (mpp.instance().pool_blocks() < required_pool_blocks)
+    blocks.push_back(AIStatefulTaskMutex::s_node_memory_resource.allocate(0));
   for (auto ptr : blocks)
-    nmr.deallocate(ptr);
+    AIStatefulTaskMutex::s_node_memory_resource.deallocate(ptr);
 
   sw.stop();
   std::cout << "Ran for " << (sw.diff_cycles() / 3612059050.0) << " seconds." << std::endl;

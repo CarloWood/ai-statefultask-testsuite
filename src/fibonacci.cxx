@@ -1,6 +1,7 @@
 #include "sys.h"
 #include "debug.h"
 #include "statefultask/AIEngine.h"
+#include "statefultask/DefaultMemoryPagePool.h"
 #include "threadpool/AIThreadPool.h"
 #include "utils/GlobalObjectManager.h"
 #include <iostream>
@@ -105,9 +106,10 @@ int main()
 
   static_assert(!std::is_destructible<Fibonacci>::value && std::has_virtual_destructor<Fibonacci>::value, "Class must have a protected virtual destuctor.");
 
-  AIEngine engine("main:engine");
   AIThreadPool thread_pool;
   high_priority_queue = thread_pool.new_queue(100);
+  AIMemoryPagePool mpp;
+  AIEngine engine("main:engine");
 
   int const number = 10;
   boost::intrusive_ptr<Fibonacci> flower = new Fibonacci;

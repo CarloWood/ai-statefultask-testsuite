@@ -1,6 +1,7 @@
 #include "sys.h"
 #include "resolver-task/GetNameInfo.h"
 #include "statefultask/AIEngine.h"
+#include "statefultask/DefaultMemoryPagePool.h"
 #include "evio/SocketAddress.h"
 #include "evio/EventLoop.h"
 #include "utils/AIAlert.h"
@@ -51,6 +52,7 @@ int main(int argc, char* argv[])
 
   AIThreadPool thread_pool;
   AIQueueHandle handler = thread_pool.new_queue(queue_capacity);
+  AIMemoryPagePool mpp;
 
   try
   {

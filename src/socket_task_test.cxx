@@ -1,6 +1,7 @@
 #include "sys.h"
 #include "socket-task/ConnectToEndPoint.h"
 #include "statefultask/AIEngine.h"
+#include "statefultask/DefaultMemoryPagePool.h"
 #include "evio/EventLoop.h"
 #include "evio/TLSSocket.h"
 #include "threadsafe/Gate.h"
@@ -50,6 +51,7 @@ int main()
 
   AIThreadPool thread_pool;
   AIQueueHandle handler = thread_pool.new_queue(queue_capacity);
+  AIMemoryPagePool mpp;
 
   try
   {

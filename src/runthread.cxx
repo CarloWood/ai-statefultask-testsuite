@@ -2,6 +2,7 @@
 #include "debug.h"
 #include "statefultask/AIStatefulTask.h"
 #include "statefultask/AIEngine.h"
+#include "statefultask/DefaultMemoryPagePool.h"
 #include "statefultask/AIPackagedTask.h"
 #include "threadpool/AIThreadPool.h"
 #include "threadsafe/Gate.h"
@@ -122,6 +123,7 @@ int main()
 
   AIThreadPool thread_pool;
   AIQueueHandle high_priority_queue = thread_pool.new_queue(8);
+  AIMemoryPagePool mpp;
 
   boost::intrusive_ptr<Task> task = new Task;
 

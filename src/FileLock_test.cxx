@@ -1,9 +1,9 @@
 #include "sys.h"
-#include "filelock-task/FileLock.h"
+#include "filelock-task/TaskLock.h"
 #include "statefultask/AIEngine.h"
+#include "statefultask/DefaultMemoryPagePool.h"
 #include "evio/EventLoop.h"
 #include "utils/debug_ostream_operators.h"
-#include "debug.h"
 
 struct TaskMutex
 {
@@ -107,6 +107,7 @@ int main()
 
   AIThreadPool thread_pool;
   AIQueueHandle handler = thread_pool.new_queue(32);
+  AIMemoryPagePool mpp;
 
   using Data_ts = aithreadsafe::Wrapper<int, policy::ReadWriteTask>;
   Data_ts data;
@@ -116,60 +117,72 @@ int main()
     evio::EventLoop event_loop(handler);
     AIEngine engine("main engine", 2.0);
 
-    FileLock* flock1 = new FileLock("flock1");
-    FileLock flock2;
-    flock2.set_filename("flock2");
+    FileLock flock;
+    flock.set_filename("flock1");
 
-    Dout(dc::notice, "flock2 = " << flock2);
+    boost::filesystem::path file_lock_name = "flock1";
+    FileLockAccess file_lock_access(file_lock_name);
 
-    FileLockAccess file_lock_access1(*flock1);
-    delete flock1;
-    FileLockAccess file_lock_access2(file_lock_access1);
-    AIStatefulTaskNamedMutex task_lock_access(file_lock_access1);
-
-    AIStatefulTaskLockTask* my_task = new AIStatefulTaskLockTask(file_lock_access1);
-    AIStatefulTask* ptr = my_task;
-
-    task_lock_access.try_lock(my_task);
-    Dout(dc::notice, "task_lock_access = " << task_lock_access);
+    boost::intrusive_ptr<task::TaskLock> my_task1 = new task::TaskLock(file_lock_access);
+    boost::intrusive_ptr<task::TaskLock> my_task2 = new task::TaskLock(file_lock_access);
 
 #if 0
     bool have_lock1;
     {
-      Data_ts::rat data_r(data, ptr, have_lock1);
+      Data_ts::rat data_r(data, my_task1, have_lock1);
     }
+    ASSERT(have_lock1);
 
     bool have_lock2;
     {
-      Data_ts::rat data_r(data, ptr + 1, have_lock2);
+      Data_ts::rat data_r(data, my_task2, have_lock2);
+      ASSERT(have_lock2);
+
+      //data.rdunlock();
+
+      bool have_lock3;
+      {
+        Data_ts::wat data_w(data, my_task2, have_lock3);
+      }
+      ASSERT(!have_lock3);
     }
-
-    if (have_lock1)
-      data.rdunlock();
-
-    bool have_lock3;
-    {
-      Data_ts::wat data_w(data, ptr + 1, have_lock3);
-    }
-
-    if (have_lock3)
-      data.wrunlock();
 
     {
-      Data_ts::wat data_w(data, ptr + 1, have_lock1);
+      Data_ts::wat data_w(data, my_task2, have_lock3);
     }
+    ASSERT(have_lock3);
 
-    std::atomic<bool> test_finished = false;
-    my_task->run(&engine, [&](bool CWDEBUG_ONLY(success)){ test_finished = true; Dout(dc::notice, "Task finished (" << (success ? "success" : "failure") << ")!"); });
+    //data.wrunlock();
+#endif
+
+    std::atomic_int test_finished = 0;
+    std::atomic_bool locked_task1 = false;
+
+    my_task1->run(&engine, [&](bool CWDEBUG_ONLY(success)){
+        test_finished++;
+        locked_task1 = true;
+        Dout(dc::notice, "Task1 finished (" << (success ? "success" : "failure") << ")!");
+    });
+
+    my_task2->run(&engine, [&](bool CWDEBUG_ONLY(success)){
+        test_finished++;
+        Dout(dc::notice, "Task2 finished (" << (success ? "success" : "failure") << ")!");
+    });
 
     // Mainloop.
     Dout(dc::notice, "Starting main loop...");
-    while (!test_finished)
+    bool unlocked_task1 = false;
+    while (test_finished < 2)
     {
       engine.mainloop();
       std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      if (locked_task1 && !unlocked_task1)
+      {
+        my_task1->unlock();
+        unlocked_task1 = true;
+      }
     }
-#endif
+    my_task2->unlock();
 
     // Terminate application.
     event_loop.join();

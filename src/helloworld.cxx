@@ -1,6 +1,7 @@
 #include "sys.h"
 #include "debug.h"
 #include "statefultask/AIEngine.h"
+#include "statefultask/DefaultMemoryPagePool.h"
 #include "threadpool/AIThreadPool.h"
 #include <iostream>
 #include <chrono>
@@ -203,6 +204,7 @@ int main()
   // Create a thread pool. Immediately afterwards call new_queue on it at least once!
   AIThreadPool thread_pool;
   AIQueueHandle high_priority_queue = thread_pool.new_queue(8);
+  AIMemoryPagePool mpp;
 
   // Create our two custom tasks. This uses normal pointers (as opposed
   // to boost::intrusive_ptr<AIStatefulTask>) which means that they
