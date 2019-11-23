@@ -53,3 +53,7 @@
 	path = filelock-task
 	url = https://github.com/CarloWood/filelock-task.git
 	branch = master
+[submodule "helloworld-task"]
+	path = helloworld-task
+	url = https://github.com/CarloWood/helloworld-task.git
+	branch = master

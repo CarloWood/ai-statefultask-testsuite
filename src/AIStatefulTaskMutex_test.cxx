@@ -21,7 +21,7 @@ class MyTask : public AIStatefulTask
 
   //! The different states of the stateful task.
   enum my_task_state_type {
-    MyTask_call_lock = direct_base_type::max_state,
+    MyTask_call_lock = direct_base_type::state_end,
     MyTask_locked,
     MyTask_critical_area,
     MyTask_done
@@ -29,7 +29,7 @@ class MyTask : public AIStatefulTask
 
  public:
   //! One beyond the largest state of this task.
-  static state_type constexpr max_state = MyTask_done + 1;
+  static state_type constexpr state_end = MyTask_done + 1;
 
  public:
   MyTask(CWDEBUG_ONLY(bool debug = false) ) CWDEBUG_ONLY(: AIStatefulTask(debug))

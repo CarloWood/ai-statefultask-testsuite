@@ -22,14 +22,14 @@ class Fibonacci : public AIStatefulTask {
 
     // The different states of the task.
     enum fibonacci_state_type {
-      Fibonacci_start = direct_base_type::max_state,
+      Fibonacci_start = direct_base_type::state_end,
       Fibonacci_wait,
       Fibonacci_math,
       Fibonacci_done,
     };
 
   public:
-    static state_type constexpr max_state = Fibonacci_done + 1;
+    static state_type constexpr state_end = Fibonacci_done + 1;
     Fibonacci() : CWDEBUG_ONLY(AIStatefulTask(true),) m_index(0), m_value(0) { }
 
     void set_number(int n) { m_index = n; }
@@ -77,7 +77,7 @@ void Fibonacci::multiplex_impl(state_type run_state)
       m_smallest->run(high_priority_queue, this, 1);
       // Wait until one or both subtasks have finished (if they haven't already).
       set_state(Fibonacci_wait);
-      /*fall-through*/
+      [[fallthrough]];
     case Fibonacci_wait:
       if (!(m_largest->finished() && m_smallest->finished()))
       {
@@ -86,12 +86,12 @@ void Fibonacci::multiplex_impl(state_type run_state)
       }
       // If we get here then both subtasks are done.
       set_state(Fibonacci_math);
-      /* Fall-through */
+      [[fallthrough]];
     case Fibonacci_math:
       // Both subtasks are done. Calculate our value from the results.
       m_value = m_largest->value() + m_smallest->value();
       set_state(Fibonacci_done);
-      /* Fall-through */
+      [[fallthrough]];
     case Fibonacci_done:
       Dout(dc::notice, "m_index = " << m_index << "; m_value set to " << m_value);
       finish();
@@ -106,9 +106,9 @@ int main()
 
   static_assert(!std::is_destructible<Fibonacci>::value && std::has_virtual_destructor<Fibonacci>::value, "Class must have a protected virtual destuctor.");
 
+  AIMemoryPagePool mpp;
   AIThreadPool thread_pool;
   high_priority_queue = thread_pool.new_queue(100);
-  AIMemoryPagePool mpp;
   AIEngine engine("main:engine");
 
   int const number = 10;

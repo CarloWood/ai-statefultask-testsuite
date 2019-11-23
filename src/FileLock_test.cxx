@@ -105,9 +105,9 @@ int main()
 {
   Debug(NAMESPACE_DEBUG::init());
 
+  AIMemoryPagePool mpp;
   AIThreadPool thread_pool;
   AIQueueHandle handler = thread_pool.new_queue(32);
-  AIMemoryPagePool mpp;
 
   using Data_ts = aithreadsafe::Wrapper<int, policy::ReadWriteTask>;
   Data_ts data;
@@ -126,33 +126,35 @@ int main()
     boost::intrusive_ptr<task::TaskLock> my_task1 = new task::TaskLock(file_lock_access);
     boost::intrusive_ptr<task::TaskLock> my_task2 = new task::TaskLock(file_lock_access);
 
-#if 0
-    bool have_lock1;
+#if 1
+    bool have_read_lock1;
     {
-      Data_ts::rat data_r(data, my_task1, have_lock1);
+      Data_ts::rat data_r(data, my_task1.get(), have_read_lock1);
     }
-    ASSERT(have_lock1);
+    ASSERT(have_read_lock1);
 
-    bool have_lock2;
+    bool have_write_lock2;
+    bool have_read_lock2;
     {
-      Data_ts::rat data_r(data, my_task2, have_lock2);
-      ASSERT(have_lock2);
+      Data_ts::rat data_r(data, my_task2.get(), have_read_lock2);
+      ASSERT(have_read_lock2);
 
-      //data.rdunlock();
+      data.rdunlock();
 
-      bool have_lock3;
       {
-        Data_ts::wat data_w(data, my_task2, have_lock3);
+        Data_ts::wat data_w(data, my_task2.get(), have_write_lock2);
       }
-      ASSERT(!have_lock3);
+      ASSERT(!have_write_lock2);
     }
+
+    data.rdunlock();
 
     {
-      Data_ts::wat data_w(data, my_task2, have_lock3);
+      Data_ts::wat data_w(data, my_task2.get(), have_write_lock2);
     }
-    ASSERT(have_lock3);
+    ASSERT(have_write_lock2);
 
-    //data.wrunlock();
+    data.wrunlock();
 #endif
 
     std::atomic_int test_finished = 0;

@@ -50,9 +50,9 @@ int main(int argc, char* argv[])
     return 1;
   }
 
+  AIMemoryPagePool mpp;
   AIThreadPool thread_pool;
   AIQueueHandle handler = thread_pool.new_queue(queue_capacity);
-  AIMemoryPagePool mpp;
 
   try
   {

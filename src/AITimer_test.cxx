@@ -32,9 +32,9 @@ int main()
   Debug(NAMESPACE_DEBUG::init());
   //Debug(if (!dc::statefultask.is_on()) dc::statefultask.on());
 
-  AIThreadPool thread_pool;
-  AIQueueHandle handler __attribute__ ((unused)) = thread_pool.new_queue(queue_capacity);
   AIMemoryPagePool mpp;
+  AIThreadPool thread_pool;
+  [[maybe_unused]] AIQueueHandle handler = thread_pool.new_queue(queue_capacity);
 
   AIEngine engine("main engine", 2.0);
   AITimer* timer = new AITimer(CWDEBUG_ONLY(true));

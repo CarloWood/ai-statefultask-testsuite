@@ -34,7 +34,7 @@ class Task : public AIStatefulTask {
 
     // The different states of the task.
     enum task_state_type {
-      Task_start = direct_base_type::max_state,
+      Task_start = direct_base_type::state_end,
       Task_dispatch_factorial,
       Task_hello,
       Task_dispatch_say_hello,
@@ -46,7 +46,7 @@ class Task : public AIStatefulTask {
     void multiplex_impl(state_type run_state) override;
 
   public:
-    static state_type constexpr max_state = Task_done + 1;  // One beyond the largest state.
+    static state_type constexpr state_end = Task_done + 1;  // One beyond the largest state.
     Task() : AIStatefulTask(CWDEBUG_ONLY(true)),
         m_task_queue(AIThreadPool::instance().new_queue(capacity)),
         m_calculate_factorial(this, 1, &factorial, m_task_queue),
@@ -82,7 +82,7 @@ void Task::multiplex_impl(state_type run_state)
   {
     case Task_start:
       m_calculate_factorial(5);
-      // Fall through.
+      [[fallthrough]];
     case Task_dispatch_factorial:
     {
       int length = m_calculate_factorial.dispatch();
@@ -97,7 +97,7 @@ void Task::multiplex_impl(state_type run_state)
     }
     case Task_hello:
       m_say_hello();
-      // Fall through.
+      [[fallthrough]];
     case Task_dispatch_say_hello:
     {
       int length = m_say_hello.dispatch();
@@ -121,9 +121,9 @@ int main()
 {
   Debug(NAMESPACE_DEBUG::init());
 
+  AIMemoryPagePool mpp;
   AIThreadPool thread_pool;
   AIQueueHandle high_priority_queue = thread_pool.new_queue(8);
-  AIMemoryPagePool mpp;
 
   boost::intrusive_ptr<Task> task = new Task;
 

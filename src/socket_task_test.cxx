@@ -49,9 +49,9 @@ int main()
 {
   Debug(NAMESPACE_DEBUG::init());
 
+  AIMemoryPagePool mpp;
   AIThreadPool thread_pool;
   AIQueueHandle handler = thread_pool.new_queue(queue_capacity);
-  AIMemoryPagePool mpp;
 
   try
   {

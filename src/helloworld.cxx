@@ -26,13 +26,13 @@ class HelloWorld : public AIStatefulTask
 
     // The different states of the task.
     enum hello_world_state_type {
-      HelloWorld_start = direct_base_type::max_state,                   // Mandatory first value.
+      HelloWorld_start = direct_base_type::state_end,                   // Mandatory first value.
       HelloWorld_wait,
       HelloWorld_done,
     };
 
   public:
-    static state_type constexpr max_state = HelloWorld_done + 1;        // Must be one passed the last state.
+    static state_type constexpr state_end = HelloWorld_done + 1;        // Must be one passed the last state.
     HelloWorld();
 
     // Raise signal '1' when this function is called.
@@ -56,13 +56,13 @@ class Bumper : public AIStatefulTask
 
     // The different states of the task.
     enum bumper_state_type {
-      Bumper_start = direct_base_type::max_state,                       // Mandatory first value.
+      Bumper_start = direct_base_type::state_end,                       // Mandatory first value.
       Bumper_wait,
       Bumper_done,
     };
 
   public:
-    static state_type constexpr max_state = Bumper_done + 1;            // Must be one passed the last state.
+    static state_type constexpr state_end = Bumper_done + 1;            // Must be one passed the last state.
     Bumper();
 
     // Raise signal '1' when this function is called.
@@ -195,16 +195,18 @@ int main()
                 std::has_virtual_destructor<Bumper>::value,
       "Class Bumper must have a protected virtual destuctor.");
 
+  // Initialize the default memory page pool.
+  AIMemoryPagePool mpp;
+
+  // Create a thread pool. Immediately afterwards call new_queue on it at least once!
+  AIThreadPool thread_pool;
+  AIQueueHandle high_priority_queue = thread_pool.new_queue(8);
+
   // Create an engine. This application isn't really using it,
   // because everything runs in the thread pool.
   // Use (any) max_duration (here 10 ms) to cause engine.mainloop()
   // to return (immediately, because it has nothing to do).
   AIEngine engine("main:engine", 10);
-
-  // Create a thread pool. Immediately afterwards call new_queue on it at least once!
-  AIThreadPool thread_pool;
-  AIQueueHandle high_priority_queue = thread_pool.new_queue(8);
-  AIMemoryPagePool mpp;
 
   // Create our two custom tasks. This uses normal pointers (as opposed
   // to boost::intrusive_ptr<AIStatefulTask>) which means that they

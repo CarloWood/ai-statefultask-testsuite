@@ -41,9 +41,9 @@ int main()
   Debug(NAMESPACE_DEBUG::init());
   //Debug(if (!dc::statefultask.is_on()) dc::statefultask.on());
 
+  AIMemoryPagePool mpp;
   AIThreadPool thread_pool;
   AIQueueHandle handler = thread_pool.new_queue(queue_capacity);
-  AIMemoryPagePool mpp;
 
   try
   {
