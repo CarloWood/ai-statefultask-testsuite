@@ -261,14 +261,14 @@ class RunningTimersImpl<INTERVALS, 0>
   std::multimap<time_point, TimerImpl<0>*> m_map;
 
  public:
-  // Return true if \a handle is the next timer to expire.
+  // Return true if @a handle is the next timer to expire.
   bool is_current(TimerHandleImpl<0> const& handle) const
   {
     assert(handle.is_running());
     return handle.m_iter == m_map.begin();
   }
 
-  // Add \a timer to the list of running timers, using \a interval as timeout.
+  // Add @a timer to the list of running timers, using @a interval as timeout.
   TimerHandleImpl<0> push(int, TimerImpl<0>* timer)
   {
     ++running_timers_0;
@@ -336,13 +336,13 @@ class RunningTimersImpl<INTERVALS, 1>
    std::priority_queue<data_t, std::vector<data_t>, Compare> m_pqueue;
 
  public:
-  // Return true if \a handle is the next timer to expire.
+  // Return true if @a handle is the next timer to expire.
   bool is_current(TimerHandleImpl<1> const& handle) const
   {
     return handle.m_timer == m_pqueue.top().second;
   }
 
-  // Add \a timer to the list of running timers, using \a interval as timeout.
+  // Add @a timer to the list of running timers, using @a interval as timeout.
   TimerHandleImpl<1> push(int, TimerImpl<1>* timer)
   {
     m_pqueue.emplace(timer->get_expiration_point(), timer);
