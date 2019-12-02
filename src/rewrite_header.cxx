@@ -584,14 +584,7 @@ int main(int argc, char* argv[])
   option_dependency(variables_map, "module-name", "module-desc");
   option_dependency(variables_map, "module-desc", "module-name");
 
-  std::vector<std::string> non_options;
-  bool wrong_number_of_non_options = variables_map.count("input-file") == 0;
-  if (!wrong_number_of_non_options)
-  {
-    non_options = variables_map["input-file"].as<std::vector<std::string>>();
-    wrong_number_of_non_options = non_options.size() != 1;
-  }
-  if (wrong_number_of_non_options)
+  if (variables_map.count("input-file") == 0)
   {
     std::cerr << "Usage: " << argv[0] << " [options] <input file>\n";
     return 1;
@@ -602,38 +595,41 @@ int main(int argc, char* argv[])
     options::module_desc = variables_map["module-desc"].as<std::string>();
   }
 
-  fs::path const input_file_name = non_options[0];
-
   try
   {
-    // Read input file.
-    std::vector<std::string> lines;
+    auto non_options = variables_map["input-file"].as<std::vector<std::string>>();
+    for (fs::path const input_file_name : non_options)
     {
-      std::ifstream file;
-      open(file, input_file_name);
-
-      std::string str;
-      while (std::getline(file, str))
-        lines.push_back(str);
-    }
-    Dout(dc::notice, "Read " << input_file_name << ": " << lines.size() << " lines.");
-
-    if (process(lines))
-    {
-      // Write output file.
-      fs::path output_file_name = input_file_name;
-      output_file_name += ".new";
-
+      // Read input file.
+      std::vector<std::string> lines;
       {
-        std::ofstream ofile;
-        open(ofile, output_file_name);
+        std::ifstream file;
+        open(file, input_file_name);
 
-        for (auto& line : lines)
-          write(ofile, output_file_name, line);
+        std::string str;
+        while (std::getline(file, str))
+          lines.push_back(str);
       }
+      Dout(dc::notice, "Read " << input_file_name << ": " << lines.size() << " lines.");
 
-      Dout(dc::notice, "Renaming " << output_file_name << " to " << input_file_name);
-      fs::rename(output_file_name, input_file_name);
+      if (process(lines))
+      {
+        // Write output file.
+        fs::path output_file_name = input_file_name;
+        output_file_name += ".new";
+
+        {
+          std::ofstream ofile;
+          open(ofile, output_file_name);
+
+          for (auto& line : lines)
+            write(ofile, output_file_name, line);
+        }
+
+        Dout(dc::notice, "Renaming " << output_file_name << " to " << input_file_name);
+        fs::rename(output_file_name, input_file_name);
+      }
+      Dout(dc::notice, "");
     }
   }
   catch (std::system_error const& error)
