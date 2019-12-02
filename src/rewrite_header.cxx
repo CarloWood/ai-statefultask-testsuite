@@ -11,6 +11,11 @@
 namespace fs = std::filesystem;
 namespace po = boost::program_options;
 
+namespace options {
+std::string module_name;
+std::string module_desc;
+} // namespace options
+
 template<typename IOSTREAM>
 void open(IOSTREAM& file, fs::path const& name)
 {
@@ -49,7 +54,12 @@ class Header
   std::vector<std::string> m_trailing;
 
  public:
-  Header() : m_doxygen_start("/**"), m_doxygen_lead(" * "), m_doxygen_end(" */") { }
+  Header(std::string const& module_name, std::string const& module_desc) :
+    m_doxygen_start("/**"), m_doxygen_lead(" * "), m_doxygen_end(" */"),
+    m_module_name(module_name), m_module_desc(module_desc)
+  {
+    DoutEntering(dc::notice, "Header(\"" << module_name << "\", \"" << module_desc << "\")");
+  }
 
   void add_current_year()
   {
@@ -61,8 +71,11 @@ class Header
   void set_module(std::string const& name, std::string const& desc)
   {
     DoutEntering(dc::notice, "set_module(\"" << name << "\", \"" << desc << "\")");
-    m_module_name = name;
-    m_module_desc = desc;
+    if (m_module_name.empty())
+    {
+      m_module_name = name;
+      m_module_desc = desc;
+    }
   }
 
   void set_brief(std::string const& desc)
@@ -368,7 +381,7 @@ bool process(std::vector<std::string>& lines)
   int const el = input_lines.size();
   enum State { searching, module, file, brief, copyright, signature, part_of, license, trailing };
   State state = searching;
-  Header header;
+  Header header(options::module_name, options::module_desc);
   std::regex const module_regexp(R"((\S+)\s+--\s+(.*))");
   std::regex const file_regexp(R"([@\\]file(?:\s+|$)(.*))");
   std::regex const brief_regexp(R"([@\\]brief\s+(.*))");
@@ -543,17 +556,14 @@ int main(int argc, char* argv[])
 {
   Debug(NAMESPACE_DEBUG::init());
 
-  std::string module_name;
-  std::string module_desc;
-
   po::options_description options_description("Program options");
   po::positional_options_description positional_options_description;
 
   options_description.add_options()
-    ("help,h",                                                                  "print usage message")
-    ("module-name,n",   po::value(&module_name),                                "name of the git submodule")
-    ("module-desc,d",   po::value(&module_desc),                                "description of the git submodule")
-    ("input-file",      po::value<std::vector<std::string>>()->composing(),     "")
+    ("help,h",                                                     "print usage message")
+    ("module-name,n",   po::value<std::string>(),                  "name of the git submodule")
+    ("module-desc,d",   po::value<std::string>(),                  "description of the git submodule")
+    ("input-file",      po::value<std::vector<std::string>>(),     "")
   ;
   positional_options_description.add("input-file", -1);
 
@@ -586,6 +596,12 @@ int main(int argc, char* argv[])
     std::cerr << "Usage: " << argv[0] << " [options] <input file>\n";
     return 1;
   }
+  if (variables_map.count("module-name"))
+  {
+    options::module_name = variables_map["module-name"].as<std::string>();
+    options::module_desc = variables_map["module-desc"].as<std::string>();
+  }
+
   fs::path const input_file_name = non_options[0];
 
   try
