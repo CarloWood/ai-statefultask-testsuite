@@ -4,7 +4,11 @@ bin_PROGRAMS = helloworld fibonacci fiboquick filelock runthread function object
 	       timer_test timer_thread signal_test benchmark mutex_benchmark test_frequency_counter AITimer_test \
 	       AILookupTask_test AIResolver_test hash_test serv_test proto_test \
 	       resolver_getnameinfo socket_task_test FileLock_test AIStatefulTaskMutex_test semaphore_test \
-	       spin_wakeup_test delay_loop_test minimal
+	       spin_wakeup_test delay_loop_test minimal rewrite_header
+
+rewrite_header_SOURCES = rewrite_header.cxx
+rewrite_header_CXXFLAGS = @LIBCWD_R_FLAGS@
+rewrite_header_LDADD = ../cwds/libcwds_r.la -lstdc++fs
 
 minimal_SOURCES = minimal.cxx
 minimal_CXXFLAGS = @LIBCWD_R_FLAGS@
