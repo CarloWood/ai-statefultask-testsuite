@@ -1,6 +1,7 @@
 #include "sys.h"
 #include "debug.h"
 #include <boost/algorithm/string.hpp>
+#include <boost/program_options.hpp>
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -8,6 +9,7 @@
 #include <regex>
 
 namespace fs = std::filesystem;
+namespace po = boost::program_options;
 
 template<typename IOSTREAM>
 void open(IOSTREAM& file, fs::path const& name)
@@ -530,17 +532,61 @@ bool process(std::vector<std::string>& lines)
   return input_lines != lines;
 }
 
+void option_dependency(po::variables_map const& vm, char const* for_what, char const* required_option)
+{
+  if (vm.count(for_what) && !vm[for_what].defaulted())
+    if (vm.count(required_option) == 0 || vm[required_option].defaulted())
+      throw std::logic_error(std::string("Option '") + for_what + "' requires option '" + required_option + "'.");
+}
+
 int main(int argc, char* argv[])
 {
   Debug(NAMESPACE_DEBUG::init());
 
-  if (argc != 2)
+  std::string module_name;
+  std::string module_desc;
+
+  po::options_description options_description("Program options");
+  po::positional_options_description positional_options_description;
+
+  options_description.add_options()
+    ("help,h",                                                                  "print usage message")
+    ("module-name,n",   po::value(&module_name),                                "name of the git submodule")
+    ("module-desc,d",   po::value(&module_desc),                                "description of the git submodule")
+    ("input-file",      po::value<std::vector<std::string>>()->composing(),     "")
+  ;
+  positional_options_description.add("input-file", -1);
+
+  po::variables_map variables_map;
+  po::store(po::command_line_parser(argc, argv)
+        .options(options_description)
+        .positional(positional_options_description)
+        .allow_unregistered()
+        .run(),
+      variables_map);
+
+  if (variables_map.count("help"))
   {
-    std::cerr << "Usage: " << argv[0] << " <input file>";
-    return 1;
+    std::cout << options_description << "\n";
+    return 0;
   }
 
-  fs::path const input_file_name = argv[1];
+  option_dependency(variables_map, "module-name", "module-desc");
+  option_dependency(variables_map, "module-desc", "module-name");
+
+  std::vector<std::string> non_options;
+  bool wrong_number_of_non_options = variables_map.count("input-file") == 0;
+  if (!wrong_number_of_non_options)
+  {
+    non_options = variables_map["input-file"].as<std::vector<std::string>>();
+    wrong_number_of_non_options = non_options.size() != 1;
+  }
+  if (wrong_number_of_non_options)
+  {
+    std::cerr << "Usage: " << argv[0] << " [options] <input file>\n";
+    return 1;
+  }
+  fs::path const input_file_name = non_options[0];
 
   try
   {

@@ -8,7 +8,7 @@ bin_PROGRAMS = helloworld fibonacci fiboquick filelock runthread function object
 
 rewrite_header_SOURCES = rewrite_header.cxx
 rewrite_header_CXXFLAGS = @LIBCWD_R_FLAGS@
-rewrite_header_LDADD = ../cwds/libcwds_r.la -lstdc++fs
+rewrite_header_LDADD = ../cwds/libcwds_r.la -lstdc++fs -lboost_program_options
 
 minimal_SOURCES = minimal.cxx
 minimal_CXXFLAGS = @LIBCWD_R_FLAGS@
