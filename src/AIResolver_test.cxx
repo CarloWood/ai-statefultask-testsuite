@@ -6,7 +6,11 @@
 int constexpr queue_capacity = 32;
 using namespace resolver;
 
-#ifndef CWDEBUG
+#ifdef CWDEBUG
+namespace {
+auto& cout_mutex = libcwd::cout_mutex;
+} // namespace
+#else
 pthread_mutex_t cout_mutex = PTHREAD_MUTEX_INITIALIZER;
 #endif
 
