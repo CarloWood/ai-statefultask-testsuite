@@ -1,8 +1,8 @@
 #include "sys.h"
 #include "debug.h"
 #include "cwds/benchmark.h"
-#include "farmhash/src/farmhash.h"
 #include "resolver-task/AddressInfo.h"
+#include <farmhash.h>
 #include <vector>
 
 struct Result
