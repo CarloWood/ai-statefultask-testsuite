@@ -28,11 +28,11 @@ semaphore_test_LDADD = ../threadsafe/libthreadsafe.la ../utils/libutils_r.la ../
 
 AIStatefulTaskMutex_test_SOURCES = AIStatefulTaskMutex_test.cxx
 AIStatefulTaskMutex_test_CXXFLAGS = -O2 @LIBCWD_R_FLAGS@
-AIStatefulTaskMutex_test_LDADD = ../statefultask/libstatefultask.la ../threadpool/libthreadpool.la ../events/libevents.la ../farmhash/src/libfarmhash.la ../evio/libevio.la ../threadsafe/libthreadsafe.la ../utils/libutils_r.la ../cwds/libcwds_r.la
+AIStatefulTaskMutex_test_LDADD = ../statefultask/libstatefultask.la ../threadpool/libthreadpool.la ../events/libevents.la ../evio/libevio.la ../threadsafe/libthreadsafe.la ../utils/libutils_r.la ../cwds/libcwds_r.la
 
 FileLock_test_SOURCES = FileLock_test.cxx
 FileLock_test_CXXFLAGS = @LIBCWD_R_FLAGS@
-FileLock_test_LDADD = ../socket-task/libsockettask.la ../resolver-task/libresolvertask.la ../filelock-task/libfilelocktask.la ../statefultask/libstatefultask.la ../threadpool/libthreadpool.la ../events/libevents.la ../farmhash/src/libfarmhash.la ../evio/libevio.la ../threadsafe/libthreadsafe.la ../utils/libutils_r.la ../cwds/libcwds_r.la -lboost_iostreams -lboost_filesystem -lboost_system
+FileLock_test_LDADD = ../socket-task/libsockettask.la ../resolver-task/libresolvertask.la -lfarmhash ../filelock-task/libfilelocktask.la ../statefultask/libstatefultask.la ../threadpool/libthreadpool.la ../events/libevents.la ../evio/libevio.la ../threadsafe/libthreadsafe.la ../utils/libutils_r.la ../cwds/libcwds_r.la -lboost_iostreams -lboost_filesystem -lboost_system
 
 helloworld_SOURCES = helloworld.cxx
 helloworld_CXXFLAGS = @LIBCWD_R_FLAGS@
@@ -101,31 +101,31 @@ AITimer_test_LDADD = ../statefultask/libstatefultask.la ../threadpool/libthreadp
 
 AILookupTask_test_SOURCES = AILookupTask_test.cxx
 AILookupTask_test_CXXFLAGS = @LIBCWD_R_FLAGS@
-AILookupTask_test_LDADD = ../events/libevents.la ../resolver-task/libresolvertask.la ../farmhash/src/libfarmhash.la ../evio/libevio.la ../statefultask/libstatefultask.la ../threadpool/libthreadpool.la ../threadsafe/libthreadsafe.la ../utils/libutils_r.la ../cwds/libcwds_r.la
+AILookupTask_test_LDADD = ../events/libevents.la ../resolver-task/libresolvertask.la -lfarmhash ../evio/libevio.la ../statefultask/libstatefultask.la ../threadpool/libthreadpool.la ../threadsafe/libthreadsafe.la ../utils/libutils_r.la ../cwds/libcwds_r.la
 
 AIResolver_test_SOURCES = AIResolver_test.cxx
 AIResolver_test_CXXFLAGS = @LIBCWD_R_FLAGS@
-AIResolver_test_LDADD = ../resolver-task/libresolvertask.la ../farmhash/src/libfarmhash.la ../resolver-task/dns/src/libdns.la ../evio/libevio.la ../statefultask/libstatefultask.la ../threadpool/libthreadpool.la ../threadsafe/libthreadsafe.la ../utils/libutils_r.la ../cwds/libcwds_r.la
+AIResolver_test_LDADD = ../resolver-task/libresolvertask.la -lfarmhash ../resolver-task/dns/src/libdns.la ../evio/libevio.la ../statefultask/libstatefultask.la ../threadpool/libthreadpool.la ../threadsafe/libthreadsafe.la ../utils/libutils_r.la ../cwds/libcwds_r.la
 
 hash_test_SOURCES = hash_test.cxx
 hash_test_CXXFLAGS = -O2 @LIBCWD_R_FLAGS@
-hash_test_LDADD = ../farmhash/src/libfarmhash.la ../cwds/libcwds_r.la
+hash_test_LDADD = -lfarmhash ../cwds/libcwds_r.la
 
 serv_test_SOURCES = serv_test.cxx
 serv_test_CXXFLAGS = -O2 @LIBCWD_R_FLAGS@
-serv_test_LDADD = ../resolver-task/libresolvertask.la ../farmhash/src/libfarmhash.la ../evio/libevio.la ../threadsafe/libthreadsafe.la ../utils/libutils_r.la ../cwds/libcwds_r.la
+serv_test_LDADD = ../resolver-task/libresolvertask.la -lfarmhash ../evio/libevio.la ../threadsafe/libthreadsafe.la ../utils/libutils_r.la ../cwds/libcwds_r.la
 
 proto_test_SOURCES = proto_test.cxx
 proto_test_CXXFLAGS = -O2 @LIBCWD_R_FLAGS@
-proto_test_LDADD = ../resolver-task/libresolvertask.la ../farmhash/src/libfarmhash.la ../evio/libevio.la ../threadsafe/libthreadsafe.la ../utils/libutils_r.la ../cwds/libcwds_r.la
+proto_test_LDADD = ../resolver-task/libresolvertask.la -lfarmhash ../evio/libevio.la ../threadsafe/libthreadsafe.la ../utils/libutils_r.la ../cwds/libcwds_r.la
 
 resolver_getnameinfo_SOURCES = resolver_getnameinfo.cxx
 resolver_getnameinfo_CXXFLAGS = @LIBCWD_R_FLAGS@
-resolver_getnameinfo_LDADD = ../resolver-task/libresolvertask.la ../statefultask/libstatefultask.la ../threadpool/libthreadpool.la ../events/libevents.la ../farmhash/src/libfarmhash.la ../evio/libevio.la ../threadsafe/libthreadsafe.la ../utils/libutils_r.la ../cwds/libcwds_r.la
+resolver_getnameinfo_LDADD = ../resolver-task/libresolvertask.la -lfarmhash ../statefultask/libstatefultask.la ../threadpool/libthreadpool.la ../events/libevents.la ../evio/libevio.la ../threadsafe/libthreadsafe.la ../utils/libutils_r.la ../cwds/libcwds_r.la
 
 socket_task_test_SOURCES = socket_task_test.cxx
 socket_task_test_CXXFLAGS = @LIBCWD_R_FLAGS@
-socket_task_test_LDADD = ../socket-task/libsockettask.la ../resolver-task/libresolvertask.la ../statefultask/libstatefultask.la ../threadpool/libthreadpool.la ../events/libevents.la ../farmhash/src/libfarmhash.la ../evio/libevio.la ../threadsafe/libthreadsafe.la ../utils/libutils_r.la ../cwds/libcwds_r.la
+socket_task_test_LDADD = ../socket-task/libsockettask.la ../resolver-task/libresolvertask.la -lfarmhash ../statefultask/libstatefultask.la ../threadpool/libthreadpool.la ../events/libevents.la ../evio/libevio.la ../threadsafe/libthreadsafe.la ../utils/libutils_r.la ../cwds/libcwds_r.la
 
 # --------------- Maintainer's Section
 
