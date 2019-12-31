@@ -1,11 +1,7 @@
 include( AICxxProject )
 
 find_package( Threads REQUIRED )
-
-hunter_add_package( Boost COMPONENTS filesystem iostreams program_options system )
 find_package( Boost REQUIRED COMPONENTS filesystem iostreams program_options system )
-
-hunter_add_package( farmhash )
 find_package( farmhash )
 
 add_executable( rewrite_header rewrite_header.cxx )
