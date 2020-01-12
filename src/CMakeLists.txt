@@ -2,7 +2,7 @@ include( AICxxProject )
 
 find_package( Threads REQUIRED )
 find_package( Boost REQUIRED COMPONENTS filesystem iostreams program_options system )
-find_package( farmhash )
+find_package( farmhash REQUIRED )
 
 add_executable( rewrite_header rewrite_header.cxx )
 target_link_libraries( rewrite_header PRIVATE AICxx::cwds -lstdc++fs Boost::program_options )
