@@ -40,7 +40,7 @@ endif ()
 HunterGate(
     GIT_REPOSITORY "https://github.com/CarloWood/hunter.git"
     SHA1 "5a40fad19c759ee1e99cc43ce22aea1b1f96358e"
-    FILEPATH "cwm4/cmake/hunter-config.cmake"
+    #    FILEPATH "cwm4/cmake/hunter-config.cmake"
         # This is relative to the CMAKE_CURRENT_SOURCE_DIR
         # (the directory containing this CMakeLists.txt).
 )
