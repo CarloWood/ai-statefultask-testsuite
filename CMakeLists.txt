@@ -51,7 +51,6 @@ project( ai-statefultask-testsuite
          DESCRIPTION "Testsuite for git submodule ai-statefultask." )
 
 hunter_add_package( farmhash )
-hunter_add_package( matrixssl )
 
 # This project uses aicxx modules.
 include( cwm4/cmake/AICxxProject )
