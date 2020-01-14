@@ -63,10 +63,6 @@ project( ai-statefultask-testsuite
          LANGUAGES C CXX
          DESCRIPTION "Testsuite for git submodule ai-statefultask." )
 
-message( STATUS "CMAKE_PREFIX_PATH = \"${CMAKE_PREFIX_PATH}\"." )
-set( HUNTER_SELF "/opt/hunter/_Base/Download/Hunter/git-3a43944/6ba4e9d/Unpacked" )
-#hunter_add_package( farmhash )
-
 # This project uses aicxx modules.
 include( cwm4/cmake/AICxxProject )
 
