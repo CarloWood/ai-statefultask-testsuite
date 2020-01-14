@@ -7,10 +7,10 @@ cmake_minimum_required( VERSION 3.14...3.16 )
 include( FetchContent )
 
 set( HUNTER_PACKAGES farmhash Boost )
-set( HUNTER_Boost_COMPONENTS system )
+set( HUNTER_Boost_COMPONENTS filesystem iostreams program_options system )
 set( HUNTER_GIT_REPOSITORY "http://github.com/CarloWood/hunter.git" )
 set( HUNTER_GIT_TAG "6ba4e9dc71963fb480cbf6ce928cc73143a43944" )        # Hunter
-set( HUNTER_FILEPATH_CONFIG "cwm4/cmake/hunter-config.cmake" )
+set( HUNTER_FILEPATH_CONFIG "${CMAKE_CURRENT_LIST_DIR}/cwm4/cmake/hunter-config.cmake" )
 
 # Fetch the hunter gate repository.
 # Note that if a parent project already did a FetchContent_Declare with the same
@@ -24,7 +24,7 @@ set( hg_name "CWHunterGate" CACHE INTERNAL
 
 FetchContent_Declare( ${hg_name}
     GIT_REPOSITORY "http://github.com/CarloWood/gate.git"
-    GIT_TAG "2576f8f69e82c5af93049d63808ed5927ebc6e05"          # Gate
+    GIT_TAG "2fea25c8557f3c86502830d4b7d2c7445a043c7b"          # Gate
             # Or just use "master" to get the latest version.
 )
 FetchContent_MakeAvailable( ${hg_name} )
@@ -49,7 +49,7 @@ endif ()
 # out (detached HEAD).
 HunterGate(
     GIT_REPOSITORY "https://github.com/CarloWood/hunter.git"
-    SHA1 "6ba4e9dc71963fb480cbf6ce928cc73143a43944"             # Hunter
+    SHA1 "6ba4e9dc71963fb480cbf6ce928cc73143a43944"
     FILEPATH "cwm4/cmake/hunter-config.cmake"
         # This is relative to the CMAKE_CURRENT_SOURCE_DIR
         # (the directory containing this CMakeLists.txt).
@@ -63,6 +63,8 @@ project( ai-statefultask-testsuite
          LANGUAGES C CXX
          DESCRIPTION "Testsuite for git submodule ai-statefultask." )
 
+message( STATUS "CMAKE_PREFIX_PATH = \"${CMAKE_PREFIX_PATH}\"." )
+set( HUNTER_SELF "/opt/hunter/_Base/Download/Hunter/git-3a43944/6ba4e9d/Unpacked" )
 #hunter_add_package( farmhash )
 
 # This project uses aicxx modules.
