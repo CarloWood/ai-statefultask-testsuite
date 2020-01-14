@@ -6,6 +6,12 @@ cmake_minimum_required( VERSION 3.14...3.16 )
 
 include( FetchContent )
 
+set( HUNTER_PACKAGES farmhash Boost )
+set( HUNTER_Boost_COMPONENTS system )
+set( HUNTER_GIT_REPOSITORY "http://github.com/CarloWood/hunter.git" )
+set( HUNTER_GIT_TAG "6ba4e9dc71963fb480cbf6ce928cc73143a43944" )        # Hunter
+set( HUNTER_FILEPATH_CONFIG "cwm4/cmake/hunter-config.cmake" )
+
 # Fetch the hunter gate repository.
 # Note that if a parent project already did a FetchContent_Declare with the same
 # name then this line will be ignored. Since we require special support only add-
@@ -16,13 +22,17 @@ include( FetchContent )
 set( hg_name "CWHunterGate" CACHE INTERNAL
      "The FetchContent_Declare name for HunterGate." )
 
-string( TOLOWER ${hg_name} lc_name )
-string( TOUPPER ${hg_name} uc_name )
 FetchContent_Declare( ${hg_name}
     GIT_REPOSITORY "http://github.com/CarloWood/gate.git"
-    GIT_TAG "19a25f7f95aae05bbe1a7f5665dec1dc722f2905"          # Gate
+    GIT_TAG "2576f8f69e82c5af93049d63808ed5927ebc6e05"          # Gate
             # Or just use "master" to get the latest version.
 )
+FetchContent_MakeAvailable( ${hg_name} )
+
+#[[
+string( TOLOWER ${hg_name} lc_name )
+string( TOUPPER ${hg_name} uc_name )
+
 # Allows a parent project to specify its own FetchContent_Declare for ${hg_name}.
 if ( NOT ${lc_name}_POPULATED )
   # While working on gate; set FETCHCONTENT_SOURCE_DIR_HUNTERGATE to the local
@@ -40,17 +50,20 @@ endif ()
 HunterGate(
     GIT_REPOSITORY "https://github.com/CarloWood/hunter.git"
     SHA1 "6ba4e9dc71963fb480cbf6ce928cc73143a43944"             # Hunter
-    #    FILEPATH "cwm4/cmake/hunter-config.cmake"
+    FILEPATH "cwm4/cmake/hunter-config.cmake"
         # This is relative to the CMAKE_CURRENT_SOURCE_DIR
         # (the directory containing this CMakeLists.txt).
 )
+
+#]]
+
 #===============================================================================
 
 project( ai-statefultask-testsuite
          LANGUAGES C CXX
          DESCRIPTION "Testsuite for git submodule ai-statefultask." )
 
-hunter_add_package( farmhash )
+#hunter_add_package( farmhash )
 
 # This project uses aicxx modules.
 include( cwm4/cmake/AICxxProject )
