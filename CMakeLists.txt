@@ -21,7 +21,7 @@ set( HUNTER_CONFIGURATION_TYPES Release )
 # For other repositories not forked from http://github.com/CarloWood/gate please
 # use a different name.
 set( hg_name "CWHunterGate" CACHE INTERNAL
-     "The FetchContent_Declare name for HunterGate." )
+     "The FetchContent_Declare name for the Hunter gate." )
 
 FetchContent_Declare( ${hg_name}
     GIT_REPOSITORY "http://github.com/CarloWood/gate.git"
@@ -29,34 +29,6 @@ FetchContent_Declare( ${hg_name}
             # Or just use "master" to get the latest version.
 )
 FetchContent_MakeAvailable( ${hg_name} )
-
-#[[
-string( TOLOWER ${hg_name} lc_name )
-string( TOUPPER ${hg_name} uc_name )
-
-# Allows a parent project to specify its own FetchContent_Declare for ${hg_name}.
-if ( NOT ${lc_name}_POPULATED )
-  # While working on gate; set FETCHCONTENT_SOURCE_DIR_HUNTERGATE to the local
-  # gate-submodule. This allows to safely edit gate without having to push it
-  # to github and update the above hash.
-  #set( FETCHCONTENT_SOURCE_DIR_${uc_name}
-  #     "${CMAKE_CURRENT_SOURCE_DIR}/gate" CACHE PATH "Path to gate submodule" )
-  FetchContent_Populate( ${hg_name} )
-  # Source the fetched content.
-  include( ${${lc_name}_SOURCE_DIR}/cmake/HunterGate.cmake )
-endif ()
-# Our HunterGate allows to use GIT_REPOSITORY and specify a git repository.
-# In that case, the specified SHA1 is the git commit hash that must be checked
-# out (detached HEAD).
-HunterGate(
-    GIT_REPOSITORY "https://github.com/CarloWood/hunter.git"
-    SHA1 "6ba4e9dc71963fb480cbf6ce928cc73143a43944"
-    FILEPATH "cwm4/cmake/hunter-config.cmake"
-        # This is relative to the CMAKE_CURRENT_SOURCE_DIR
-        # (the directory containing this CMakeLists.txt).
-)
-
-#]]
 
 #===============================================================================
 
@@ -75,7 +47,7 @@ endif ()
 
 include( AICxxSubmodules )
 
-# Do not Builds the googlemock subproject.
+# Do not build the googlemock subproject.
 set( BUILD_GMOCK OFF CACHE BOOL "" )
 # Disable installation of googletest.
 set( INSTALL_GTEST OFF CACHE BOOL "" )
