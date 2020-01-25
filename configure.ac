@@ -12,8 +12,8 @@ define(CW_VERSION_REVISION, 0)
 define(CW_PACKAGE_NAME, [ai-statefultask-testsuite])
 define(CW_BUGREPORT, [carlo@alinoe.com])
 
-# CW_COMPILE_FLAGS may contain warning flags, but also default debug flags (-g*)
-# and optimization flags (-O*) that which will be stripped when not required.
+# CW_COMPILE_FLAGS may contain warning flags, but also default debug flag (-g*) and/or optimization flag (-O*)
+# which will be stripped when not required, and an optional -std=* flag.
 define(CW_COMPILE_FLAGS, [-std=c++17 -W -Wall -Woverloaded-virtual -Wundef -Wpointer-arith -Wwrite-strings -Winline])
 # CW_THREADS can be [no] (single-threaded), [yes] (multi-threaded) or [both] (single and multi-threaded applications).
 define(CW_THREADS, [yes])
