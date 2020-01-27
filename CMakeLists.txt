@@ -9,7 +9,7 @@ include(FetchContent)
 set(HUNTER_PACKAGES farmhash Boost)
 set(HUNTER_Boost_COMPONENTS filesystem iostreams program_options system)
 set(HUNTER_GIT_REPOSITORY "http://github.com/CarloWood/hunter.git")
-set(HUNTER_GIT_TAG "6ba4e9dc71963fb480cbf6ce928cc73143a43944")          # Hunter
+set(HUNTER_GIT_TAG "a41867826d77ff80915d5ed89a11048f5b57e1dc")          # Hunter
 set(HUNTER_FILEPATH_CONFIG "${CMAKE_CURRENT_LIST_DIR}/cwm4/cmake/hunter-config.cmake")
 set(HUNTER_CONFIGURATION_TYPES Release)
 
