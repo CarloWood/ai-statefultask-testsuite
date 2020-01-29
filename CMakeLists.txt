@@ -6,10 +6,10 @@ cmake_minimum_required(VERSION 3.14...3.16)
 
 include(FetchContent)
 
-set(HUNTER_PACKAGES farmhash Boost)
+set(HUNTER_PACKAGES farmhash Boost libcwd_r)
 set(HUNTER_Boost_COMPONENTS filesystem iostreams program_options system)
 set(HUNTER_GIT_REPOSITORY "http://github.com/CarloWood/hunter.git")
-set(HUNTER_GIT_TAG "a41867826d77ff80915d5ed89a11048f5b57e1dc")          # Hunter
+set(HUNTER_GIT_TAG "80c62f5caaa292c37ce02e0869ccfe5cccb8c3d7")          # Hunter
 set(HUNTER_FILEPATH_CONFIG "${CMAKE_CURRENT_LIST_DIR}/cwm4/cmake/hunter-config.cmake")
 set(HUNTER_CONFIGURATION_TYPES Release)
 
@@ -25,7 +25,7 @@ set(hg_name "CWHunterGate" CACHE INTERNAL
 
 FetchContent_Declare(${hg_name}
   GIT_REPOSITORY "http://github.com/CarloWood/gate.git"
-  GIT_TAG "2fea25c8557f3c86502830d4b7d2c7445a043c7b"                    # Gate
+  GIT_TAG "3a0ba21578f4e7b08b9dfb6532406a3bf7eef4e2"                    # Gate
           # Or just use "master" to get the latest version.
 )
 FetchContent_MakeAvailable(${hg_name})
