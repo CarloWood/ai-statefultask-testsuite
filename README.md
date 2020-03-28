@@ -27,4 +27,4 @@ types.
 ### Building ###
 
     NUMBER_OF_CORES=8
-    cmake --build build --config RelWithDebug --parallel $NUMBER_OF_CORES
+    cmake --build build --config RelWithDebug --parallel ${NUMBER_OF_CORES}
