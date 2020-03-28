@@ -21,8 +21,8 @@ want to keep it around).
     
 Optionally add `-DCMAKE_VERBOSE_MAKEFILE:BOOL=ON` to see the compile commands.
 Other build types are: `Release`, `RelWithDebInfo`, `Debug` and `BetaTest`.
-See https://stackoverflow.com/a/59314670/1487069 for an explanation of the different
-types.
+See [stackoverflow](https://stackoverflow.com/a/59314670/1487069) for an explanation
+of the different types.
 
 ### Building ###
 
