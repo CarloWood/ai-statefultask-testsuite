@@ -1,4 +1,4 @@
-=== Prerequisites ===
+### Prerequisites ###
 
     sudo apt install libboost-dev libfarmhash-dev libsparsehash-dev doxygen
 
@@ -9,11 +9,11 @@ have write access to. It will be used to cache packages so you
 don't have to recompile them (it is a 'cache', but you might
 want to keep it around).
 
-=== Downloading ===
+### Downloading ###
 
     git clone --recursive https://github.com/CarloWood/ai-statefultask-testsuite.git
 
-=== Configuration ===
+### Configuration ###
 
     cd ai-statefultask-testsuite
     mkdir build
@@ -21,10 +21,10 @@ want to keep it around).
     
 Optionally add `-DCMAKE_VERBOSE_MAKEFILE:BOOL=ON` to see the compile commands.
 Other build types are: `Release`, `RelWithDebInfo`, `Debug` and `BetaTest`.
-See https://stackoverflow.com/a/59314670/1487069 for an explanation of the different
-types.
+See [stackoverflow](https://stackoverflow.com/a/59314670/1487069) for an explanation
+of the different types.
 
-=== Building ===
+### Building ###
 
     NUMBER_OF_CORES=8
-    cmake --build build --config RelWithDebug --parallel $NUMBER_OF_CORES
+    cmake --build build --config RelWithDebug --parallel ${NUMBER_OF_CORES}
