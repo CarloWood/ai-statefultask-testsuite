@@ -7,7 +7,7 @@ project(ai-statefultask-testsuite
 )
 
 # Begin of gitache configuration.
-set(GITACHE_PACKAGES farmhash libcwd_r)
+set(GITACHE_PACKAGES libcwd_r)
 
 #include(gitache/gateway.cmake)
 # OR
