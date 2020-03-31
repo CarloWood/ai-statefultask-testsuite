@@ -1,6 +1,6 @@
 ### Prerequisites ###
 
-    sudo apt install libboost-dev libfarmhash-dev libsparsehash-dev doxygen
+    sudo apt install libboost-dev libfarmhash-dev libsparsehash-dev doxygen graphviz
 
     export GITACHE_ROOT=/opt/gitache_root
 
