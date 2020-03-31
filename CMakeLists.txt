@@ -39,6 +39,11 @@ endif ()
 
 include(AICxxSubmodules)
 
+# Extra clean up before removing directories.
+add_custom_target(maintainer-clean-extra
+  COMMAND rm -f CMakeDoxygenDefaults.cmake CMakeDoxyfile.in
+)
+
 # Do not build the googlemock subproject.
 set(BUILD_GMOCK OFF CACHE BOOL "")
 # Disable installation of googletest.
