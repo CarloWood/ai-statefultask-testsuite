@@ -9,6 +9,16 @@ project(ai-statefultask-testsuite
 # Begin of gitache configuration.
 set(GITACHE_PACKAGES libcwd_r)
 
+# Is libfarmhash installed somewhere in a default path?
+find_library(
+  FARMHASH farmhash
+  DOC "Whether or not libfarmhash is installed locally."
+)
+# If not, use gitache to get it.
+if(NOT FARMHASH)
+  list(APPEND GITACHE_PACKAGES farmhash)
+endif()
+
 #include(gitache/gateway.cmake)
 # OR
 include(FetchContent)
