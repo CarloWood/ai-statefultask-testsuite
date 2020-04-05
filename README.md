@@ -1,6 +1,7 @@
 ### Prerequisites ###
 
-    sudo apt install libboost-dev libfarmhash-dev libsparsehash-dev doxygen graphviz
+    sudo apt install automake libtool-bin gawk doxygen graphviz
+    sudo apt install libboost-dev libfarmhash-dev libsparsehash-dev
 
     export GITACHE_ROOT=/opt/gitache_root
 
