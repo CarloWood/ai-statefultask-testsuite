@@ -3,4 +3,6 @@ gitache_config(
     "https://github.com/google/farmhash.git"
   GIT_TAG
     "master"
+  BOOTSTRAP_COMMAND
+    autoreconf -fi
 )
