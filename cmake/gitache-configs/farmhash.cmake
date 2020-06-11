@@ -5,4 +5,6 @@ gitache_config(
     "master"
   BOOTSTRAP_COMMAND
     autoreconf -fi
+  CONFIGURE_ARGS
+    --disable-option-checking --with-gnu-ld
 )
