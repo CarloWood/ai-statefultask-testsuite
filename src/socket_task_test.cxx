@@ -12,7 +12,7 @@
 #include <libcwd/buf2str.h>
 #endif
 
-class InputPrinter : public evio::InputDecoder
+class InputPrinter : public evio::protocol::Decoder
 {
  protected:
    void decode(int& allow_deletion_count, evio::MsgBlock&& msg) override;
@@ -36,7 +36,7 @@ class MySocket : public evio::TLSSocket
  public:
   MySocket()
   {
-    set_sink(m_input_printer);
+    set_protocol_decoder(m_input_printer);
     set_source(m_output_stream);
   }
 

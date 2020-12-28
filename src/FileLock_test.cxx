@@ -120,7 +120,7 @@ int main()
     FileLock flock;
     flock.set_filename("flock1");
 
-    boost::filesystem::path file_lock_name = "flock1";
+    std::filesystem::path file_lock_name = "flock1";
     FileLockAccess file_lock_access(file_lock_name);
 
     boost::intrusive_ptr<task::TaskLock> my_task1 = new task::TaskLock(file_lock_access);
