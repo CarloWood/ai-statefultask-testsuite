@@ -6,5 +6,5 @@ gitache_config(
   BOOTSTRAP_COMMAND
     autoreconf -fi
   CONFIGURE_ARGS
-    --disable-examples --disable-oldnames --disable-memory --disable-tlsv10 --enable-intelasm --enable-writedup --enable-maxfragment --enable-sni
+    --disable-examples --disable-oldnames --disable-memory --disable-tlsv10 --enable-all --enable-intelasm --enable-writedup --enable-maxfragment --enable-sni
 )
