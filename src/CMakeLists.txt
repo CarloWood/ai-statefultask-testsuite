@@ -13,6 +13,9 @@ find_package(farmhash REQUIRED)
 # that are installed in gitache!).
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--disable-new-dtags")
 
+add_executable(proxy_test proxy_test.cxx)
+target_link_libraries(proxy_test PRIVATE AICxx::socket-task AICxx::resolver-task dns::dns ${AICXX_OBJECTS_LIST})
+
 add_executable(rewrite_header rewrite_header.cxx)
 target_link_libraries(rewrite_header PRIVATE AICxx::cwds -lstdc++fs Boost::program_options)
 

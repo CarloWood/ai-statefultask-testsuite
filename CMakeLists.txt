@@ -7,7 +7,7 @@ project(ai-statefultask-testsuite
 )
 
 # Begin of gitache configuration.
-set(GITACHE_PACKAGES libcwd_r wolfssl)
+set(GITACHE_PACKAGES libcwd_r wolfssl magic_enum)
 
 # Is libfarmhash installed somewhere in a default path?
 find_library(
