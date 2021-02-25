@@ -18,6 +18,12 @@ class DBusProtocol : public evio::Protocol
 
 class DBusSocket : public evio::Socket
 {
+ protected:
+  void data_received(int& allow_deletion_count, char const* new_data, size_t rlen) override
+  {
+    std::cout << "dbus--> " << utils::print_using(std::string_view{new_data, rlen}, utils::c_escape) << std::endl;
+    evio::Socket::data_received(allow_deletion_count, new_data, rlen);
+  }
 };
 
 class ProxyAcceptedSocket : public evio::Socket
@@ -38,6 +44,14 @@ class ProxyAcceptedSocket : public evio::Socket
   }
 
   boost::intrusive_ptr<DBusSocket>& dbus_socket() { return m_dbus_socket; }
+
+ protected:
+  void data_received(int& allow_deletion_count, char const* new_data, size_t rlen) override
+  {
+    std::cout << "dbus<-- " << utils::print_using(std::string_view{new_data, rlen}, utils::c_escape) << std::endl;
+    evio::Socket::data_received(allow_deletion_count, new_data, rlen);
+    evio::Socket::data_received(allow_deletion_count, new_data, rlen);
+  }
 };
 
 class ProxyListenSocket : public evio::ListenSocket<ProxyAcceptedSocket>
@@ -80,8 +94,8 @@ int main()
   AIThreadPool thread_pool;
   AIQueueHandle handler = thread_pool.new_queue(queue_capacity);
 
-  static evio::SocketAddress const listen_address("127.0.0.1:9393");
-  static evio::SocketAddress const dbus_address("127.0.0.1:25"); // ("/run/user/1000/bus");
+  static evio::SocketAddress const listen_address("/run/user/1000/proxy");
+  static evio::SocketAddress const dbus_address("/run/user/1000/bus");
 
   try
   {
