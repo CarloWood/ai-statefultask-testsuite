@@ -1,3 +1,9 @@
+### Documentation ###
+
+Preliminary documentation of `statefultask` (not the other submodules) can be
+generated with `doxygen` by running `make doc` (build automatically for build type
+Release). This documentation is also [available online](http://carlowood.github.io/statefultask/).
+
 ### Prerequisites ###
 
     sudo apt install automake libtool-bin gawk doxygen graphviz
