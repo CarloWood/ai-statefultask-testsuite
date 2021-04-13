@@ -5,9 +5,10 @@
 #include "statefultask/DefaultMemoryPagePool.h"
 #include "statefultask/AIPackagedTask.h"
 #include "threadpool/AIThreadPool.h"
-#include "threadsafe/Gate.h"
+#include "utils/threading/Gate.h"
 
-static aithreadsafe::Gate gate;
+namespace utils { using namespace threading; }
+static utils::Gate gate;
 
 // Suppose we need to run this from a task (and wait until it finished).
 static int factorial(int n)

@@ -1,17 +1,19 @@
 #include "sys.h"
-#include "threadsafe/Semaphore.h"
+#include "utils/threading/Semaphore.h"
 #include "debug.h"
 #include <thread>
 #include <chrono>
 
-void waiter(aithreadsafe::Semaphore& semaphore)
+namespace utils { using namespace threading; }
+
+void waiter(utils::Semaphore& semaphore)
 {
   Dout(dc::notice, "Entering waiter()...");
   semaphore.wait();
   Dout(dc::notice, "Leaving waiter()...");
 }
 
-void waker(aithreadsafe::Semaphore& semaphore)
+void waker(utils::Semaphore& semaphore)
 {
   Dout(dc::notice, "Entering waker()...");
   semaphore.post(3);
@@ -23,7 +25,7 @@ int main()
   Debug(NAMESPACE_DEBUG::init());
   Dout(dc::notice, "Entering main()...");
 
-  aithreadsafe::Semaphore semaphore(0);
+  utils::Semaphore semaphore(0);
 
   std::thread thr1([&](){ Debug(NAMESPACE_DEBUG::init_thread("THREAD1")); waiter(semaphore); });
   std::thread thr2([&](){ Debug(NAMESPACE_DEBUG::init_thread("THREAD2")); waiter(semaphore); });

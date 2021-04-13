@@ -4,13 +4,15 @@
 #include "statefultask/DefaultMemoryPagePool.h"
 #include "evio/EventLoop.h"
 #include "evio/TLSSocket.h"
-#include "threadsafe/Gate.h"
+#include "utils/threading/Gate.h"
 #include "utils/AIAlert.h"
 #include "utils/debug_ostream_operators.h"
 #include "debug.h"
 #ifdef CWDEBUG
 #include <libcwd/buf2str.h>
 #endif
+
+namespace utils { using namespace threading; }
 
 class InputPrinter : public evio::protocol::Decoder
 {
@@ -59,7 +61,7 @@ int main()
     resolver::Scope resolver_scope(handler, false);
 
     // Allow the main thread to wait until the test finished.
-    aithreadsafe::Gate test_finished;
+    utils::Gate test_finished;
 
     boost::intrusive_ptr<task::ConnectToEndPoint> task = new task::ConnectToEndPoint(CWDEBUG_ONLY(true));
     auto socket = evio::create<MySocket>();

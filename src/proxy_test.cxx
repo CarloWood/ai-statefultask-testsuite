@@ -4,13 +4,15 @@
 #include "statefultask/DefaultMemoryPagePool.h"
 #include "evio/EventLoop.h"
 #include "evio/ListenSocket.h"
-#include "threadsafe/Gate.h"
+#include "utils/threading/Gate.h"
 #include "utils/AIAlert.h"
 #include "utils/debug_ostream_operators.h"
 #include "debug.h"
 #ifdef CWDEBUG
 #include <libcwd/buf2str.h>
 #endif
+
+namespace utils { using namespace threading; }
 
 class DBusProtocol : public evio::Protocol
 {
@@ -58,10 +60,10 @@ class ProxyListenSocket : public evio::ListenSocket<ProxyAcceptedSocket>
 {
  private:
   evio::SocketAddress m_dbus_address;
-  aithreadsafe::Gate& m_test_finished;
+  utils::Gate& m_test_finished;
 
  public:
-  ProxyListenSocket(evio::SocketAddress dbus_address, aithreadsafe::Gate& test_finished) : m_dbus_address(std::move(dbus_address)), m_test_finished(test_finished) { }
+  ProxyListenSocket(evio::SocketAddress dbus_address, utils::Gate& test_finished) : m_dbus_address(std::move(dbus_address)), m_test_finished(test_finished) { }
 
   // Called when a new connection is accepted.
   void new_connection(accepted_socket_type& accepted_socket) override
@@ -103,7 +105,7 @@ int main()
     resolver::Scope resolver_scope(handler, false);
 
     // Allow the main thread to wait until the test finished.
-    aithreadsafe::Gate test_finished;
+    utils::Gate test_finished;
 
     // Start the listen socket.
     {

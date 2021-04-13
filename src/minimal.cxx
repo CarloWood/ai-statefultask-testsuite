@@ -19,7 +19,7 @@ int main()
     evio::EventLoop event_loop(low_priority_queue);
     AIEngine engine("main engine", 2.0);
 
-    auto task = task::create<task::HelloWorld>();
+    auto task = statefultask::create<task::HelloWorld>();
     task->initialize(42);
 
     bool test_finished = false;

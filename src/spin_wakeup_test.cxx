@@ -1,12 +1,14 @@
 #include "sys.h"
 #include "debug.h"
-#include "threadsafe/SpinSemaphore.h"
+#include "utils/threading/SpinSemaphore.h"
 #include "utils/macros.h"
 //#include "cwds/benchmark.h"
 #include "cwds/gnuplot_tools.h"
 #include <thread>
 #include <vector>
 #include <iostream>
+
+namespace utils { using namespace threading; }
 
 constexpr int post_amount = 2;
 constexpr int number_of_sleeper_threads = 4;
@@ -16,7 +18,7 @@ constexpr int number_of_times_to_wait_per_sleeper = number_of_times_to_wait / nu
 constexpr int number_of_times_to_post_per_trigger = number_of_times_to_wait / number_of_trigger_threads / post_amount;
 std::atomic<unsigned long> delay_loop = ATOMIC_VAR_INIT(0);
 
-class SpinSemaphore : public aithreadsafe::SpinSemaphore
+class SpinSemaphore : public utils::SpinSemaphore
 {
  public:
   uint64_t debug_word() const

@@ -1,8 +1,10 @@
 #include "sys.h"
 #include "threadpool/AIThreadPool.h"
-#include "threadsafe/Gate.h"
+#include "utils/threading/Gate.h"
 #include "debug.h"
 #include <chrono>
+
+namespace utils { using namespace threading; }
 
 int constexpr capacity = 1300;
 int constexpr loop_size = 1000000;
@@ -53,7 +55,7 @@ int main()
       }
       // Wait for the queue to be entirely processed.
       {
-        aithreadsafe::Gate finished;
+        utils::Gate finished;
         auto queues_access = thread_pool.queues_read_access();
         auto& queue = thread_pool.get_queue(queues_access, queue_handle1);
         int length;

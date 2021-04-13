@@ -1,5 +1,5 @@
 #include "sys.h"
-#include "threadsafe/Gate.h"
+#include "utils/threading/Gate.h"
 #include "threadpool/AIThreadPool.h"
 #include "statefultask/AIStatefulTaskMutex.h"
 #include "statefultask/AIStatefulTask.h"
@@ -9,6 +9,8 @@
 #include "debug.h"
 #include "cwds/benchmark.h"
 #include <chrono>
+
+namespace utils { using namespace threading; }
 
 constexpr int queue_capacity = 100032; //32;
 constexpr int number_of_tasks = 100000;
@@ -141,7 +143,7 @@ int main()
 //    evio::EventLoop event_loop(handler);
 
     // Allow the main thread to wait until the test finished.
-    aithreadsafe::Gate test_finished;
+    utils::Gate test_finished;
     AIQueueHandle handler = thread_pool.new_queue(queue_capacity);
 
     std::vector<boost::intrusive_ptr<MyTask>> tasks;

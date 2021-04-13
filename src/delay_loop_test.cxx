@@ -1,12 +1,14 @@
 #include "sys.h"
 #include "debug.h"
-#include "threadsafe/SpinSemaphore.h"
+#include "utils/threading/SpinSemaphore.h"
+
+namespace utils { using namespace threading; }
 
 int main()
 {
   Debug(NAMESPACE_DEBUG::init());
 
   Dout(dc::notice, "Entering main()");
-  aithreadsafe::SpinSemaphore sem1;
-  aithreadsafe::SpinSemaphore sem2;
+  utils::SpinSemaphore sem1;
+  utils::SpinSemaphore sem2;
 }
