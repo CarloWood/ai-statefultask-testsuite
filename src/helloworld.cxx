@@ -22,11 +22,11 @@ class HelloWorld : public AIStatefulTask
     bool m_bumped;
 
   protected:
-    typedef AIStatefulTask direct_base_type;    // The base class of this task.
+    using direct_base_type = AIStatefulTask;            // The base class of this task.
 
     // The different states of the task.
     enum hello_world_state_type {
-      HelloWorld_start = direct_base_type::state_end,                   // Mandatory first value.
+      HelloWorld_start = direct_base_type::state_end,   // Mandatory first value.
       HelloWorld_wait,
       HelloWorld_done,
     };
@@ -98,8 +98,7 @@ char const* HelloWorld::state_str_impl(state_type run_state) const
     AI_CASE_RETURN(HelloWorld_wait);
     AI_CASE_RETURN(HelloWorld_done);
   }
-  ASSERT(false);
-  return "UNKNOWN STATE";
+  return direct_base_type::state_str_impl(run_state);
 };
 
 // Pass true to the base class to turn on debug output for this task.
@@ -125,8 +124,7 @@ char const* Bumper::state_str_impl(state_type run_state) const
     AI_CASE_RETURN(Bumper_wait);
     AI_CASE_RETURN(Bumper_done);
   }
-  ASSERT(false);
-  return "UNKNOWN STATE";
+  return direct_base_type::state_str_impl(run_state);
 };
 
 // The HelloWorld task waits until it gets 'bumped'.
