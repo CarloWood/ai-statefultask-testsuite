@@ -21,6 +21,7 @@ int main()
   std::atomic_int full(0);
   {
     AIThreadPool thread_pool(6);
+    Debug(thread_pool.set_color_functions([](int color){ std::string code{"\e[30m"}; code[3] = '1' + color; return code; }));
     AIQueueHandle queue_handle1 = thread_pool.new_queue(capacity);
     {
       auto queues_access = thread_pool.queues_read_access();

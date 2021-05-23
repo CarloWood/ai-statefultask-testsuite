@@ -13,6 +13,9 @@ find_package(farmhash REQUIRED)
 # that are installed in gitache!).
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--disable-new-dtags")
 
+add_executable(slow_down_test slow_down_test.cxx)
+target_link_libraries(slow_down_test PRIVATE AICxx::helloworld-task ${AICXX_OBJECTS_LIST})
+
 add_executable(wait_signal_test2 wait_signal_test2.cxx)
 target_link_libraries(wait_signal_test2 PRIVATE ${AICXX_OBJECTS_LIST})
 

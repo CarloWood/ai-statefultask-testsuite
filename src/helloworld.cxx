@@ -198,6 +198,7 @@ int main()
 
   // Create a thread pool. Immediately afterwards call new_queue on it at least once!
   AIThreadPool thread_pool;
+  Debug(thread_pool.set_color_functions([](int color){ std::string code{"\e[30m"}; code[3] = '1' + color; return code; }));
   AIQueueHandle high_priority_queue = thread_pool.new_queue(8);
 
   // Create an engine. This application isn't really using it,

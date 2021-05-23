@@ -18,6 +18,7 @@ int main()
   benchmark::Stopwatch stopwatch(cpu);
 
   AIThreadPool thread_pool;
+  Debug(thread_pool.set_color_functions([](int color){ std::string code{"\e[30m"}; code[3] = '1' + color; return code; }));
   AIQueueHandle handler = thread_pool.new_queue(32);
 
   // Initialize the IO event loop thread and the async hostname resolver.

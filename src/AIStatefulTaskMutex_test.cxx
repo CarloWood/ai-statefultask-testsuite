@@ -137,6 +137,7 @@ int main()
   std::cout << "Ran for " << (sw.diff_cycles() / 3612059050.0) << " seconds." << std::endl;
 
   AIThreadPool thread_pool;
+  Debug(thread_pool.set_color_functions([](int color){ std::string code{"\e[30m"}; code[3] = '1' + color; return code; }));
 
   try
   {

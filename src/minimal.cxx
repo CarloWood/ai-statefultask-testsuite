@@ -12,6 +12,7 @@ int main()
 
   AIMemoryPagePool mpp;                 // Create before thread_pool.
   AIThreadPool thread_pool;
+  Debug(thread_pool.set_color_functions([](int color){ std::string code{"\e[30m"}; code[3] = '1' + color; return code; }));
   AIQueueHandle low_priority_queue = thread_pool.new_queue(8);
 
   try

@@ -52,6 +52,7 @@ int main(int argc, char* argv[])
 
   AIMemoryPagePool mpp;
   AIThreadPool thread_pool;
+  Debug(thread_pool.set_color_functions([](int color){ std::string code{"\e[30m"}; code[3] = '1' + color; return code; }));
   AIQueueHandle handler = thread_pool.new_queue(queue_capacity);
 
   try

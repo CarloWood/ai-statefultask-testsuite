@@ -19,6 +19,7 @@ int main()
   Debug(NAMESPACE_DEBUG::init());
 
   AIThreadPool thread_pool;
+  Debug(thread_pool.set_color_functions([](int color){ std::string code{"\e[30m"}; code[3] = '1' + color; return code; }));
   AIQueueHandle handler = thread_pool.new_queue(queue_capacity);
 
   // Initialize the IO event loop thread and the async hostname resolver.
