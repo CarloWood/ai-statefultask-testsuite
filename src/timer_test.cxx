@@ -60,8 +60,8 @@ struct TimerHandleImpl;
 
 int running_timers_0;
 int expired_timers_0;
-int cancelled_removed_0;
-int cancelled_timers_0;
+int canceled_removed_0;
+int canceled_timers_0;
 
 template<>
 struct TimerHandleImpl<0>
@@ -81,7 +81,7 @@ struct TimerHandleImpl<0>
   {
     assert(m_iter != end);
     assert(m_iter->second);
-    ++cancelled_timers_0;
+    ++canceled_timers_0;
     --running_timers_0;
     m_iter->second = nullptr;   // Cancel timer.
     m_iter = end;               // Mark this handle as being 'not running'.
@@ -163,9 +163,9 @@ struct TimerImpl<1>
   std::function<void()> m_call_back;            // The callback function (only valid when this is a running timer).
   static int s_sequence_number;
   int const m_sequence_number;
-  bool m_cancelled_1;
+  bool m_canceled_1;
 
-  TimerImpl() : m_sequence_number(++s_sequence_number), m_cancelled_1(false) { }
+  TimerImpl() : m_sequence_number(++s_sequence_number), m_canceled_1(false) { }
   ~TimerImpl() { stop(); }
 
   void start(Timer::Interval interval, std::function<void()> call_back, time_point now_);
@@ -174,7 +174,7 @@ struct TimerImpl<1>
   void expire()
   {
     assert(m_handle.is_running());
-    assert(!m_cancelled_1);
+    assert(!m_canceled_1);
     m_handle.set_not_running();
 #if VERBOSE
     std::cout << "1. Expiring timer " << m_sequence_number << " @" << m_expiration_point.time_since_epoch().count() << '\n';
@@ -247,7 +247,7 @@ void print(threadpool::TimerQueue const& queue)
     if (*timer)
       std::cout << " [" << static_cast<TimerImpl<2>*>(*timer)->m_sequence_number << ']' << (*timer)->get_expiration_point().time_since_epoch().count();
     else
-      std::cout << " <cancelled>";
+      std::cout << " <canceled>";
   }
 }
 
@@ -297,7 +297,7 @@ class RunningTimersImpl<INTERVALS, 0>
         timer->expire();
       }
       else
-        ++cancelled_removed_0;
+        ++canceled_removed_0;
       m_map.erase(b);
     }
     while (!timer);
@@ -314,7 +314,7 @@ class RunningTimersImpl<INTERVALS, 0>
         timer->expire();
       }
       else
-        ++cancelled_removed_0;
+        ++canceled_removed_0;
       m_map.erase(b);
     }
   }
@@ -365,20 +365,20 @@ class RunningTimersImpl<INTERVALS, 1>
       assert(!m_pqueue.empty());
       data_t const& data = m_pqueue.top();
       timer = data.second;
-      if (!timer->m_cancelled_1)
+      if (!timer->m_canceled_1)
       {
         now = timer->m_expiration_point;
         timer->expire();
       }
       m_pqueue.pop();
     }
-    while (timer->m_cancelled_1);
+    while (timer->m_canceled_1);
     // Expire all timers that expired now too.
     while (!m_pqueue.empty())
     {
       data_t const& data = m_pqueue.top();
       timer = data.second;
-      if (!timer->m_cancelled_1)
+      if (!timer->m_canceled_1)
       {
         assert(timer->m_expiration_point >= now);
         if (timer->m_expiration_point != now)
@@ -418,7 +418,7 @@ class RunningTimersImpl<INTERVALS, 2> : public threadpool::RunningTimers
     sanity_check();
 #endif
 
-    // Return true if the cancelled timer is the currently running timer.
+    // Return true if the canceled timer is the currently running timer.
     return res;
   }
 
@@ -622,7 +622,7 @@ void TimerImpl<1>::start(Timer::Interval interval, std::function<void()> call_ba
   std::lock_guard<std::mutex> lk(running_timers_mutex);
   m_handle = running_timers1.push(0, this);
 
-  m_cancelled_1 = false;
+  m_canceled_1 = false;
 #if VERBOSE
   std::cout << "  expires at " << m_expiration_point.time_since_epoch().count() << std::endl;
 #endif
@@ -657,8 +657,8 @@ void TimerImpl<1>::stop()
   {
     bool update;
     update = running_timers1.is_current(m_handle);
-    assert(!m_cancelled_1);
-    m_cancelled_1 = true;
+    assert(!m_canceled_1);
+    m_canceled_1 = true;
 
     m_handle.set_not_running();
     if (update)
@@ -864,6 +864,6 @@ int main()
   std::cout << "Success." << std::endl;
 
 #ifdef TEST_ALL_THREE
-  std::cout << "running_timers_0 = " << running_timers_0 << "; expired_timers_0 = " << expired_timers_0 << "; cancelled_removed_0 = " << cancelled_removed_0 << "; cancelled_timers_0 = " << cancelled_timers_0 << std::endl;
+  std::cout << "running_timers_0 = " << running_timers_0 << "; expired_timers_0 = " << expired_timers_0 << "; canceled_removed_0 = " << canceled_removed_0 << "; canceled_timers_0 = " << canceled_timers_0 << std::endl;
 #endif
 }
