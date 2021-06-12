@@ -19,6 +19,8 @@
 #include "threadpool/RunningTimers.h"
 #include "debug.h"
 
+#ifdef DEBUG_SPECIFY_NOW
+
 #define VERBOSE 0
 #define VERBOSE_LIBRARY 0
 #define DEBUG_SANITY 0
@@ -124,9 +126,9 @@ struct TimerImpl;
 template<>
 struct TimerImpl<0>
 {
-  TimerHandleImpl<0> m_handle;                   // If m_handle.is_running() returns true then this timer is running
-                                                 //   and m_handle can be used to find the corresponding Timer object.
-  time_point m_expiration_point;          // The time at which we should expire (only valid when this is a running timer).
+  TimerHandleImpl<0> m_handle;                  // If m_handle.is_running() returns true then this timer is running
+                                                //   and m_handle can be used to find the corresponding Timer object.
+  time_point m_expiration_point;                // The time at which we should expire (only valid when this is a running timer).
   std::function<void()> m_call_back;            // The callback function (only valid when this is a running timer).
   static int s_sequence_number;
   int const m_sequence_number;
@@ -199,7 +201,7 @@ struct TimerImpl<2> : public Timer
   static int s_sequence_number;
   int const m_sequence_number;
   TimerImpl() : m_sequence_number(++s_sequence_number) { }
-  TimerImpl(Timer timer) : Timer(timer), m_sequence_number(++s_sequence_number) { }
+//  TimerImpl(Timer timer) : Timer(timer), m_sequence_number(++s_sequence_number) { }
 };
 
 int volatile output;
@@ -400,7 +402,7 @@ class RunningTimersImpl<INTERVALS, 2> : public threadpool::RunningTimers
   {
     assert(handle.is_running());
 #if VERBOSE
-    std::cout << "Calling RunningTimers::cancel({[" << handle.m_sequence << "], in=" << handle. m_interval << "})\n";
+    std::cout << "Calling RunningTimers::cancel({[" << handle.m_sequence << "], in=" << handle.m_interval << "})\n";
     std::cout << "Before:\n";
     print();
 #endif
@@ -499,13 +501,15 @@ class RunningTimersImpl<INTERVALS, 2> : public threadpool::RunningTimers
       now = queue_w->next_expiration_point();                           // Pretend it is already that time.
     }
     auto current_w = threadpool::RunningTimers::instance().access_current();
-    while (true)
+    bool another_timer_expired = true;
+    while (another_timer_expired)
     {
-      current_w->timer = nullptr;
-      Timer* timer = threadpool::RunningTimers::update_current_timer(current_w, now);
-      if (!timer)
-        break;
-      timer->expire();
+      another_timer_expired = threadpool::RunningTimers::update_current_timer(current_w, now);
+      Timer* timer = current_w->expired_timer;
+      if (timer)
+        timer->debug_expire();
+      else
+        ASSERT(!another_timer_expired);
     }
 #if DEBUG_SANITY
     sanity_check();
@@ -542,7 +546,9 @@ void RunningTimersImpl<INTERVALS, 2>::sanity_check() const
 #endif
 
   // Initialize RunningTimers correctly.
-  assert(this->m_queues.size() == INTERVALS::number - 2);       // 5000ms and 7000ms are duplicates of 5s and 7s.
+  assert(this->m_queues.size() - 6 == INTERVALS::number - 2);       // -2: 5000ms and 7000ms are duplicates of 5s and 7s.
+                                                                    // -6: the library creates intervals too and has the following
+                                                                    //     that we don't: 125us, 16s, 32s, 64s, 128s and 256s.
 
   // Every cache entry needs to have either no_timer in it when the corresponding queue is empty, or the first entry of that queue.
   for (int interval = 0; interval < threadpool::RunningTimers::tree_size; ++interval)
@@ -716,10 +722,19 @@ void generate()
 
   size_t nt = 0;
 #ifdef TEST_ALL_THREE
-  timers<0>.resize(loopsize + extra_timers);
-  timers<1>.resize(loopsize + extra_timers);
+  {
+    decltype(timers<0>) new_timers_0(loopsize + extra_timers);
+    timers<0>.swap(new_timers_0);
+  }
+  {
+    decltype(timers<1>) new_timers_1(loopsize + extra_timers);
+    timers<1>.swap(new_timers_1);
+  }
 #endif
-  timers<2>.resize(loopsize + extra_timers);
+  {
+    decltype(timers<2>) new_timers_2(loopsize + extra_timers);
+    timers<2>.swap(new_timers_2);
+  }
 
   std::cout << "Starting benchmark test..." << std::endl;
   auto start = std::chrono::high_resolution_clock::now();
@@ -845,6 +860,7 @@ void generate()
 int main()
 {
   Debug(NAMESPACE_DEBUG::init());
+  Debug(libcw_do.off());
 
   // Ignore signal used for the timer because the functions we call will
   // cause that signal to be generated, but we don't want the normal callback
@@ -867,3 +883,10 @@ int main()
   std::cout << "running_timers_0 = " << running_timers_0 << "; expired_timers_0 = " << expired_timers_0 << "; canceled_removed_0 = " << canceled_removed_0 << "; canceled_timers_0 = " << canceled_timers_0 << std::endl;
 #endif
 }
+
+#else // DEBUG_SPECIFY_NOW
+int main()
+{
+  std::cerr << "Define DEBUG_SPECIFY_NOW for this test to work." << std::endl;
+}
+#endif // DEBUG_SPECIFY_NOW
