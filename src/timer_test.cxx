@@ -400,7 +400,6 @@ class RunningTimersImpl<INTERVALS, 2> : public threadpool::RunningTimers
  public:
   bool cancel(Timer::Handle const handle)
   {
-    assert(handle.is_running());
 #if VERBOSE
     std::cout << "Calling RunningTimers::cancel({[" << handle.m_sequence << "], in=" << handle.m_interval << "})\n";
     std::cout << "Before:\n";

@@ -19,6 +19,53 @@ template<Timer::time_point::rep count, typename Unit> using Interval = threadpoo
 utils::Gate gate;
 std::atomic_int callbacks = 0;
 
+struct Test
+{
+  Timer::Interval const m_interval;
+  Timer m_timer;
+  std::atomic_int m_count;
+  bool m_stopped;
+
+  Test(Timer::Interval interval) : m_interval(interval), m_timer([this](){ callback(); }), m_count(0), m_stopped(false) { }
+
+  void start()
+  {
+    m_count.store(0, std::memory_order_relaxed);
+    m_timer.start(m_interval);
+    m_stopped = false;
+  }
+
+  void stop()
+  {
+    if (m_timer.stop())
+    {
+      int prev = m_count.fetch_add(1, std::memory_order_relaxed);
+      ASSERT(prev == 0);
+      m_stopped = true;
+      gate.open();
+    }
+  }
+
+  void check_result()
+  {
+    m_timer.wait_for_possible_expire_to_finish();
+    ASSERT(m_count.load(std::memory_order_relaxed) == 1);
+  }
+
+  void callback()
+  {
+    Dout(dc::notice, "Calling Test::callback()");
+    int prev = m_count.fetch_add(1, std::memory_order_relaxed);
+    ASSERT(prev == 0);
+    gate.open();
+  }
+
+  bool stopped() const
+  {
+    return m_stopped;
+  }
+};
+
 int main()
 {
   Debug(debug::init());
@@ -60,12 +107,23 @@ int main()
     Interval<113 * base, std::chrono::microseconds>()
   };
 
+  std::array<int, number_of_intervals> loop_size = {
+    58000,
+    85000,
+    136000,
+    187000,
+    293000,
+    345000,
+    450000,
+    503000,
+  };
+
   // Create a AIMemoryPagePool object (must be created before thread_pool).
   [[maybe_unused]] AIMemoryPagePool mpp;
 
   // Set up the thread pool for the application.
-  int const number_of_threads = 30;                     // Use a thread pool of 30 threads.
-  int const max_number_of_threads = 30;                 // This can later dynamically be increased to 16 if needed.
+  int const number_of_threads = 8;                      // Use a thread pool of 8 threads.
+  int const max_number_of_threads = 16;                 // This can later dynamically be increased to 16 if needed.
   int const queue_capacity = 1000;
   int const reserved_threads = 1;                       // Reserve 1 thread for each priority.
   // Create the thread pool.
@@ -77,43 +135,37 @@ int main()
                    AIQueueHandle low_priority_queue    = thread_pool.new_queue(queue_capacity);
 
   // Set 'now' to 1 second into the future, so that we have time to create and start all the timers.
-  Timer::time_point now = Timer::clock_type::now() + std::chrono::seconds(1);
+  //Timer::time_point now = Timer::clock_type::now() + std::chrono::seconds(1);
 
   // Main application begin.
   try
   {
-    constexpr int number_of_timers_per_interval = 1000;
-    constexpr int number_of_timers = number_of_intervals * number_of_timers_per_interval;
-    Timer timer[number_of_timers];
-    std::array<std::atomic_int, number_of_timers> been_here;
-    for (int t = 0; t < number_of_timers; ++t)
-      been_here[t] = 0;
+    // Choose interval to use.
+    int interval = 7;
 
-    for (int i = 0; i < intervals.size(); ++i)
+    Test t(intervals[interval]);
+
+    int l = loop_size[interval];
+    for (int i = 0; i < 100000; ++i)
     {
-      for (int t = number_of_timers_per_interval * i; t < number_of_timers_per_interval * (i + 1); ++t)
-      {
-        timer[t].start(intervals[i], [&, t](){
-          // The expiration function should only be called once!
-          ASSERT(been_here[t]++ == 0);
-          callbacks++;
-          if (callbacks == number_of_timers)
-            gate.open();
-        }, now);
-      }
+      t.start();
+
+      for (int j = l; j != 0; --j)
+        asm volatile ("");
+
+      t.stop();
+      t.check_result();
+
+      if (t.stopped())
+        ++l;
+      else
+        --l;
+
+      Dout(dc::notice, "l = " << l);
     }
-
-    //std::this_thread::sleep_for(std::chrono::milliseconds(2));
-
-    //timer.stop();
 
     // Wait till program finished.
     gate.wait();
-    for (int t = 0; t < number_of_timers; ++t)
-    {
-      // The expiration function must have been called.
-      ASSERT(been_here[t] == 1);
-    }
   }
   catch (AIAlert::Error const& error)
   {
