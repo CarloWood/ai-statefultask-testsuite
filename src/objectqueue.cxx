@@ -22,7 +22,7 @@ struct F : tracked::Tracked<&name_F> {
   F(F const&& orig) : tracked::Tracked<&name_F>{std::move(orig)}, m_f{std::move(orig.m_f)} { }
   void operator=(F const& orig) { tracked::Tracked<&name_F>::operator=(orig); m_f = orig.m_f; }
   void operator=(F&& orig) { tracked::Tracked<&name_F>::operator=(std::move(orig)); m_f = std::move(orig.m_f); }
-  operator bool() const { return static_cast<bool>(m_f); }
+  explicit operator bool() const { return static_cast<bool>(m_f); }
   void operator()() const { m_f(); }
 };
 #else
