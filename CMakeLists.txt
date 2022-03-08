@@ -1,6 +1,11 @@
 # FetchContent was added to 3.14.
 cmake_minimum_required(VERSION 3.14...3.17)
 
+# Compile all subdirectories with the same standard.
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
 project(ai-statefultask-testsuite
   LANGUAGES C CXX
   DESCRIPTION "Testsuite for git submodule ai-statefultask."
