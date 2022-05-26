@@ -100,7 +100,7 @@ if (CW_BUILD_TYPE_IS_DEBUG)
 endif()
 
 add_executable(benchmark benchmark.cxx)
-target_link_libraries(benchmark PRIVATE AICxx::cwds Boost::iostreams Boost::system)
+target_link_libraries(benchmark PRIVATE AICxx::cwds Boost::iostreams Boost::system Boost::filesystem)
 if (CW_BUILD_TYPE_IS_DEBUG)
   target_compile_options(benchmark PRIVATE "-O3")
 endif()

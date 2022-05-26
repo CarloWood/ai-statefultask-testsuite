@@ -61,16 +61,16 @@ void thr7_run(int signr)
   for (int k = 0; k < 2000; ++k)
     for (int i = 0; i < 500; ++i)
     {
-      for (int volatile j = 0; j < k; ++j)
-        ;
+      for (int j = 0; j < k; ++j)
+        asm volatile ("" :: "r" (j));
       pthread_kill(ids[i % 7], signr + i % 2);
     }
   std::this_thread::sleep_for(std::chrono::milliseconds(500));
   running = false;
   for (int k = 0; k < 20; ++k)
   {
-    for (int volatile j = 0; j < 2000 + k; ++j)
-      ;
+    for (int j = 0; j < 2000 + k; ++j)
+      asm volatile ("" :: "r" (j));
     pthread_t id = ids[k % 7];
     if (id != 0)
       pthread_kill(id, signr + 2);
