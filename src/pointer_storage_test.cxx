@@ -41,7 +41,7 @@ void f(A* a)
   std::cout << "a->n_ = " << a->n_ << std::endl;
 }
 
-using PS = utils::threading::PointerStorage<A>;
+using PS = aithreadsafe::PointerStorage<A>;
 PS ps(2000);
 
 #ifdef CWDEBUG
@@ -118,7 +118,7 @@ int main()
   stopwatch.calibrate_overhead(loopsize, minimum_of);
 #endif
 
-  constexpr int number_of_threads = 32;
+  constexpr int number_of_threads = 4;
   constexpr int number_of_random_numbers_per_thread = 1000;
 
   std::random_device rd;
@@ -137,7 +137,7 @@ int main()
   for (int t = 0; t < threads.size(); ++t)
     threads[t].join();
 
-  ASSERT(!ps.empty());
+  ASSERT(!ps.debug_empty());
 
   int total = 0;
   for (int t = 0; t < threads.size(); ++t)

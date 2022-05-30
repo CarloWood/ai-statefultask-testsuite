@@ -13,9 +13,12 @@ find_package(farmhash REQUIRED)
 # that are installed in gitache!).
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--disable-new-dtags")
 
+add_executable(rwspinlock_test rwspinlock_test.cxx)
+target_link_libraries(rwspinlock_test PRIVATE ${AICXX_OBJECTS_LIST})
+
 add_executable(pointer_storage_test pointer_storage_test.cxx)
 if (CW_BUILD_TYPE_IS_DEBUG)
-  target_compile_options(pointer_storage_test PRIVATE "-O2")
+  target_compile_options(pointer_storage_test PRIVATE "-O0")
 endif()
 target_link_libraries(pointer_storage_test PRIVATE ${AICXX_OBJECTS_LIST})
 
