@@ -118,8 +118,8 @@ int main()
   stopwatch.calibrate_overhead(loopsize, minimum_of);
 #endif
 
-  constexpr int number_of_threads = 4;
-  constexpr int number_of_random_numbers_per_thread = 1000;
+  constexpr int number_of_threads = 16;
+  constexpr int number_of_random_numbers_per_thread = 100000;
 
   std::random_device rd;
   std::mt19937 rng(rd());
