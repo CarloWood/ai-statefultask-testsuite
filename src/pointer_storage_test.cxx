@@ -147,8 +147,8 @@ int main()
   }
   ASSERT(total == counter);
 
-  std::vector<A*> ptrs;
-  ps.copy(ptrs);
-  ASSERT(ptrs.size() == counter);
+  int count = 0;
+  ps.for_each([&](A* ptr){ ++count; });
+  ASSERT(count == counter);
   Dout(dc::notice, "Success!");
 }
