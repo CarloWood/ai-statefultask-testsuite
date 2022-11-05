@@ -110,6 +110,7 @@ class ThreadPoolYieldTest : public AIStatefulTask
  protected: // The destructor must be protected.
   // Override virtual functions of the base class.
   ~ThreadPoolYieldTest() override;
+  char const* task_name_impl() const override { return "ThreadPoolYieldTest"; }
   char const* state_str_impl(state_type run_state) const override;
   void initialize_impl() override;
   void multiplex_impl(state_type run_state) override;

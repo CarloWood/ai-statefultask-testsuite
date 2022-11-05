@@ -43,6 +43,9 @@ class MyTask : public AIStatefulTask
   /// Call finish() (or abort()), not delete.
   ~MyTask() override { DoutEntering(dc::statefultask(mSMDebug), "~MyTask() [" << (void*)this << "]"); }
 
+  /// Implemenation of task_name_impl.
+  char const* task_name_impl() const override { return "MyTask"; }
+
   /// Implemenation of state_str for run states.
   char const* state_str_impl(state_type run_state) const override;
 

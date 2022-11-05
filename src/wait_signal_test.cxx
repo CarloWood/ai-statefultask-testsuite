@@ -40,6 +40,7 @@ class Test : public AIStatefulTask
   }
 
  protected:
+  char const* task_name_impl() const override { return "Test"; }
   char const* state_str_impl(state_type run_state) const override;
   void multiplex_impl(state_type run_state) override;
   void initialize_impl() override { AIStatefulTask::set_state(Test_start + m_test); }

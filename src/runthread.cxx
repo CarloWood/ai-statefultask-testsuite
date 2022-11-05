@@ -43,6 +43,7 @@ class Task : public AIStatefulTask {
     };
 
     // Override virtual functions.
+    char const* task_name_impl() const override { return "Task"; }
     char const* state_str_impl(state_type run_state) const override;
     void multiplex_impl(state_type run_state) override;
 

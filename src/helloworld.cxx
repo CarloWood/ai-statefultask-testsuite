@@ -41,6 +41,7 @@ class HelloWorld : public AIStatefulTask
   protected: // The destructor must be protected.
     // Override virtual functions of the base class.
     ~HelloWorld() override;
+    char const* task_name_impl() const override { return "HelloWorld"; }
     char const* state_str_impl(state_type run_state) const override;
     void multiplex_impl(state_type run_state) override;
 };
@@ -71,6 +72,7 @@ class Bumper : public AIStatefulTask
   protected: // The destructor must be protected.
     // Override virtual functions of the base class.
     ~Bumper() override;
+    char const* task_name_impl() const override { return "Bumper"; }
     char const* state_str_impl(state_type run_state) const override;
     void multiplex_impl(state_type run_state) override;
 };
