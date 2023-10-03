@@ -41,7 +41,7 @@ void f(A* a)
   std::cout << "a->n_ = " << a->n_ << std::endl;
 }
 
-using PS = aithreadsafe::PointerStorage<A>;
+using PS = threadsafe::PointerStorage<A>;
 PS ps(2000);
 
 #ifdef CWDEBUG

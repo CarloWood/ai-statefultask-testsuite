@@ -86,7 +86,7 @@ struct TaskMutex
 
 namespace policy {
 
-struct ReadWriteTask : public aithreadsafe::policy::ReadWrite<TaskMutex>
+struct ReadWriteTask : public threadsafe::policy::ReadWrite<TaskMutex>
 {
   void wrunlock()
   {
@@ -110,7 +110,10 @@ int main()
   Debug(thread_pool.set_color_functions([](int color){ std::string code{"\e[30m"}; code[3] = '1' + color; return code; }));
   AIQueueHandle handler = thread_pool.new_queue(32);
 
-  using Data_ts = aithreadsafe::Wrapper<int, policy::ReadWriteTask>;
+  struct Integer {
+    int value_;
+  };
+  using Data_ts = threadsafe::Unlocked<Integer, policy::ReadWriteTask>;
   Data_ts data;
 
   try
