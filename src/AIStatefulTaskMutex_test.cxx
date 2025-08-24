@@ -130,7 +130,7 @@ int main()
 
   // Pre-allocate memory in the memory pools.
   std::vector<void*> blocks;
-  utils::MemoryPagePool::blocks_t const required_pool_blocks = 21000000 / mpp.instance().block_size();
+  memory::MemoryPagePool::blocks_t const required_pool_blocks = 21000000 / mpp.instance().block_size();
   while (mpp.instance().pool_blocks() < required_pool_blocks)
     blocks.push_back(AIStatefulTaskMutex::s_node_memory_resource.allocate(0));
   for (auto ptr : blocks)
