@@ -2,7 +2,7 @@
 //
 // Then test with:
 //
-// genmc -unroll=3 -- -I$REPOBASE-objdir/src genmc_spinsemaphore_test.c
+// genmc -unroll=3 -- -I$REPOROOT-objdir/src genmc_spinsemaphore_test.c
 
 // These header files are replaced by genmc (see /usr/local/include/genmc):
 #include <pthread.h>
