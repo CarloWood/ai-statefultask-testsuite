@@ -1,7 +1,7 @@
 include(AICxxProject)
 
 find_package(Threads REQUIRED)
-find_package(Boost REQUIRED COMPONENTS filesystem iostreams program_options system)
+find_package(Boost REQUIRED COMPONENTS filesystem iostreams program_options)
 find_package(farmhash REQUIRED)
 
 # Use --disable-new-dtags when linking executables. This is to avoid setting the RUNPATH
@@ -47,10 +47,10 @@ add_executable(minimal minimal.cxx)
 target_link_libraries(minimal PRIVATE AICxx::helloworld-task ${AICXX_OBJECTS_LIST})
 
 add_executable(delay_loop_test delay_loop_test.cxx)
-target_link_libraries(delay_loop_test PRIVATE AICxx::threadsafe AICxx::utils AICxx::cwds Boost::iostreams Boost::system)
+target_link_libraries(delay_loop_test PRIVATE AICxx::threadsafe AICxx::utils AICxx::cwds Boost::iostreams)
 
 add_executable(spin_wakeup_test spin_wakeup_test.cxx)
-target_link_libraries(spin_wakeup_test PRIVATE AICxx::threadsafe AICxx::utils AICxx::cwds Boost::iostreams Boost::system)
+target_link_libraries(spin_wakeup_test PRIVATE AICxx::threadsafe AICxx::utils AICxx::cwds Boost::iostreams)
 
 add_executable(semaphore_test semaphore_test.cxx)
 target_link_libraries(semaphore_test PRIVATE AICxx::threadsafe AICxx::utils AICxx::cwds)
@@ -62,7 +62,7 @@ if (CW_BUILD_TYPE_IS_DEBUG)
 endif()
 
 add_executable(FileLock_test FileLock_test.cxx)
-target_link_libraries(FileLock_test PRIVATE AICxx::socket-task AICxx::resolver-task dns::dns AICxx::filelock-task ${AICXX_OBJECTS_LIST} Boost::iostreams Boost::filesystem Boost::system)
+target_link_libraries(FileLock_test PRIVATE AICxx::socket-task AICxx::resolver-task dns::dns AICxx::filelock-task ${AICXX_OBJECTS_LIST} Boost::iostreams Boost::filesystem)
 
 add_executable(helloworld helloworld.cxx)
 target_link_libraries(helloworld PRIVATE ${AICXX_OBJECTS_LIST})
@@ -109,7 +109,7 @@ if (CW_BUILD_TYPE_IS_DEBUG)
 endif()
 
 add_executable(benchmark benchmark.cxx)
-target_link_libraries(benchmark PRIVATE AICxx::cwds Boost::iostreams Boost::system Boost::filesystem)
+target_link_libraries(benchmark PRIVATE AICxx::cwds Boost::iostreams Boost::filesystem)
 if (CW_BUILD_TYPE_IS_DEBUG)
   target_compile_options(benchmark PRIVATE "-O3")
 endif()
@@ -121,7 +121,7 @@ if (CW_BUILD_TYPE_IS_DEBUG)
 endif()
 
 add_executable(test_frequency_counter test_frequency_counter.cxx)
-target_link_libraries(test_frequency_counter PRIVATE AICxx::cwds Boost::iostreams Boost::system)
+target_link_libraries(test_frequency_counter PRIVATE AICxx::cwds Boost::iostreams)
 
 add_executable(AITimer_test AITimer_test.cxx)
 target_link_libraries(AITimer_test PRIVATE ${AICXX_OBJECTS_LIST})
