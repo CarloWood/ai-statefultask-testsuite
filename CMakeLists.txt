@@ -65,6 +65,7 @@ set(BUILD_GMOCK OFF CACHE BOOL "")
 # Disable installation of googletest.
 set(INSTALL_GTEST OFF CACHE BOOL "")
 
+add_subdirectory(enchantum)
 add_subdirectory(helloworld-task)
 add_subdirectory(filelock-task)
 add_subdirectory(resolver-task)
