@@ -506,7 +506,7 @@ class RunningTimersImpl<INTERVALS, 2> : public threadpool::RunningTimers
       another_timer_expired = threadpool::RunningTimers::update_current_timer(current_w, now);
       Timer* timer = current_w->expired_timer;
       if (timer)
-        timer->debug_expire();
+        Debug(timer->debug_expire());
       else
         ASSERT(!another_timer_expired);
     }

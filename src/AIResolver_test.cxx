@@ -1,22 +1,18 @@
 #include "sys.h"
 #include "resolver-task/AddrInfoLookup.h"
 #include "evio/EventLoop.h"
+#include <mutex>
 #include "debug.h"
 
 int constexpr queue_capacity = 32;
 using namespace resolver;
 
-#ifdef CWDEBUG
-namespace {
-auto& cout_mutex = libcwd::cout_mutex;
-} // namespace
-#else
-pthread_mutex_t cout_mutex = PTHREAD_MUTEX_INITIALIZER;
-#endif
+std::mutex cout_mutex;
 
 int main()
 {
   Debug(NAMESPACE_DEBUG::init());
+  Debug(libcw_do.set_ostream(&std::cout, &cout_mutex));
 
   AIThreadPool thread_pool;
   Debug(thread_pool.set_color_functions([](int color){ std::string code{"\e[30m"}; code[3] = '1' + color; return code; }));
@@ -37,25 +33,22 @@ int main()
 
   if (handle->success())
   {
-    pthread_mutex_lock(&cout_mutex);
+    std::lock_guard lock(cout_mutex);
     std::cout << "Result: port = " << handle->get_port() << "; IP#'s = " << handle->get_result() << std::endl;
-    pthread_mutex_unlock(&cout_mutex);
   }
   else
     std::cerr << "Failure: " << handle->get_error() << '.' << std::endl;
   if (handle2->success())
   {
-    pthread_mutex_lock(&cout_mutex);
+    std::lock_guard lock(cout_mutex);
     std::cout << "Result2: port = " << handle2->get_port() << "; IP#'s = " << handle2->get_result() << std::endl;
-    pthread_mutex_unlock(&cout_mutex);
   }
   else
     std::cerr << "Failure2: " << handle2->get_error() << '.' << std::endl;
   if (handle3->success())
   {
-    pthread_mutex_lock(&cout_mutex);
+    std::lock_guard lock(cout_mutex);
     std::cout << "Result3: port = " << handle3->get_port() << "; IP#'s = " << handle3->get_result() << std::endl;
-    pthread_mutex_unlock(&cout_mutex);
   }
   else
     std::cerr << "Failure3: " << handle3->get_error() << '.' << std::endl;

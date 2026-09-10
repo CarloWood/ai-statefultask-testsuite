@@ -9,6 +9,7 @@ namespace debug { void init() {} void init_thread() {} }
 #endif
 #include <iostream>
 #include <atomic>
+#include <array>
 #include <thread>
 #include <cstring>
 #include <csignal>

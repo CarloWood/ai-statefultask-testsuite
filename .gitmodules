@@ -1,7 +1,3 @@
-[submodule "cwm4"]
-	path = cwm4
-	url = https://github.com/CarloWood/cwm4.git
-	branch = master
 [submodule "utils"]
 	path = utils
 	url = https://github.com/CarloWood/ai-utils.git
@@ -60,3 +56,7 @@
 [submodule "enchantum"]
 	path = enchantum
 	url = https://github.com/ZXShady/enchantum.git
+[submodule "cmake/aicxx"]
+	path = cmake/aicxx
+	url = https://github.com/CarloWood/cmake-aicxx.git
+	branch = master

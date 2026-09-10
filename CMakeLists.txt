@@ -12,7 +12,7 @@ project(ai-statefultask-testsuite
 )
 
 # Begin of gitache configuration.
-set(GITACHE_PACKAGES libcwd_r wolfssl)
+set(GITACHE_PACKAGES libcwd wolfssl)
 
 # Is libfarmhash installed somewhere in a default path?
 find_library(
@@ -45,7 +45,7 @@ FetchContent_MakeAvailable(gitache)
 # End of gitache configuration.
 
 # This project uses aicxx modules.
-include(cwm4/cmake/AICxxProject NO_POLICY_SCOPE)
+include(cmake/aicxx/Project NO_POLICY_SCOPE)
 
 # Exit if someone tries to contaminate the source directory with an in-source build.
 if (${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_BINARY_DIR})

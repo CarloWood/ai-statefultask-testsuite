@@ -1,4 +1,6 @@
 #include "sys.h"
+#include "utils/cpu_relax.h"
+#include "cwds/benchmark.h"
 #include <thread>
 #include <array>
 #include <chrono>
@@ -6,7 +8,6 @@
 #include <atomic>
 #include <condition_variable>
 #include <algorithm>
-#include "cwds/benchmark.h"
 #include "debug.h"
 
 int constexpr number_of_threads = 4;
@@ -15,9 +16,6 @@ int constexpr skip_cores = 2;
 std::mutex cv_mutex;
 std::condition_variable cv;
 std::atomic_flag block = ATOMIC_FLAG_INIT;
-
-// Pause instruction to prevent excess processor bus usage.
-#define cpu_relax() asm volatile("pause\n": : :"memory")
 
 struct Result
 {

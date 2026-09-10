@@ -116,7 +116,7 @@ class ThreadPoolYieldTest : public AIStatefulTask
   void multiplex_impl(state_type run_state) override;
 };
 
-ThreadPoolYieldTest::ThreadPoolYieldTest() : CWDEBUG_ONLY(AIStatefulTask(true))
+ThreadPoolYieldTest::ThreadPoolYieldTest() CWDEBUG_ONLY(: AIStatefulTask(true))
 {
   DoutEntering(dc::statefultask, "ThreadPoolYieldTest::ThreadPoolYieldTest()");
 }

@@ -50,7 +50,7 @@ add_executable(delay_loop_test delay_loop_test.cxx)
 target_link_libraries(delay_loop_test PRIVATE AICxx::threadsafe AICxx::utils AICxx::cwds Boost::iostreams)
 
 add_executable(spin_wakeup_test spin_wakeup_test.cxx)
-target_link_libraries(spin_wakeup_test PRIVATE AICxx::threadsafe AICxx::utils AICxx::cwds Boost::iostreams)
+target_link_libraries(spin_wakeup_test PRIVATE AICxx::threadsafe AICxx::utils AICxx::cwds Boost::iostreams Boost::filesystem)
 
 add_executable(semaphore_test semaphore_test.cxx)
 target_link_libraries(semaphore_test PRIVATE AICxx::threadsafe AICxx::utils AICxx::cwds)
@@ -115,7 +115,7 @@ if (CW_BUILD_TYPE_IS_DEBUG)
 endif()
 
 add_executable(mutex_benchmark mutex_benchmark.cxx)
-target_link_libraries(mutex_benchmark PRIVATE AICxx::cwds)
+target_link_libraries(mutex_benchmark PRIVATE AICxx::utils AICxx::cwds)
 if (CW_BUILD_TYPE_IS_DEBUG)
   target_compile_options(mutex_benchmark PRIVATE "-O3")
 endif()
