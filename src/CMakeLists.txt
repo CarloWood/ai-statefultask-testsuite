@@ -16,12 +16,6 @@ set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--disable-new-dtags")
 add_executable(rwspinlock_test rwspinlock_test.cxx)
 target_link_libraries(rwspinlock_test PRIVATE ${AICXX_OBJECTS_LIST})
 
-add_executable(pointer_storage_test pointer_storage_test.cxx)
-if (CW_BUILD_TYPE_IS_DEBUG)
-  target_compile_options(pointer_storage_test PRIVATE "-O2")
-endif()
-target_link_libraries(pointer_storage_test PRIVATE ${AICXX_OBJECTS_LIST})
-
 add_executable(threadpool_yield_test threadpool_yield_test.cxx)
 target_link_libraries(threadpool_yield_test PRIVATE AICxx::helloworld-task ${AICXX_OBJECTS_LIST})
 
@@ -49,17 +43,8 @@ target_link_libraries(minimal PRIVATE AICxx::helloworld-task ${AICXX_OBJECTS_LIS
 add_executable(delay_loop_test delay_loop_test.cxx)
 target_link_libraries(delay_loop_test PRIVATE AICxx::threadsafe AICxx::utils AICxx::cwds Boost::iostreams)
 
-add_executable(spin_wakeup_test spin_wakeup_test.cxx)
-target_link_libraries(spin_wakeup_test PRIVATE AICxx::threadsafe AICxx::utils AICxx::cwds Boost::iostreams Boost::filesystem)
-
 add_executable(semaphore_test semaphore_test.cxx)
 target_link_libraries(semaphore_test PRIVATE AICxx::threadsafe AICxx::utils AICxx::cwds)
-
-add_executable(AIStatefulTaskMutex_test AIStatefulTaskMutex_test.cxx)
-target_link_libraries(AIStatefulTaskMutex_test PRIVATE ${AICXX_OBJECTS_LIST})
-if (CW_BUILD_TYPE_IS_DEBUG)
-  target_compile_options(AIStatefulTaskMutex_test PRIVATE "-O2")
-endif()
 
 add_executable(FileLock_test FileLock_test.cxx)
 target_link_libraries(FileLock_test PRIVATE AICxx::socket-task AICxx::resolver-task dns::dns AICxx::filelock-task ${AICXX_OBJECTS_LIST} Boost::iostreams Boost::filesystem)
@@ -108,18 +93,6 @@ if (CW_BUILD_TYPE_IS_DEBUG)
   target_compile_options(signal_test PRIVATE "-O3")
 endif()
 
-add_executable(benchmark benchmark.cxx)
-target_link_libraries(benchmark PRIVATE AICxx::cwds Boost::iostreams Boost::filesystem)
-if (CW_BUILD_TYPE_IS_DEBUG)
-  target_compile_options(benchmark PRIVATE "-O3")
-endif()
-
-add_executable(mutex_benchmark mutex_benchmark.cxx)
-target_link_libraries(mutex_benchmark PRIVATE AICxx::utils AICxx::cwds)
-if (CW_BUILD_TYPE_IS_DEBUG)
-  target_compile_options(mutex_benchmark PRIVATE "-O3")
-endif()
-
 add_executable(test_frequency_counter test_frequency_counter.cxx)
 target_link_libraries(test_frequency_counter PRIVATE AICxx::cwds Boost::iostreams)
 
@@ -132,29 +105,58 @@ target_link_libraries(AILookupTask_test PRIVATE AICxx::events AICxx::resolver-ta
 add_executable(AIResolver_test AIResolver_test.cxx)
 target_link_libraries(AIResolver_test PRIVATE AICxx::resolver-task dns::dns ${AICXX_OBJECTS_LIST})
 
-add_executable(hash_test hash_test.cxx)
-target_link_libraries(hash_test PRIVATE farmhash::farmhash AICxx::cwds)
-if (CW_BUILD_TYPE_IS_DEBUG)
-  target_compile_options(hash_test PRIVATE "-O2")
-endif()
-
-add_executable(serv_test serv_test.cxx)
-target_link_libraries(serv_test PRIVATE AICxx::resolver-task dns::dns ${AICXX_OBJECTS_LIST})
-if (CW_BUILD_TYPE_IS_DEBUG)
-  target_compile_options(serv_test PRIVATE "-O2")
-endif()
-
-add_executable(proto_test proto_test.cxx)
-target_link_libraries(proto_test PRIVATE AICxx::resolver-task dns::dns ${AICXX_OBJECTS_LIST})
-if (CW_BUILD_TYPE_IS_DEBUG)
-  target_compile_options(proto_test PRIVATE "-O2")
-endif()
-
 add_executable(resolver_getnameinfo resolver_getnameinfo.cxx)
 target_link_libraries(resolver_getnameinfo PRIVATE AICxx::resolver-task dns::dns ${AICXX_OBJECTS_LIST})
 
 add_executable(socket_task_test socket_task_test.cxx)
 target_link_libraries(socket_task_test PRIVATE AICxx::socket-task AICxx::resolver-task dns::dns ${AICXX_OBJECTS_LIST})
+
+if (BENCHMARK_SUPPORTED)
+  add_executable(pointer_storage_test pointer_storage_test.cxx)
+  if (CW_BUILD_TYPE_IS_DEBUG)
+    target_compile_options(pointer_storage_test PRIVATE "-O2")
+  endif()
+  target_link_libraries(pointer_storage_test PRIVATE ${AICXX_OBJECTS_LIST})
+
+  add_executable(spin_wakeup_test spin_wakeup_test.cxx)
+  target_link_libraries(spin_wakeup_test PRIVATE AICxx::threadsafe AICxx::utils AICxx::cwds Boost::iostreams Boost::filesystem)
+
+  add_executable(AIStatefulTaskMutex_test AIStatefulTaskMutex_test.cxx)
+  target_link_libraries(AIStatefulTaskMutex_test PRIVATE ${AICXX_OBJECTS_LIST})
+  if (CW_BUILD_TYPE_IS_DEBUG)
+    target_compile_options(AIStatefulTaskMutex_test PRIVATE "-O2")
+  endif()
+
+  add_executable(benchmark benchmark.cxx)
+  target_link_libraries(benchmark PRIVATE AICxx::cwds Boost::iostreams Boost::filesystem)
+  if (CW_BUILD_TYPE_IS_DEBUG)
+    target_compile_options(benchmark PRIVATE "-O3")
+  endif()
+
+  add_executable(mutex_benchmark mutex_benchmark.cxx)
+  target_link_libraries(mutex_benchmark PRIVATE AICxx::utils AICxx::cwds)
+  if (CW_BUILD_TYPE_IS_DEBUG)
+    target_compile_options(mutex_benchmark PRIVATE "-O3")
+  endif()
+
+  add_executable(hash_test hash_test.cxx)
+  target_link_libraries(hash_test PRIVATE farmhash::farmhash AICxx::cwds)
+  if (CW_BUILD_TYPE_IS_DEBUG)
+    target_compile_options(hash_test PRIVATE "-O2")
+  endif()
+
+  add_executable(serv_test serv_test.cxx)
+  target_link_libraries(serv_test PRIVATE AICxx::resolver-task dns::dns ${AICXX_OBJECTS_LIST})
+  if (CW_BUILD_TYPE_IS_DEBUG)
+    target_compile_options(serv_test PRIVATE "-O2")
+  endif()
+
+  add_executable(proto_test proto_test.cxx)
+  target_link_libraries(proto_test PRIVATE AICxx::resolver-task dns::dns ${AICXX_OBJECTS_LIST})
+  if (CW_BUILD_TYPE_IS_DEBUG)
+    target_compile_options(proto_test PRIVATE "-O2")
+  endif()
+endif()
 
 # --------------- Maintainer's Section
 
